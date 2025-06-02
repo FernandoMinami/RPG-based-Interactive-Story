@@ -1,0 +1,12 @@
+[
+  {
+    "name": "story01 battle",
+    "file": "./story01-battle-st/scenarios/story01-start.json",
+    "folder": "./story01-battle-st"
+  },
+  {
+    "name": "Other story (Example not implemented)",
+    "file": "./folder inside 'story-content'/scenarios/start scenario.json",
+    "folder": "./folder inside 'story-content'"
+  }
+]

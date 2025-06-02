@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Interactive Story</title>
+    <link rel="stylesheet" href="styles.css" />
+</head>
+
+<body>
+    <script type="module" src="story.js"></script>
+
+    <div id="story-selection">
+        <h1>Choose Your Story</h1>
+        <ul id="story-list"></ul>
+    </div>
+
+    <div id="character-selection" style="display:none; margin-bottom:20px;"></div>
+
+    <div id="current-character" style="margin-bottom: 20px; display:none;">
+        <strong>Character:</strong> <span id="current-character-name"></span>
+        <button id="show-character-stats-btn">Show Stats</button>
+        <div id="player-attribute-points"></div>
+
+        <div style="margin-top:10px; box-shadow: unset;">
+            <label for="life-bar">Life:</label>
+            <progress id="life-bar" value="100" max="100" style="width:120px;vertical-align:middle;"></progress>
+            <span id="life-value">0</span>/<span id="max-life-value">0</span>
+            &nbsp;&nbsp;
+            <label for="mana-bar">MP:</label>
+            <progress id="mana-bar" value="0" max="0" style="width:120px;vertical-align:middle;"></progress>
+            <span id="mp-value">0</span>/<span id="max-mp-value">0</span>
+        </div>
+        <!-- Add inside your character/status panel -->
+        <div id="player-level"></div>
+        <div id="player-exp"></div>
+        <button id="show-inventory-btn" style="margin-bottom:10px;">Show Inventory</button>
+    </div>
+
+    <div id="inventory-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="min-width:320px;max-width:500px;margin:auto;">
+            <span id="close-inventory-modal" style="float:right;cursor:pointer;font-size:1.5em;">&times;</span>
+            <h2>Inventory</h2>
+            <div id="items-bar-container"></div>
+        </div>
+    </div>
+
+    <button id="history-toggle-btn" style="margin-bottom:10px; display: none; width: 100%;">Show History</button>
+    <div id="history-panel"
+        style="display:none; border:1px solid #ccc; padding:10px; max-height:200px; overflow-y:auto; background:#fafafa; margin-bottom:20px;">
+    </div>
+
+    <div id="attributes-bar-container"
+        style="margin-bottom: 20px; border:1px solid #ccc; padding:10px; background:#f0f6ff;display: none;"></div>
+
+    <div id="status-abilities">
+        <h2>Buffs</h2>
+        <div id="ability-btns"></div>
+    </div>
+
+    <div class="story-container" style="display:none;">
+        <div class="story-content">
+            <h1 id="story-title"></h1>
+            <div id="node-effect"></div>
+            <p id="story-text"></p>
+        </div>
+        <div class="choices-container" id="choices-container"></div>
+    </div>
+
+    <div class="gameover-container" id="gameover-container" style="display:none;">
+        <h2 id="gameover-title"></h2>
+        <p id="gameover-text"></p>
+        <button id="restart-button">Restart</button>
+    </div>
+
+    <div id="character-stats-modal" class="modal" style="display:none;">
+        <div class="modal-content" style="min-width:320px;max-width:500px;margin:auto;">
+            <span id="close-character-stats-modal" style="float:right;cursor:pointer;font-size:1.5em;">&times;</span>
+            <h2 id="character-stats-title"></h2>
+            <div id="character-stats-content"></div>
+        </div>
+    </div>
+
+    <!-- Combat Modal -->
+    <div id="combat-modal" class="modal" style="display:none;">
+        <div class="modal-content" ...>
+            <h2 id="combat-title">Battle!</h2>
+            <button id="show-battle-history-btn">Show Battle History</button>
+            <div id="combat-log" style="display:none;"></div>
+            <div id="combat-enemy-stats"></div>
+            <div id="combat-recent"></div>
+            <div id="combat-player-stats"></div>
+            <div id="combat-actions"></div>
+        </div>
+    </div>
+
+
+</body>
+
+</html>

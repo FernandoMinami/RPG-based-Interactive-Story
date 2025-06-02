@@ -1,0 +1,49 @@
+{
+    "id": "forest01",
+    "title": "Forest01",
+    "noBattle": false,
+    "enemies": [
+        "enemy02",
+        "enemy01"
+    ],
+    "respawn": [
+        "forest-clearing"
+    ],
+    "nodes": {
+        "forest-clearing": {
+            "title": "A Forest Clearing",
+            "text": "You are in a peaceful clearing. Birds are singing.",
+            "choices": [
+                {
+                    "text": "Go deeper",
+                    "battle": "enemy01",
+                    "next": "deep-forest"
+                },
+                {
+                    "text": "Return to city",
+                    "next": "city-gate"
+                }
+            ]
+        },
+        "deep-forest": {
+            "title": "Deep Forest",
+            "text": "It's dark and you hear something moving...",
+            "choices": [
+                {
+                    "text": "Investigate",
+                    "next": "forest-monster"
+                }
+            ]
+        },
+        "forest-monster": {
+            "title": "A Wild Enemy Appears!",
+            "text": "A wild enemy jumps out!",
+            "choices": [
+                {
+                    "text": "Fight!",
+                    "next": "battle"
+                }
+            ]
+        }
+    }
+}

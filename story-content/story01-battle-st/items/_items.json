@@ -1,0 +1,37 @@
+[
+    {
+        "id": "potion",
+        "name": "Potion",
+        "file": "items/potion.js"
+    },
+    {
+        "id": "super-potion",
+        "name": "Super Potion",
+        "file": "items/super-potion.js"
+    },
+    {
+        "id": "mana-potion",
+        "name": "Mana Potion",
+        "file": "items/mana-potion.js"
+    },
+    {
+        "id": "super-mana-potion",
+        "name": "Super Mana Potion",
+        "file": "items/super-mana-potion.js"
+    },
+    {
+        "id": "metal-armor",
+        "name": "Metal Armor",
+        "file": "items/metal-armor.js"
+    },
+    {
+        "id": "metal-helmet",
+        "name": "Metal Helmet",
+        "file": "items/metal-helmet.js"
+    },
+    {
+        "id": "leather-helmet",
+        "name": "Leather Helmet",
+        "file": "items/leather-helmet.js"
+    }
+]

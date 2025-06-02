@@ -1,0 +1,6 @@
+[
+  { "id": "story-start", "file": "story01-start.json" },
+  { "id": "forest01", "file": "forest01.json" },
+  { "id": "city01", "file": "city01.json" },
+  { "id": "mountain01", "file": "mountain01.json" }
+]

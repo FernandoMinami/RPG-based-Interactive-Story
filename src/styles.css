@@ -1,0 +1,465 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 0 200px;
+    text-align: center;
+    height: 100vh;
+    align-content: center;
+}
+
+#story-selection {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+}
+
+#choices-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+#choices-container div {
+    display: flex;
+    width: 100%;
+}
+
+#choices-container div button {
+    width: 50%;
+}
+
+#life-bar-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+#potion-bar-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    gap: 20px;
+}
+
+.story-content {
+    width: 75%;
+    margin: 0 auto;
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: unset;
+    text-align: left;
+}
+
+.story-content h1 {
+    text-align: center;
+}
+
+content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+
+#history-panel div {
+    background-color: #f9f9f9;
+    border: 0;
+    border-radius: 0;
+    padding: 10px;
+    margin-bottom: 10px;
+    box-shadow: none;
+}
+
+div {
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+h1 {
+    font-size: 2em;
+    color: #333;
+}
+
+p {
+    font-size: 1.2em;
+    color: #666;
+}
+
+button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+button:focus {
+    outline: none;
+}
+
+#node-effect,
+#node-effect div {
+    background-color: white;
+    border-radius: 8px;
+    text-align: center;
+    box-shadow: unset;
+}
+
+ul {
+    padding: 0;
+    margin: 0;
+    width: 100%;
+}
+
+li {
+    list-style: none;
+    padding: 0;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+#story-list,
+#story-list li {
+    list-style: none;
+    padding: 0;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
+#story-list button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#character-selection {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    padding: 20px;
+}
+
+#character-selection button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+}
+
+#status-abilities {
+    display: none;
+    float: left;
+    gap: 10px;
+    width: 20%;
+}
+
+#status-abilities div {
+    display: flex;
+    flex-direction: column;
+    row-gap: 5px;
+    width: 100%;
+}
+
+
+.story-container {
+    width: 75%;
+    float: right;
+}
+
+/*Text effects*/
+.crushing-effect {
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: large;
+    animation: crushing-shake 2s;
+    animation-delay: 1s;
+    text-align: center;
+}
+
+.str-crushing-effect {
+    font-style: bold italic;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: larger;
+    animation: crushing-shake 2s;
+    animation-delay: 1s;
+    text-align: center;
+    font-size: 150%;
+}
+
+.str-crushing-effect:hover {
+    animation: crushing-shake 2s infinite;
+}
+
+.strger-crushing-effect {
+    font-style: italic;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: larger;
+    animation: crushing-shake 2s infinite;
+    animation-delay: 1s;
+    text-align: center;
+    font-size: 200%;
+}
+
+.trampling-effect {
+    font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: large;
+    animation: trampling-shake 2s infinite;
+    animation-delay: 1s;
+    text-align: center;
+}
+
+.str-trampling-effect {
+    font-style: italic;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: larger;
+    animation: trampling-shake 2s infinite;
+    animation-delay: 1s;
+    text-align: center;
+    font-size: 150%;
+}
+
+.strger-trampling-effect {
+    font-style: italic;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    font-size: larger;
+    animation: trampling-shake 2s infinite;
+    animation-delay: 1s;
+    text-align: center;
+    font-size: 200%;
+}
+
+
+
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background: rgba(0, 0, 0, 0.4);
+    align-content: center;
+}
+
+.modal-content {
+    background: #fff;
+    margin: 10%;
+    padding: 20px;
+    border: 1px solid #888;
+    border-radius: 8px;
+}
+
+#show-inventory-btn {
+    margin: 10px;
+}
+
+
+#combat-modal {
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 9999;
+}
+
+#combat-log div {
+    margin-bottom: 10px;
+    box-shadow: none;
+}
+
+#combat-enemy-stats {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    flex-direction: column;
+}
+
+#combat-player-stats {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    flex-direction: column;
+}
+
+.ability {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    /* Adjust gap between buttons */
+}
+
+.consumables {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+}
+
+
+.escape-container {
+    padding: 10px 0;
+    display: flex;
+    justify-content: center;
+    /* or flex-start */
+    gap: 10px;
+    /* spacing if there are multiple buttons */
+}
+
+
+#player-attribute-points {
+    font-weight: bold;
+    font-style: italic;
+}
+
+#ability-btns{
+    margin: 10px 0;
+}
+
+
+/* Animation keyframes */
+@keyframes crushing-shake {
+    0% {
+        font-size: 150%;
+    }
+
+    17% {
+        font-size: 190%;
+    }
+
+    30% {
+        font-size: 150%;
+    }
+
+    35% {
+        transform: skewX(20deg);
+    }
+
+    40% {
+        transform: skewX(-18deg);
+    }
+
+    45% {
+        transform: skewX(17deg);
+    }
+
+    50% {
+        transform: skewX(-13deg);
+    }
+
+    55% {
+        transform: skewX(12deg);
+    }
+
+    60% {
+        transform: skewX(-17deg);
+    }
+
+    65% {
+        transform: skewX(11deg);
+    }
+
+    70% {
+        transform: skewX(-13deg);
+    }
+
+    75% {
+        transform: skewX(13deg);
+    }
+
+    80% {
+        transform: skewX(-17deg);
+    }
+
+    90% {
+        transform: skewX(0deg);
+    }
+
+    100% {
+        transform: skewX(0deg);
+    }
+}
+
+@keyframes trampling-shake {
+    0% {
+        transform: skewX(20deg);
+    }
+
+    10% {
+        transform: skewX(-18deg);
+    }
+
+    20% {
+        transform: skewX(17deg);
+    }
+
+    30% {
+        transform: skewX(-13deg);
+    }
+
+    40% {
+        transform: skewX(12deg);
+    }
+
+    50% {
+        transform: skewX(-17deg);
+    }
+
+    60% {
+        transform: skewX(11deg);
+    }
+
+    70% {
+        transform: skewX(-13deg);
+    }
+
+    80% {
+        transform: skewX(13deg);
+    }
+
+    90% {
+        transform: skewX(-17deg);
+    }
+
+    100% {
+        transform: skewX(0deg);
+    }
+}
+
+
+/* Responsive design */
