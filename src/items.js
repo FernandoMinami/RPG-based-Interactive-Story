@@ -26,11 +26,11 @@ export async function loadItems(storyFolder) {
   }
 }
 
-export function equipableItems() {
+export function equipableItems(player, item) {
   // Unequip any item in this slot first
-  const current = player.equipment[this.slot];
-  if (current && current !== this) {
-    // Remove modifiers of currently equipped item
+  const current = player.equipment[item.slot];
+  if (current && current !== item) {
+    // Remove base attribute modifiers of currently equipped item
     for (const [attr, mod] of Object.entries(current.modifiers)) {
       if (player.attributes[attr] !== undefined) {
         player.attributes[attr] -= mod;
@@ -39,59 +39,29 @@ export function equipableItems() {
     current.equipped = false;
   }
 
-  if (!this.equipped) {
-    // Equip: apply modifiers
-    for (const [attr, mod] of Object.entries(this.modifiers)) {
+  if (!item.equipped) {
+    // Equip: apply base attribute modifiers only
+    for (const [attr, mod] of Object.entries(item.modifiers)) {
       if (player.attributes[attr] !== undefined) {
         player.attributes[attr] += mod;
       }
-      if (attr === "physicalDefense" || attr === "magicDefense") {
-        player.secondary[attr] += mod; // Update secondary stats
-      }
     }
-    this.equipped = true;
-    player.equipment[this.slot] = this;
-    return true;
+    item.equipped = true;
+    player.equipment[item.slot] = item;
   } else {
-    // Unequip: remove modifiers
-    for (const [attr, mod] of Object.entries(this.modifiers)) {
+    // Unequip: remove base attribute modifiers only
+    for (const [attr, mod] of Object.entries(item.modifiers)) {
       if (player.attributes[attr] !== undefined) {
         player.attributes[attr] -= mod;
       }
-      if (attr === "physicalDefense" || attr === "magicDefense") {
-        player.secondary[attr] -= mod; // Update secondary stats
-      }
     }
-    this.equipped = false;
-    player.equipment[this.slot] = null;
-    return true;
+    item.equipped = false;
+    player.equipment[item.slot] = null;
   }
-  updateInventoryBar();
-  updateStoryUI();
+  
+  // Recalculate secondary stats after equipment change
+  // This will calculate physicalDefense and magicDefense from equipped items
+  updateSecondaryStats(player);
+  updateCharacterUI();
+  return true;
 }
-
-/*export function manaPotion() {
-  const manaRestored = item.restore;
-  if (player.mana < player.maxMana) {
-    player.mana = Math.min(player.maxMana, player.mana + manaRestored);
-    return true; // Consumed
-    updateInventoryBar();
-    updateStoryUI();
-  }
-  return false; // Not consumed (already at max MP)
-  updateInventoryBar();
-  updateStoryUI();
-}
-
-export function healthPotion(player, restore) {
-  const restored = restore;
-  if (player.life < player.maxLife) {
-    player.life = Math.min(player.maxLife, player.life + restored);
-    return true; // Consumed
-    updateInventoryBar();
-    updateStoryUI();
-  }
-  return false; // Not consumed (already at max life)
-  updateInventoryBar();
-  updateStoryUI();
-}*/
