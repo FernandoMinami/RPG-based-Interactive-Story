@@ -1,0 +1,97 @@
+{
+    "id": "city01",
+    "title": "The City",
+    "noBattle": false,
+    "respawn": [
+        "city-gate"
+    ],
+    "nodes": {
+        "city-gate": {
+            "title": "City Gate",
+            "text": "You stand before the massive gates of the city. Guards patrol the walls, and merchants come and go with their wares.",
+            "choices": [
+                {
+                    "text": "Enter the marketplace",
+                    "next": "marketplace"
+                },
+                {
+                    "text": "Visit the temple",
+                    "next": "temple"
+                },
+                {
+                    "text": "Return to the forest",
+                    "scenario": "forest01",
+                    "next": "forest-clearing"
+                }
+            ]
+        },
+        "marketplace": {
+            "title": "Marketplace",
+            "text": "The marketplace is bustling with activity. You see vendors selling potions, weapons, and various goods.",
+            "items": {
+                "potion": 1
+            },
+            "choices": [
+                {
+                    "text": "Look for work",
+                    "next": "work-board"
+                },
+                {
+                    "text": "Return to city gate",
+                    "next": "city-gate"
+                }
+            ]
+        },
+        "temple": {
+            "title": "Temple",
+            "text": "You enter a peaceful temple. A priest offers to heal your wounds.",
+            "choices": [
+                {
+                    "text": "Accept healing",
+                    "life": 50,
+                    "next": "temple-healed"
+                },
+                {
+                    "text": "Leave the temple",
+                    "next": "city-gate"
+                }
+            ]
+        },
+        "temple-healed": {
+            "title": "Temple - Healed",
+            "text": "You feel refreshed and renewed. The priest blesses you for your journey.",
+            "choices": [
+                {
+                    "text": "Thank the priest and leave",
+                    "next": "city-gate"
+                }
+            ]
+        },
+        "work-board": {
+            "title": "Work Board",
+            "text": "There's a notice board with various jobs available. Most involve dealing with the monster problem.",
+            "choices": [
+                {
+                    "text": "Accept monster hunting job",
+                    "exp": 10,
+                    "next": "hunt-quest"
+                },
+                {
+                    "text": "Look for easier work",
+                    "next": "marketplace"
+                }
+            ]
+        },
+        "hunt-quest": {
+            "title": "Monster Hunt",
+            "text": "You've accepted a job to hunt monsters. Time to prove yourself!",
+            "choices": [
+                {
+                    "text": "Head to the forest to hunt",
+                    "scenario": "forest01",
+                    "next": "forest-clearing"
+                }
+            ]
+        }
+    }
+}

@@ -1,0 +1,22 @@
+[
+    {
+        "name": "Burn",
+        "id": "burn",
+        "file": "burn.js"
+    },
+    {
+        "name": "Stun",
+        "id": "stun",
+        "file": "stun.js"
+    },
+    {
+        "name": "Fly",
+        "id": "fly",
+        "file": "fly.js"
+    },
+    {
+        "name": "Poison",
+        "id": "poison",
+        "file": "poison.js"
+    }
+]
