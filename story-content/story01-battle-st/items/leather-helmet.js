@@ -13,6 +13,6 @@ export const item = {
   },
 
   use(player) {
-    equipableItems(player, this);
+    return equipableItems(player, this);
   }
 };

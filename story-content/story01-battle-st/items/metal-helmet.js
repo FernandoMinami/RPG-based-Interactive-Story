@@ -11,6 +11,6 @@ export const item = {
     physicalDefense: 2
   },
   use(player) {
-    equipableItems(player, this);
+    return equipableItems(player, this);
   }
 };

@@ -5,37 +5,36 @@ import { historyLog } from './history.js';
 
 // --- Secondary stats calculation ---
 function updateSecondaryStats(player) {
+  // Reset defense values before recalculating
+  player.secondary.physicalDefense = 0;
+  player.secondary.magicDefense = 0;
+  
   // maxlife is based on constitution, but can be adjusted as needed
   player.secondary.maxLife = player.attributes.constitution * 10;
   if (player.secondary.maxLife < 0) player.secondary.maxLife = 0; // Ensure no negative max life
   // Update player's max life
   player.maxLife = player.secondary.maxLife;
+  
+  // Initialize current life if it's not set (0, undefined, or NaN)
+  if (!player.life || player.life <= 0 || isNaN(player.life)) {
+    player.life = player.maxLife;
+  }
 
   // Update max Mana based on intelligence
   player.maxMana = player.attributes.intelligence * 10;
   if (player.maxMana < 0) player.maxMana = 0; // Ensure no negative max Mana
+  
+  // Initialize current mana if it's not set (0, undefined, or NaN)
+  if (!player.mana || player.mana <= 0 || isNaN(player.mana)) {
+    player.mana = player.maxMana;
+  }
+  
   // Optionally, restore Mana when max Mana increases
   if (player.mana > player.maxMana) player.mana = player.maxMana;
 
   // Mana Regen is based on intelligence, but can be adjusted as needed
   player.secondary.manaRegen = Math.floor(player.attributes.intelligence / 2) - 1;
   if (player.secondary.manaRegen < 0) player.secondary.manaRegen = 0; // Ensure no negative regen
-
-  // Add physical defense from all equipped items
-  for (const slot of Object.keys(player.equipment)) {
-    const eq = player.equipment[slot];
-    if (eq && eq.modifiers && typeof eq.modifiers.physicalDefense === "number") {
-      player.secondary.physicalDefense += eq.modifiers.physicalDefense;
-    }
-  }
-
-  // Add magic defense from all equipped items
-  for (const slot of Object.keys(player.equipment)) {
-    const eq = player.equipment[slot];
-    if (eq && eq.modifiers && typeof eq.modifiers.magicDefense === "number") {
-      player.secondary.magicDefense += eq.modifiers.magicDefense;
-    }
-  }
 
   // Speed is based on dexterity, but can be adjusted as needed
   player.secondary.speed = Math.floor(player.attributes.dexterity / 1.5) - 5;
@@ -56,6 +55,24 @@ function updateSecondaryStats(player) {
   // Magic defense is based on intelligence, but can be adjusted as needed
   player.secondary.magicDefense = Math.floor(player.attributes.intelligence * 0.5) - 5;
   if (player.secondary.magicDefense < 0) player.secondary.magicDefense = 0; // Ensure no negative defense
+
+
+  
+  // Add physical defense from all equipped items
+  for (const slot of Object.keys(player.equipment)) {
+    const eq = player.equipment[slot];
+    if (eq && eq.modifiers && typeof eq.modifiers.physicalDefense === "number") {
+      player.secondary.physicalDefense += eq.modifiers.physicalDefense;
+    }
+  }
+
+  // Add magic defense from all equipped items
+  for (const slot of Object.keys(player.equipment)) {
+    const eq = player.equipment[slot];
+    if (eq && eq.modifiers && typeof eq.modifiers.magicDefense === "number") {
+      player.secondary.magicDefense += eq.modifiers.magicDefense;
+    }
+  }
 }
 
 function regenMp() {

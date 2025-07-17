@@ -21,6 +21,7 @@
                 },
                 {
                     "text": "Return to city",
+                    "scenario": "city01",
                     "next": "city-gate"
                 }
             ]

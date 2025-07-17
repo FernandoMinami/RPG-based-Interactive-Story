@@ -15,7 +15,7 @@ const baseSecondary = {
   manaRegen: 0,
   physicalDamage: 0,
   magicDamage: 0,
-  physicalDefense: 0, // Physical defense stat that will be calculated
+  physicalDefense: 100, // Physical defense stat that will be calculated
   magicDefense: 0, // Magic defense stat that will be calculated
   speed: 0
 };
@@ -23,6 +23,7 @@ const baseSecondary = {
 export let player = {
   name: "Character00",
   id: "character00",
+  weight: 70, // Weight in kg (used for fall damage calculations)
   life: 0,
   mana: 0,
   level: 1,
@@ -31,17 +32,34 @@ export let player = {
   attributes: { ...baseAttributes },
   secondary: { ...baseSecondary },
 
-  // abilities of the character
-  /**
+  //checks the buffs
+  activeBoosts: {},
+
+  status: {},
+
+  // equipment slots
+  equipment: {
+    body: null,
+    legs: null,
+    head: null,
+    foot: null,
+    hand: null,
+    weapon: null
+  },
+
+  /*
+  abilities of the character
    * Abilities of the character can be of type "attack", "heal", or "buff".
    * Each ability has a name, type, minDamage, maxDamage, accuracy, mpCost,
    * description, onHit message, onMiss message, and optional effects.
    * The buff abilities will modify the character's attributes for a certain number of turns.
    */
+
   abilities: {
     quickAttack: {
       name: "Quick Attack",
       type: "physical", // Changed to physical for clarity
+      range: "close", // Close combat attack
       minDamage: 80,
       maxDamage: 80,
       accuracy: 95,
@@ -51,23 +69,27 @@ export let player = {
       onMiss: "Character00's quick attack misses!"
     },
     test: {
-      name: "test",
+      name: "poison",
       type: "physical",
-      minDamage: 80,
-      maxDamage: 80,
+      range: "close", // Close combat attack
+      minDamage: 0,
+      maxDamage: 0,
       accuracy: 95,
       mpCost: 0,
+      effect: { type: "poison", chance: 1, turns: 4 },
       description: "Character00 uses a fast strike to hit the enemy.",
       onHit: "Character00's quick attack hits the enemy!",
       onMiss: "Character00's quick attack misses!"
     },
     teste2: {
-      name: "teste2",
+      name: "stun",
       type: "attack",
-      minDamage: 80,
-      maxDamage: 80,
+      range: "close", // Close combat attack
+      minDamage: 0,
+      maxDamage: 0,
       accuracy: 95,
       mpCost: 0,
+      effect: { type: "stun", chance: 1, turns: 2 },
       description: "Character00 uses a fast strike to hit the enemy.",
       onHit: "Character00's quick attack hits the enemy!",
       onMiss: "Character00's quick attack misses!"
@@ -75,6 +97,7 @@ export let player = {
     asdawdasdafa: {
       name: "asdawdasdafa",
       type: "attack",
+      range: "close", // Close combat attack
       minDamage: 80,
       maxDamage: 80,
       accuracy: 95,
@@ -86,11 +109,24 @@ export let player = {
     forcePalm: {
       name: "Force Palm",
       type: "attack",
+      range: "close", // Close combat attack
       minDamage: 10,
       maxDamage: 18,
       accuracy: 90,
       mpCost: 8,
       effect: { type: "stun", chance: 0.3, turns: 1 }
+    },
+    magicMissile: {
+      name: "Magic Missile",
+      type: "magic",
+      range: "ranged", // Ranged attack - can hit flying enemies
+      minDamage: 15,
+      maxDamage: 25,
+      accuracy: 85,
+      mpCost: 10,
+      description: "Character00 launches a magical projectile at the enemy.",
+      onHit: "Character00's magic missile strikes the target!",
+      onMiss: "Character00's magic missile misses its target!"
     },
     heal: {
       name: "Quick Heal",
@@ -139,25 +175,20 @@ export let player = {
       mpCost: 12
     }
   },
-  // equipment slots
-  equipment: {
-    body: null,
-    legs: null,
-    head: null,
-    foot: null,
-    hand: null,
-    weapon: null
-  },
-  //checks the buffs
-  activeBoosts: {},
+
+
   //resets the character
   reset() {
     for (const key in baseAttributes) {
       this.attributes[key] = baseAttributes[key];
     }
-    for (const key in baseSecondary) {
-      this.secondary[key] = baseSecondary[key];
-    }
+    // Don't reset secondary stats - they will be recalculated by updateSecondaryStats()
+    // Only reset the non-calculated secondary stats
+    this.secondary.maxLife = baseSecondary.maxLife;
+    this.secondary.maxMana = baseSecondary.maxMana;
+    this.secondary.manaRegen = baseSecondary.manaRegen;
+    // Keep physicalDefense and magicDefense as they are calculated from equipment
+    
     this.life = this.maxLife;
     this.mana = this.maxMana;
     this.activeBoosts = {};
