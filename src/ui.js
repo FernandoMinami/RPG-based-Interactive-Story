@@ -4,6 +4,7 @@ import { addExp, getExpForLevel } from './leveling.js';
 import { updateSecondaryStats } from './character.js';
 import { updateHistoryPanel, historyLog } from './history.js';
 import { loadItems, items } from './items.js';
+import { getAbilities, getAbility } from './abilities.js';
 
 // --- Grouped UI update functions ---
 function updateCharacterUI() {
@@ -159,7 +160,10 @@ function createAbilityButtons() {
   if (!container) return;
   container.innerHTML = "";
 
-  for (const [key, ability] of Object.entries(player.abilities)) {
+  // Get player abilities using the new system
+  const playerAbilities = getAbilities(player.abilityIds || []);
+  
+  for (const [key, ability] of Object.entries(playerAbilities)) {
     if (ability.type !== "buff" && ability.type !== "heal") continue; // Only buffs and heals
 
     const btn = document.createElement("button");

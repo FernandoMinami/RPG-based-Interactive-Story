@@ -1,25 +1,18 @@
-import { addExp } from './leveling.js';
+import { addExp, getExpForLevel } from './leveling.js';
 import { getInventory, removeItem } from './inventory.js';
 import { items } from './items.js';
-import { regenMp } from './character.js';
-import { updateLifeBar } from './ui.js';
-import { loadStatuses, StatusRegistry } from './status.js';
+import { updateSecondaryStats, regenMp } from './character.js';
+import { updateHistoryPanel, historyLog } from './history.js';
+import { updateLifeBar, updateManaBar } from './ui.js';
+import { applyStatus, updateStatuses, statusSummary, isStatusActive } from './status.js';
+import { getAbilities, getAbility } from './abilities.js';
 
-console.log('Loaded statuses:', StatusRegistry);
+/*import { updateAttributesBar, createAbilityButtons } from './ui.js';
+import { applyStatus, updateStatuses, statusSummary } from './status/_status.js';*/
 
 
-import {
-    applyStatus,
-    updateStatuses,
-    isStatusActive,
-    statusSummary
-} from './status.js';
-
+// Starts a battle between the player and an enemy
 export function startBattle(player, enemy, onBattleEnd) {
-    //initializeStatus(player);
-    //initializeStatus(enemy);
-    // Note: statuses are already loaded in story.js, no need to reload them here
-
     const modal = document.getElementById("combat-modal");
     const logDiv = document.getElementById("combat-log");
     const playerStats = document.getElementById("combat-player-stats");
@@ -28,59 +21,62 @@ export function startBattle(player, enemy, onBattleEnd) {
     const recentDiv = document.getElementById("combat-recent");
     const showHistoryBtn = document.getElementById("show-battle-history-btn");
 
-    let battleLog = [];
-    let groupedBattleLogs = [];
+    let battleLog = [];            // Current "turn" log messages
+    let groupedBattleLogs = [];    // All grouped logs for this battle
+
+    modal.style.display = "block";
+    logDiv.innerHTML = "";
     let playerTurn = true;
 
+    showHistoryBtn.onclick = function () {
+        if (logDiv.style.display === "none") {
+            logDiv.style.display = "";
+            showHistoryBtn.textContent = "Hide Battle History";
+        } else {
+            logDiv.style.display = "none";
+            showHistoryBtn.textContent = "Show Battle History";
+        }
+    };
+    logDiv.style.display = "none"; // Hide by default
+
+    // Initialize player and enemy stats
     function updateStats() {
-        playerStats.innerHTML = `<b>${player.name}</b> 
-            <span>HP: ${player.life}/${player.maxLife}</span> 
-            <span>MP: ${player.mana}/${player.maxMana}</span> 
-            <span>Status: ${statusSummary(player)}</span>`;
-
-        enemyStats.innerHTML = `<b>${enemy.name}</b> 
-            <span>HP: ${enemy.life}/${enemy.maxLife}</span> 
-            <span>Status: ${statusSummary(enemy)}</span>`;
+        playerStats.innerHTML = `<b>${player.name}</b> <span>HP: ${player.life}/${player.maxLife}</span> <span>MP: ${player.mana}/${player.maxMana}</span> <span>Status: ${statusSummary(player)}</span>`;
+        enemyStats.innerHTML = `<b>${enemy.name}</b> <span>HP: ${enemy.life}/${enemy.maxLife}</span> <span>Status: ${statusSummary(enemy)}</span>`;
     }
 
-    function addLog(msg) {
-        battleLog.push(msg);
-        const recentGroups = battleLog.slice().map(m => `<div>${m}</div>`).join("");
-        recentDiv.innerHTML = recentGroups;
-        logDiv.scrollTop = logDiv.scrollHeight;
-    }
-
-    function separateLog() {
-        if (battleLog.length === 0) return;
-        const grouped = battleLog.join(' ');
-        logDiv.innerHTML += `<div class="battle-log-group">${grouped}</div>`;
-        groupedBattleLogs.push(grouped);
-        battleLog = [];
-    }
-
+    // shows the result of the battle in the logDiv
     function showResult(result) {
         actionsDiv.innerHTML = "";
         let summary = result === "win" ? "Victory!" : result === "lose" ? "Defeat!" : result === "escape" ? "Escaped!" : "Battle Ended";
 
+        // Add grouped log to history
         if (typeof window.addBattleToHistory === "function") {
             window.addBattleToHistory(enemy.name, groupedBattleLogs, summary);
         }
 
-        if (result === "win") {
+        actionsDiv.innerHTML = "";
+
+        if (result === "win") { // Player won the battle
             separateLog();
             logDiv.innerHTML += `<div style="color:green;font-weight:bold;">You won!</div>`;
             const contBtn = document.createElement("button");
             contBtn.textContent = "Continue";
             contBtn.onclick = () => {
                 const exp = enemy.exp || Math.floor(Math.random() * 10 + 10);
+                const gold = enemy.gold || Math.floor(Math.random() * 10 + 5);
                 const leveledUp = addExp(player, exp);
                 if (typeof window.updateCharacterUI === "function") window.updateCharacterUI();
-                if (leveledUp) logDiv.innerHTML += `<div style="color:gold;font-weight:bold;">Level Up! You are now level ${player.level}!</div>`;
+                if (leveledUp) {
+                    logDiv.innerHTML += `<div style="color:gold;font-weight:bold;">Level Up! You are now level ${player.level}!</div>`;
+                }
                 modal.style.display = "none";
                 onBattleEnd("win");
             };
             actionsDiv.appendChild(contBtn);
-        } else if (result === "escape") {
+            separateLog();
+        } else if (result === "escape") { // Player escaped the battle
+            // Add grouped log to history for escape
             logDiv.innerHTML += `<div style="color:orange;font-weight:bold;">You escaped!</div>`;
             const contBtn = document.createElement("button");
             contBtn.textContent = "Continue";
@@ -89,7 +85,8 @@ export function startBattle(player, enemy, onBattleEnd) {
                 onBattleEnd("escape");
             };
             actionsDiv.appendChild(contBtn);
-        } else if (result === "lose") {
+        }
+        else if (result === "lose") { // Player lost the battle
             separateLog();
             logDiv.innerHTML += `<div style="color:red;font-weight:bold;">You died!</div>`;
             const contBtn = document.createElement("button");
@@ -101,77 +98,130 @@ export function startBattle(player, enemy, onBattleEnd) {
         }
     }
 
+    // this function will add the messages of the battle together in a div until the next turn
+    function addLog(msg) {
+        battleLog.push(msg);
+
+        // show last 2 battle-log-groups in the recentDiv
+        const recentGroups = battleLog.slice().map(m => `<div>${m}</div>`).join("");
+        recentDiv.innerHTML = recentGroups;
+
+        // Add to history log
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    // this function will separate the messages of the battle together in a div until the next turn
+    function separateLog() {
+        if (battleLog.length === 0) return; // Nothing to group
+
+        const grouped = battleLog.join(' ');
+
+
+        // Display in logDiv
+        logDiv.innerHTML += `<div class="battle-log-group">${grouped}</div>`;
+
+        // Save this group for history
+        groupedBattleLogs.push(grouped);
+
+        // Clear current turn log
+        battleLog = [];
+    }
+
+    // function to control the turn order and actions
     function nextTurn() {
         updateStats();
+
         regenMp && regenMp();
-        updateStatuses(player, addLog);
-        updateStatuses(enemy, addLog);
+
+        // Example: apply burn
+        // applyStatus(enemy, 'burn', 3);
+
+
+        //updateStatuses(player, addLog);
+        //updateStatuses(enemy, addLog);
+
 
         if (player.life <= 0) return showResult("lose");
         if (enemy.life <= 0) return showResult("win");
 
+        // player base speed and accuracy calculations
         let effectivePlayerSpeed = player.secondary?.speed || 0;
         let effectivePlayerAccuracy = 1;
-
-        if (isStatusActive(player, 'pin')) {
+        // if player is pinned or frozen, set speed to 0 and accuracy to 0.5
+        if (isStatusActive(player, 'pinned')) {
             effectivePlayerSpeed = 0;
             effectivePlayerAccuracy = 0.5;
         }
 
+        // enemy base speed and accuracy calculations
         let effectiveEnemySpeed = enemy.secondary?.speed || enemy.speed || 0;
         let effectiveEnemyAccuracy = 1;
-
-        if (isStatusActive(enemy, 'pin')) {
+        //if enemy is pinned, set speed to 0 and accuracy to 0.5
+        if (enemy.status && enemy.status.pin > 0) {
             effectiveEnemySpeed = 0;
             effectiveEnemyAccuracy = 0.0;
         }
 
         actionsDiv.innerHTML = "";
-
-        if (playerTurn) {
+        /*player turn logic*/ if (playerTurn) {
             separateLog();
-
-            if (isStatusActive(player, 'stun') || isStatusActive(player, 'freeze')) {
+            if (isStatusActive(player, 'stunned') || isStatusActive(player, 'frozen')) {
                 addLog(`${player.name} is unable to move!`);
-                player.status.stun = Math.max(0, player.status.stun - 1);
-                player.status.freeze = Math.max(0, player.status.freeze - 1);
                 playerTurn = false;
                 setTimeout(nextTurn, 1000);
                 return;
             }
 
-            const abilityDiv = document.createElement("div");
-            abilityDiv.className = "ability";
-            abilityDiv.style.display = "none";
-            actionsDiv.appendChild(abilityDiv);
+            actionsDiv.innerHTML = ""; // Clear previous actions
 
-            const consumablesDiv = document.createElement("div");
-            consumablesDiv.className = "consumables";
-            consumablesDiv.style.display = "none";
-            actionsDiv.appendChild(consumablesDiv);
 
+            // create the ability toggle button
             const abilityToggleBtn = document.createElement("button");
             abilityToggleBtn.textContent = "Abilities";
+
             abilityToggleBtn.onclick = () => {
-                abilityDiv.style.display = abilityDiv.style.display === "grid" ? "none" : "grid";
-                consumablesDiv.style.display = "none";
+                const isVisible = abilityDiv.style.display === "grid";
+                abilityDiv.style.display = isVisible ? "none" : "grid";
+                consumablesDiv.style.display = "none";  // Always hide items when showing abilities
             };
             actionsDiv.appendChild(abilityToggleBtn);
 
+
+            // Create the consumables toggle button
             const itemsToggleBtn = document.createElement("button");
             itemsToggleBtn.textContent = "Items";
+
             itemsToggleBtn.onclick = () => {
-                consumablesDiv.style.display = consumablesDiv.style.display === "grid" ? "none" : "grid";
-                abilityDiv.style.display = "none";
+                const isVisible = consumablesDiv.style.display === "grid";
+                consumablesDiv.style.display = isVisible ? "none" : "grid";
+                abilityDiv.style.display = "none";  // Always hide abilities when showing items
             };
             actionsDiv.appendChild(itemsToggleBtn);
 
-            Object.entries(player.abilities).forEach(([key, ability]) => {
+
+            // Create the ability div inside actionsDiv
+            const abilityDiv = document.createElement("div");
+            abilityDiv.className = "ability";
+            abilityDiv.style.display = "none"; // Hide initially
+            actionsDiv.appendChild(abilityDiv);
+
+
+            // Create the consumable div inside actionsDiv
+            const consumablesDiv = document.createElement("div");
+            consumablesDiv.className = "consumables";
+            consumablesDiv.style.display = "none"; // Hide initially
+            actionsDiv.appendChild(consumablesDiv);
+
+
+            // Show a button for each ability based on player's ability IDs
+            const playerAbilities = getAbilities(player.abilityIds || []);
+            Object.entries(playerAbilities).forEach(([abilityId, ability]) => {
                 const btn = document.createElement("button");
                 btn.textContent = `${ability.name} (${ability.mpCost || 0} MP)`;
 
+                // Only disable buff abilities if their buff is active
                 let buffActive = false;
-                if (ability.type === "buff" && ability.attribute && player.activeBoosts[ability.attribute]?.turns > 0) {
+                if (ability.type === "buff" && ability.attribute && player.activeBoosts[ability.attribute] && player.activeBoosts[ability.attribute].turns > 0) {
                     buffActive = true;
                 }
                 btn.disabled = player.mana < (ability.mpCost || 0) || buffActive;
@@ -182,62 +232,40 @@ export function startBattle(player, enemy, onBattleEnd) {
 
                     if (ability.type === "physical" || ability.type === "magic") {
                         addLog(`${player.name}`);
-                        
-                        // Check if enemy is flying and attack is close range
-                        if (isStatusActive(enemy, 'fly') && ability.range === "close") {
-                            // Check if player is also flying (can hit flying targets with close attacks)
-                            if (!isStatusActive(player, 'fly')) {
-                                addLog(`${player.name} cannot reach the flying ${enemy.name} with a close attack!`);
-                                playerTurn = false;
-                                nextTurn();
-                                return;
-                            }
-                        }
-                        
-                        const baseAccuracy = ability.accuracy ?? 100;
+                        const baseAccuracy = ability.accuracy !== undefined ? ability.accuracy : 100;
                         let finalAccuracy = baseAccuracy + (effectivePlayerSpeed - effectiveEnemySpeed) * 2;
                         finalAccuracy = Math.max(5, Math.min(100, finalAccuracy));
                         finalAccuracy = Math.floor(finalAccuracy * effectivePlayerAccuracy);
                         const roll = Math.floor(Math.random() * 100) + 1;
-
                         if (roll <= finalAccuracy) {
                             addLog(ability.onHit || `${player.name} used ${ability.name}!`);
-
-                            // If player used a close attack while flying, they land
-                            if (ability.range === "close" && isStatusActive(player, 'fly')) {
-                                player.status.fly = 0;
-                                addLog(`${player.name} lands after using a close attack!`);
-                            }
-
-                            if (isStatusActive(player, 'pin')) {
-                                player.status.pin = 0;
+                            if (isStatusActive(player, 'pinned')) {
+                                applyStatus(player, 'pinned', 0); // Remove pin
                                 addLog(`The attack made ${enemy.name} tumble backward and ${player.name} is no longer pinned!`);
                             }
 
-                            let base = Math.floor(Math.random() * (ability.maxDamage - ability.minDamage + 1)) + ability.minDamage;
-                            let attackStat = 0, defenseStat = 0;
 
+                            // Calculate damage
+                            let base = Math.floor(Math.random() * (ability.maxDamage - ability.minDamage + 1)) + ability.minDamage;
+                            let attackStat;
+                            let defenseStat;
                             if (ability.type === "magic") {
-                                attackStat = base + (player.secondary?.magicDamage || 0);
+                                attackStat = base + player.secondary?.magicDamage || 0;
                                 defenseStat = enemy.secondary?.magicDefense || 0;
                             } else if (ability.type === "physical") {
-                                attackStat = base + (player.secondary?.physicalDamage || 0);
+                                attackStat = base + player.secondary?.physicalDamage || 0;
                                 defenseStat = enemy.secondary?.physicalDefense || 0;
+                            } else {
+                                attackStat = 0;
+                                defenseStat = 0;
                             }
-
                             let dmg = Math.max(0, base + attackStat - defenseStat);
-                            
-                            // If target is flying and hit by ranged attack, they fall and take fall damage
-                            if (isStatusActive(enemy, 'fly') && ability.range === "ranged") {
-                                enemy.status.fly = 0;
-                                const fallDamage = Math.floor((enemy.weight || 50) / 10); // Fall damage based on weight
-                                dmg += fallDamage;
-                                addLog(`${enemy.name} is knocked out of the air and takes ${fallDamage} fall damage!`);
-                            }
-                            
                             enemy.life -= dmg;
 
-                            if (dmg !== 0) addLog(`${dmg} damage!`);
+                            if (dmg !== 0) {
+                                // Log the damage dealt
+                                addLog(`${dmg} damage!`);
+                            }
 
                             if (ability.effect && Math.random() < (ability.effect.chance || 1)) {
                                 const statusTarget = ability.effect.target === 'self' ? player : enemy;
@@ -258,14 +286,16 @@ export function startBattle(player, enemy, onBattleEnd) {
                     } else if (ability.type === "buff") {
                         if (!player.activeBoosts[ability.attribute] || player.activeBoosts[ability.attribute].turns <= 0) {
                             player.attributes[ability.attribute] += ability.amount;
-                            player.activeBoosts[ability.attribute] = { amount: ability.amount, turns: ability.turns };
+                            player.activeBoosts[ability.attribute] = {
+                                amount: ability.amount,
+                                turns: ability.turns
+                            };
                             if (typeof window.updateSecondaryStats === "function") window.updateSecondaryStats(player);
                             addLog(`${player.name} uses ${ability.name} and gains +${ability.amount} ${ability.attribute} for ${ability.turns} turns!`);
                         } else {
                             addLog(`${ability.name} is already active!`);
                         }
                     }
-
                     updateStats();
                     playerTurn = false;
                     nextTurn();
@@ -274,6 +304,8 @@ export function startBattle(player, enemy, onBattleEnd) {
                 abilityDiv.appendChild(btn);
             });
 
+
+            // Create the consumables div inside actionsDiv
             Object.entries(getInventory()).forEach(([itemId, count]) => {
                 const itemDef = items[itemId];
                 if (itemDef && itemDef.type === "consumable" && count > 0) {
@@ -293,24 +325,29 @@ export function startBattle(player, enemy, onBattleEnd) {
                     consumablesDiv.appendChild(btn);
                 }
             });
+            actionsDiv.appendChild(consumablesDiv);
 
+
+            // Create a container for the Escape/Struggle button
             const escapeDiv = document.createElement("div");
             escapeDiv.className = "escape-container";
-            escapeDiv.style.marginTop = "10px";
+            escapeDiv.style.marginTop = "10px";  // optional spacing for separation
 
-            if (isStatusActive(player, 'pin')) {
+            // Escape button
+            if (isStatusActive(player, 'pinned')) {
+                // Player is pinned, show struggle button
                 const struggleBtn = document.createElement("button");
                 struggleBtn.textContent = "Struggle";
                 struggleBtn.onclick = () => {
                     const roll = Math.floor(Math.random() * 20) + 1;
-                    const playerStrengthBonus = (player.attributes?.strength || 10) - 10;
+                    const playerStrengthBonus = player.attributes?.strength - 10 || 0;
                     const enemyWeight = enemy.weight || 0;
-                    const struggleScore = Math.floor(roll + playerStrengthBonus - (enemyWeight / 10));
+                    const struggleScore = Math.floor(roll + (playerStrengthBonus) - (enemyWeight / 10));
                     addLog(`${player.name} Struggles! (Roll: ${roll} + Strength Bonus: ${playerStrengthBonus} - Enemy Weight/10: ${enemyWeight}/10 = ${struggleScore})`);
 
                     if (struggleScore > 10) {
                         addLog(`${player.name} Manages to push ${enemy.name} away!`);
-                        player.status.pin = 0;
+                        applyStatus(player, 'pinned', 0); // Remove pin
                         playerTurn = false;
                         setTimeout(nextTurn, 1000);
                     } else {
@@ -320,7 +357,9 @@ export function startBattle(player, enemy, onBattleEnd) {
                     }
                 };
                 escapeDiv.appendChild(struggleBtn);
+
             } else {
+                // Player is not pinned, show escape button
                 const escapeBtn = document.createElement("button");
                 escapeBtn.textContent = "Escape";
                 escapeBtn.onclick = () => {
@@ -342,45 +381,54 @@ export function startBattle(player, enemy, onBattleEnd) {
                 escapeDiv.appendChild(escapeBtn);
             }
 
+            // Finally, append the escapeDiv to actionsDiv
             actionsDiv.appendChild(escapeDiv);
 
-        } else { /* Enemy turn logic */
+
+        } /*Enemy turn logic*/ else {
             separateLog();
             setTimeout(() => {
-                // Filter attacks based on player status
-                let availableAttacks = enemy.attacks.filter(atk => {
-                    if (!atk.requiresStatus) return true;
-                    return isStatusActive(player, atk.requiresStatus);
+                // Get enemy abilities based on their ability IDs
+                const enemyAbilities = getAbilities(enemy.abilityIds || []);
+                const availableAbilityIds = Object.keys(enemyAbilities).filter(abilityId => {
+                    const ability = enemyAbilities[abilityId];
+                    if (!ability.requiresStatus) return true;
+                    return isStatusActive(player, ability.requiresStatus);
                 });
+                
+                // Fallback: if no abilities are available, use any ability
+                if (availableAbilityIds.length === 0) availableAbilityIds = Object.keys(enemyAbilities);
 
-                // Fallback: if no attacks are available, use any attack
-                if (availableAttacks.length === 0) availableAttacks = enemy.attacks;
-
-                // Weighted random: favorite attacks appear more often
+                // Weighted random: favorite abilities appear more often
                 let weighted = [];
-                availableAttacks.forEach(atk => {
-                    if (atk.favorite) {
-                        weighted.push(atk, atk, atk, atk);
+                availableAbilityIds.forEach(abilityId => {
+                    const ability = enemyAbilities[abilityId];
+                    if (ability.favorite) {
+                        // Add the ability multiple times to increase its chance (e.g., 4x)
+                        weighted.push(abilityId, abilityId, abilityId, abilityId);
                     } else {
-                        weighted.push(atk, atk, atk);
+                        weighted.push(abilityId, abilityId, abilityId); // Normal abilities appear three times
                     }
                 });
-
-                let attack = weighted[Math.floor(Math.random() * weighted.length)];
-                const baseAccuracy = attack.accuracy !== undefined ? attack.accuracy : 100;
+                
+                const selectedAbilityId = weighted[Math.floor(Math.random() * weighted.length)];
+                const ability = enemyAbilities[selectedAbilityId];
+                
+                const baseAccuracy = ability.accuracy !== undefined ? ability.accuracy : 100;
                 let finalAccuracy = baseAccuracy + (effectiveEnemySpeed - effectivePlayerSpeed) * 2;
                 finalAccuracy = Math.max(5, Math.min(100, finalAccuracy));
                 finalAccuracy = Math.floor(finalAccuracy * effectiveEnemyAccuracy);
                 const roll = Math.floor(Math.random() * 100) + 1;
 
-                addLog(`${enemy.name} used ${attack.name}` + (attack.description ? `: ${attack.description}` : ""));
 
-                // Check if attack can hit based on flying status and range
-                if (attack.type === "physical" || attack.type === "magic") {
-                    // Check if player is flying and attack is close range
-                    if (isStatusActive(player, 'fly') && attack.range === "close") {
+                addLog(`${enemy.name} used ${ability.name}` + (ability.description ? `: ${ability.description}` : ""));
+
+                // Check if ability can hit based on flying status and range
+                if (ability.type === "physical" || ability.type === "magic") {
+                    // Check if player is flying and ability is close range
+                    if (isStatusActive(player, 'flying') && ability.range === "close") {
                         // Check if enemy is also flying (can hit flying targets with close attacks)
-                        if (!isStatusActive(enemy, 'fly')) {
+                        if (!isStatusActive(enemy, 'flying')) {
                             addLog(`${enemy.name} cannot reach the flying ${player.name} with a close attack!`);
                             playerTurn = true;
                             setTimeout(nextTurn, 1000);
@@ -391,89 +439,84 @@ export function startBattle(player, enemy, onBattleEnd) {
 
                 if (roll <= finalAccuracy) {
                     // HIT!
-                    addLog(attack.onHit || `${enemy.name}'s attack hits!`);
+                    addLog(ability.onHit || `${enemy.name}'s ability hits!`);
 
-                    // If enemy used a close attack while flying, they land
-                    if (attack.range === "close" && isStatusActive(enemy, 'fly')) {
-                        enemy.status.fly = 0;
-                        addLog(`${enemy.name} lands after using a close attack!`);
+                    // If enemy used a close ability while flying, they land
+                    if (ability.range === "close" && isStatusActive(enemy, 'flying')) {
+                        enemy.status.flying = 0;
+                        addLog(`${enemy.name} lands after using a close ability!`);
                     }
 
                     // If the player is pinned and the enemy uses a move with removesPin, remove pin
-                    if (isStatusActive(player, 'pin') && attack.removesPin) {
-                        player.status.pin = 0;
+                    if (isStatusActive(player, 'pinned') && ability.removesPin) {
+                        applyStatus(player, 'pinned', 0); // Remove pin
                         addLog(`${player.name} is no longer pinned!`);
                     }
 
                     // If the enemy is pinned and hits the player, remove pin
-                    if (isStatusActive(enemy, 'pin')) {
-                        enemy.status.pin = 0;
+                    if (isStatusActive(enemy, 'pinned')) {
+                        applyStatus(enemy, 'pinned', 0); // Remove pin
                         addLog(`The attack made ${player.name} tumble backward and ${enemy.name} is no longer pinned!`);
                     }
 
-                    // Calculate damage
-                    let base = Math.floor(Math.random() * (attack.maxDamage - attack.minDamage + 1)) + attack.minDamage;
-                    let attackStat;
-                    let defenseStat;
+                    // Calculate damage (only for physical/magic abilities)
+                    if (ability.type === "physical" || ability.type === "magic") {
+                        let base = Math.floor(Math.random() * (ability.maxDamage - ability.minDamage + 1)) + ability.minDamage;
+                        let attackStat;
+                        let defenseStat;
+                        if (ability.type === "magic") {
+                            attackStat = base + (enemy.secondary?.magicDamage || 0);
+                            defenseStat = player.secondary?.magicDefense || 0;
+                        } else if (ability.type === "physical") {
+                            attackStat = base + (enemy.secondary?.physicalDamage || 0);
+                            defenseStat = player.secondary?.physicalDefense || 0;
+                        } else {
+                            attackStat = 0;
+                            defenseStat = 0;
+                        }
+                        let dmg = Math.max(0, base + attackStat - defenseStat);
 
-                    if (attack.type === "magic") {
-                        attackStat = base + (enemy.secondary?.magicDamage || 0);
-                        defenseStat = player.secondary?.magicDefense || 0;
-                    } else if (attack.type === "physical") {
-                        attackStat = base + (enemy.secondary?.physicalDamage || 0);
-                        defenseStat = player.secondary?.physicalDefense || 0;
-                    } else {
-                        attackStat = 0;
-                        defenseStat = 0;
+                        // If target (player) is flying and hit by ranged ability, they fall and take fall damage
+                        if (isStatusActive(player, 'flying') && ability.range === "ranged") {
+                            applyStatus(player, 'flying', 0); // Remove flying
+                            const fallDamage = Math.floor((player.weight || 70) / 10); // Fall damage based on weight (default 70kg for player)
+                            dmg += fallDamage;
+                            addLog(`${player.name} is knocked out of the air and takes ${fallDamage} fall damage!`);
+                        }
+
+                        if (dmg !== 0) {
+                            // Log the damage dealt
+                            addLog(`${dmg} damage!`);
+                            player.life -= dmg;
+                            updateLifeBar(player.life, player.maxLife);
+                        }
                     }
 
-                    let dmg = Math.max(0, base + attackStat - defenseStat);
-
-                    // If target (player) is flying and hit by ranged attack, they fall and take fall damage
-                    if (isStatusActive(player, 'fly') && attack.range === "ranged") {
-                        player.status.fly = 0;
-                        const fallDamage = Math.floor((player.weight || 70) / 10); // Fall damage based on weight (default 70kg for player)
-                        dmg += fallDamage;
-                        addLog(`${player.name} is knocked out of the air and takes ${fallDamage} fall damage!`);
-                    }
-
-                    if (dmg !== 0) {
-                        addLog(`${dmg} damage!`);
-                        player.life -= dmg;
-                        updateLifeBar(player.life, player.maxLife);
-                    }
-
-                    if (attack.effect && Math.random() < (attack.effect.chance || 1)) {
-                        const statusTarget = attack.effect.target === 'self' ? enemy : player;
+                    if (ability.effect && Math.random() < (ability.effect.chance || 1)) {
+                        const statusTarget = ability.effect.target === 'self' ? enemy : player;
                         applyStatus(
                             statusTarget,
-                            attack.effect.type,
-                            attack.effect.turns || 1,
+                            ability.effect.type,
+                            ability.effect.turns || 1,
                             addLog,
-                            attack.effect.permanent || false
+                            ability.effect.permanent || false
                         );
                     }
-
-
                 } else {
                     // MISS!
-                    addLog(`${enemy.name} uses ${attack.name} but you dodge!`);
+                    addLog(`${enemy.name} uses ${ability.name} but you dodge!`);
+                    // addLog(ability.onMiss || `${enemy.name}'s ability misses!`); use this if you want a custom message for each ability
                 }
-
+                
+                // Update status effects for both player and enemy
+                updateStatuses(player, addLog);
+                updateStatuses(enemy, addLog);
+                
                 playerTurn = true;
                 nextTurn();
             }, 1000);
         }
     }
-
-    modal.style.display = "block";
-    logDiv.innerHTML = "";
-    logDiv.style.display = "none";
-
-    showHistoryBtn.onclick = function () {
-        logDiv.style.display = logDiv.style.display === "none" ? "" : "none";
-        showHistoryBtn.textContent = logDiv.style.display === "none" ? "Show Battle History" : "Hide Battle History";
-    };
 
     nextTurn();
 }

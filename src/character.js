@@ -21,7 +21,7 @@ function updateSecondaryStats(player) {
   player.secondary.manaRegen = Math.floor(player.attributes.intelligence / 2) - 1;
   if (player.secondary.manaRegen < 0) player.secondary.manaRegen = 0; // Ensure no negative regen
 
-    // Speed is based on dexterity, but can be adjusted as needed
+  // Speed is based on dexterity, but can be adjusted as needed
   player.secondary.speed = Math.floor(player.attributes.dexterity / 1.5) - 5;
   if (player.secondary.speed < 0) player.secondary.speed = 0; // Ensure no negative speed
 
@@ -41,8 +41,7 @@ function updateSecondaryStats(player) {
   player.secondary.magicDefense = Math.floor(player.attributes.intelligence * 0.5) - 5;
   if (player.secondary.magicDefense < 0) player.secondary.magicDefense = 0; // Ensure no negative defense
 
-
-  // Add physical defense from all equipped items
+    // Add physical defense from all equipped items
   for (const slot of Object.keys(player.equipment)) {
     const eq = player.equipment[slot];
     if (eq && eq.modifiers && typeof eq.modifiers.physicalDefense === "number") {

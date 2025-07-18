@@ -1,0 +1,135 @@
+// abilities.js - Dynamic ability loading system
+
+export const AbilityRegistry = {};
+
+// Make abilities functions available globally for items
+window.abilities = {
+    learnAbility: null, // Will be set after function definition
+    learnMultipleAbilities: null
+};
+
+/**
+ * Dynamically loads all abilities from a manifest.
+ */
+export async function loadAbilities(abilityManifest, abilityBasePath = "../story-content/story01-battle-st/abilities/") {
+    if (!Array.isArray(abilityManifest)) {
+        throw new TypeError('abilityManifest must be an array');
+    }
+    
+    for (let ability of abilityManifest) {
+        try {
+            const abilityModule = await import(`${abilityBasePath}${ability.file}`);
+            AbilityRegistry[ability.id] = abilityModule.default;
+        } catch (e) {
+            console.error(`Failed to load ability: ${ability.file}`, e);
+        }
+    }
+}
+
+/**
+ * Get an ability by ID from the registry
+ */
+export function getAbility(abilityId) {
+    return AbilityRegistry[abilityId];
+}
+
+/**
+ * Get multiple abilities by their IDs
+ */
+export function getAbilities(abilityIds) {
+    const abilities = {};
+    for (const id of abilityIds) {
+        if (AbilityRegistry[id]) {
+            abilities[id] = AbilityRegistry[id];
+        } else {
+            console.warn(`Ability ${id} not found in registry`);
+        }
+    }
+    return abilities;
+}
+
+/**
+ * Check if an ability can be used based on requirements
+ */
+export function canUseAbility(user, target, abilityId) {
+    const ability = AbilityRegistry[abilityId];
+    if (!ability) return false;
+    
+    // Check MP cost
+    if (ability.mpCost && user.mana < ability.mpCost) return false;
+    
+    // Check status requirements
+    if (ability.requiresStatus && !isStatusActive(target, ability.requiresStatus)) return false;
+    
+    return true;
+}
+
+// Import status checking function
+import { isStatusActive } from './status.js';
+
+/**
+ * Teach an ability to a player
+ * @param {Object} player - The player object
+ * @param {string} abilityId - The ID of the ability to learn
+ * @param {string} abilityName - The display name of the ability (optional)
+ * @returns {boolean} - true if ability was learned, false if already known
+ */
+export function learnAbility(player, abilityId, abilityName = null) {
+    // Use the actual ability name from registry if not provided
+    if (!abilityName && AbilityRegistry[abilityId]) {
+        abilityName = AbilityRegistry[abilityId].name || abilityId;
+    } else if (!abilityName) {
+        abilityName = abilityId;
+    }
+
+    // Check if player already knows this ability
+    if (player.abilityIds && player.abilityIds.includes(abilityId)) {
+        const message = `${player.name} already knows the ${abilityName} ability!`;
+        if (window.historyLog) {
+            window.historyLog.push({ action: message });
+        }
+        console.log("📜 " + message);
+        return false; // Not learned (already known)
+    }
+
+    // Initialize abilityIds if it doesn't exist
+    if (!player.abilityIds) {
+        player.abilityIds = [];
+    }
+    
+    // Teach the ability to the player
+    player.abilityIds.push(abilityId);
+    
+    const message = `${player.name} learned the ${abilityName} ability!`;
+    if (window.historyLog) {
+        window.historyLog.push({ action: message });
+    }
+    console.log("📜 " + message);
+    
+    return true; // Successfully learned
+}
+
+/**
+ * Learn multiple abilities at once
+ * @param {Object} player - The player object
+ * @param {Array} abilityIds - Array of ability IDs to learn
+ * @returns {Object} - Object with learned count and already known abilities
+ */
+export function learnMultipleAbilities(player, abilityIds) {
+    let learnedCount = 0;
+    let alreadyKnown = [];
+    
+    for (const abilityId of abilityIds) {
+        if (learnAbility(player, abilityId)) {
+            learnedCount++;
+        } else {
+            alreadyKnown.push(abilityId);
+        }
+    }
+    
+    return { learnedCount, alreadyKnown };
+}
+
+// Make functions available globally
+window.abilities.learnAbility = learnAbility;
+window.abilities.learnMultipleAbilities = learnMultipleAbilities;

@@ -28,39 +28,15 @@ export const player = {
   attributePoints: 30,
   attributes: { ...baseAttributes },
   secondary: { ...baseSecondary },
-  abilities: {
-    defense: {
-      name: "Defense Curl",
-      attribute: "defense",
-      amount: 10,
-      turns: 5,
-      mpCost: 10
-    },
-    dexterityBoost: {
-      name: "Agility",
-      attribute: "dexterity",
-      amount: 4,
-      turns: 3
-    },
-    constitutionBoost: {
-      name: "Iron Body",
-      attribute: "constitution",
-      amount: 4,
-      turns: 3
-    },
-    charismaBoost: {
-      name: "Inspire",
-      attribute: "charisma",
-      amount: 4,
-      turns: 3
-    },
-    intelligenceBoost: {
-      name: "Analyze",
-      attribute: "intelligence",
-      amount: 4,
-      turns: 3
-    }
-  },
+  
+  // List of ability IDs that this character can use
+  abilityIds: [
+    "defenseBoost",
+    "dexterityBoost", 
+    "constitutionBoost",
+    "charismaBoost",
+    "intelligenceBoost"
+  ],
   equipment: {
     body: null,
     legs: null,

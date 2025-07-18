@@ -15,7 +15,7 @@ const baseSecondary = {
   manaRegen: 0,
   physicalDamage: 0,
   magicDamage: 0,
-  physicalDefense: 100, // Physical defense stat that will be calculated
+  physicalDefense: 0, // Physical defense stat that will be calculated
   magicDefense: 0, // Magic defense stat that will be calculated
   speed: 0
 };
@@ -23,7 +23,6 @@ const baseSecondary = {
 export let player = {
   name: "Character00",
   id: "character00",
-  weight: 70, // Weight in kg (used for fall damage calculations)
   life: 0,
   mana: 0,
   level: 1,
@@ -32,11 +31,19 @@ export let player = {
   attributes: { ...baseAttributes },
   secondary: { ...baseSecondary },
 
-  //checks the buffs
-  activeBoosts: {},
-
-  status: {},
-
+  // List of ability IDs that this character can use
+  abilityIds: [
+    "quickAttack",
+    "forcePalm",
+    "heal",
+    "defenseBoost",
+    "strengthBoost",
+    "dexterityBoost",
+    "constitutionBoost",
+    "charismaBoost",
+    "poison",
+    "stun"
+  ],
   // equipment slots
   equipment: {
     body: null,
@@ -46,149 +53,16 @@ export let player = {
     hand: null,
     weapon: null
   },
-
-  /*
-  abilities of the character
-   * Abilities of the character can be of type "attack", "heal", or "buff".
-   * Each ability has a name, type, minDamage, maxDamage, accuracy, mpCost,
-   * description, onHit message, onMiss message, and optional effects.
-   * The buff abilities will modify the character's attributes for a certain number of turns.
-   */
-
-  abilities: {
-    quickAttack: {
-      name: "Quick Attack",
-      type: "physical", // Changed to physical for clarity
-      range: "close", // Close combat attack
-      minDamage: 80,
-      maxDamage: 80,
-      accuracy: 95,
-      mpCost: 0,
-      description: "Character00 uses a fast strike to hit the enemy.",
-      onHit: "Character00's quick attack hits the enemy!",
-      onMiss: "Character00's quick attack misses!"
-    },
-    test: {
-      name: "poison",
-      type: "physical",
-      range: "close", // Close combat attack
-      minDamage: 0,
-      maxDamage: 0,
-      accuracy: 95,
-      mpCost: 0,
-      effect: { type: "poison", chance: 1, turns: 4 },
-      description: "Character00 uses a fast strike to hit the enemy.",
-      onHit: "Character00's quick attack hits the enemy!",
-      onMiss: "Character00's quick attack misses!"
-    },
-    teste2: {
-      name: "stun",
-      type: "attack",
-      range: "close", // Close combat attack
-      minDamage: 0,
-      maxDamage: 0,
-      accuracy: 95,
-      mpCost: 0,
-      effect: { type: "stun", chance: 1, turns: 2 },
-      description: "Character00 uses a fast strike to hit the enemy.",
-      onHit: "Character00's quick attack hits the enemy!",
-      onMiss: "Character00's quick attack misses!"
-    },
-    asdawdasdafa: {
-      name: "asdawdasdafa",
-      type: "attack",
-      range: "close", // Close combat attack
-      minDamage: 80,
-      maxDamage: 80,
-      accuracy: 95,
-      mpCost: 0,
-      description: "Character00 uses a fast strike to hit the enemy.",
-      onHit: "Character00's quick attack hits the enemy!",
-      onMiss: "Character00's quick attack misses!"
-    },
-    forcePalm: {
-      name: "Force Palm",
-      type: "attack",
-      range: "close", // Close combat attack
-      minDamage: 10,
-      maxDamage: 18,
-      accuracy: 90,
-      mpCost: 8,
-      effect: { type: "stun", chance: 0.3, turns: 1 }
-    },
-    magicMissile: {
-      name: "Magic Missile",
-      type: "magic",
-      range: "ranged", // Ranged attack - can hit flying enemies
-      minDamage: 15,
-      maxDamage: 25,
-      accuracy: 85,
-      mpCost: 10,
-      description: "Character00 launches a magical projectile at the enemy.",
-      onHit: "Character00's magic missile strikes the target!",
-      onMiss: "Character00's magic missile misses its target!"
-    },
-    heal: {
-      name: "Quick Heal",
-      type: "heal",
-      amount: 20,
-      mpCost: 8
-    },
-    defense: {
-      name: "Defense Curl",
-      type: "buff",
-      attribute: "defense",
-      amount: 10,
-      turns: 5,
-      mpCost: 10
-    },
-    strengthBoost: {
-      name: "Power Up",
-      type: "buff",
-      attribute: "strength",
-      amount: 4,
-      turns: 3,
-      mpCost: 12
-    },
-    dexterityBoost: {
-      name: "Agility",
-      type: "buff",
-      attribute: "dexterity",
-      amount: 4,
-      turns: 3,
-      mpCost: 12
-    },
-    constitutionBoost: {
-      name: "Iron Body",
-      type: "buff",
-      attribute: "constitution",
-      amount: 4,
-      turns: 3,
-      mpCost: 12
-    },
-    charismaBoost: {
-      name: "Inspire",
-      type: "buff",
-      attribute: "charisma",
-      amount: 4,
-      turns: 3,
-      mpCost: 12
-    }
-  },
-
-
+  //checks the buffs
+  activeBoosts: {},
   //resets the character
   reset() {
     for (const key in baseAttributes) {
       this.attributes[key] = baseAttributes[key];
     }
-    // Don't reset secondary stats - they will be recalculated by updateSecondaryStats()
-    // Only reset the non-calculated secondary stats
-    this.secondary.maxLife = baseSecondary.maxLife;
-    this.secondary.maxMana = baseSecondary.maxMana;
-    this.secondary.manaRegen = baseSecondary.manaRegen;
-    // Keep physicalDefense and magicDefense as they are calculated from equipment
-    
+    for (const key in baseSecondary) {
+      this.secondary[key] = baseSecondary[key];
+    }
     this.life = this.maxLife;
     this.mana = this.maxMana;
     this.activeBoosts = {};

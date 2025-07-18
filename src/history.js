@@ -1,5 +1,8 @@
 export let historyLog = [];
 
+// Make historyLog available globally for items
+window.historyLog = historyLog;
+
 // updates the history panel with the current history log and adds the ability to toggle battle logs in the history panel
 function updateHistoryPanel() {
   const panel = document.getElementById("history-panel");

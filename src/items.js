@@ -5,32 +5,54 @@ import { updateSecondaryStats } from './character.js';
 
 export let items = {};
 
+// Debug access to items
+window._debugItems = items;
+
 export async function loadItems(storyFolder) {
   // Clear the existing items object
   Object.keys(items).forEach(k => delete items[k]);
 
+  console.log(`Loading items for story: ${storyFolder}`);
 
-
-  const manifestUrl = `../story-content/${storyFolder}/items/_items.json`;
+  const manifestUrl = `../story-content/${storyFolder}/items/_items.json?v=${Date.now()}`;
   const itemList = await fetch(manifestUrl).then(r => r.json());
+  
+  console.log('📜 Raw manifest data:', itemList);
+  console.log('📊 Manifest keys:', Object.keys(itemList));
+  
+  const totalItems = Object.keys(itemList).length;
+  let loadedCount = 0;
+  let failedCount = 0;
 
   for (const [id, itemInfo] of Object.entries(itemList)) {
     let itemId = id.toLowerCase();
     if (itemInfo.file) {
-      const itemModule = await import(`../story-content/${storyFolder}/${itemInfo.file}?v=${Date.now()}`);
-      itemId = (itemModule.item.id || id).toLowerCase();
-      items[itemId] = itemModule.item;
+      try {
+        const itemModule = await import(`../story-content/${storyFolder}/${itemInfo.file}?v=${Date.now()}`);
+        itemId = (itemModule.item.id || id).toLowerCase();
+        items[itemId] = itemModule.item;
+        console.log(`✅ Loaded item: ${itemId}`);
+        loadedCount++;
+      } catch (error) {
+        console.error(`❌ Failed to load item ${id} from ${itemInfo.file}:`, error);
+        failedCount++;
+      }
     } else {
       items[itemId] = itemInfo;
+      console.log(`✅ Loaded item (inline): ${itemId}`);
+      loadedCount++;
     }
   }
+  
+  console.log(`📦 Item loading complete: ${loadedCount}/${totalItems} successful, ${failedCount} failed`);
+  console.log('📋 Available items:', Object.keys(items));
 }
 
-export function equipableItems(player, item) {
+export function equipableItems() {
   // Unequip any item in this slot first
-  const current = player.equipment[item.slot];
-  if (current && current !== item) {
-    // Remove base attribute modifiers of currently equipped item
+  const current = player.equipment[this.slot];
+  if (current && current !== this) {
+    // Remove modifiers of currently equipped item
     for (const [attr, mod] of Object.entries(current.modifiers)) {
       if (player.attributes[attr] !== undefined) {
         player.attributes[attr] -= mod;
@@ -39,29 +61,33 @@ export function equipableItems(player, item) {
     current.equipped = false;
   }
 
-  if (!item.equipped) {
-    // Equip: apply base attribute modifiers only
-    for (const [attr, mod] of Object.entries(item.modifiers)) {
+  if (!this.equipped) {
+    // Equip: apply modifiers
+    for (const [attr, mod] of Object.entries(this.modifiers)) {
       if (player.attributes[attr] !== undefined) {
         player.attributes[attr] += mod;
       }
+      if (attr === "physicalDefense" || attr === "magicDefense") {
+        player.secondary[attr] += mod; // Update secondary stats
+      }
     }
-    item.equipped = true;
-    player.equipment[item.slot] = item;
+    this.equipped = true;
+    player.equipment[this.slot] = this;
+    return true;
   } else {
-    // Unequip: remove base attribute modifiers only
-    for (const [attr, mod] of Object.entries(item.modifiers)) {
+    // Unequip: remove modifiers
+    for (const [attr, mod] of Object.entries(this.modifiers)) {
       if (player.attributes[attr] !== undefined) {
         player.attributes[attr] -= mod;
       }
+      if (attr === "physicalDefense" || attr === "magicDefense") {
+        player.secondary[attr] -= mod; // Update secondary stats
+      }
     }
-    item.equipped = false;
-    player.equipment[item.slot] = null;
+    this.equipped = false;
+    player.equipment[this.slot] = null;
+    return true;
   }
-  
-  // Recalculate secondary stats after equipment change
-  // This will calculate physicalDefense and magicDefense from equipped items
-  updateSecondaryStats(player);
-  updateCharacterUI();
-  return true;
+  updateInventoryBar();
+  updateStoryUI();
 }
