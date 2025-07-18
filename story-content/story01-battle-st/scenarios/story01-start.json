@@ -24,6 +24,10 @@
       {
         "text": "A lot of Potions.",
         "next": "a-lot-potions"
+      },
+      {
+        "text": "Magical Scrolls.",
+        "next": "magical-scrolls"
       }
     ]
   },
@@ -64,6 +68,22 @@
     "items": {
       "potion": 20,
       "metal-armor": 1
+    },
+    "choices": [
+      {
+        "text": "Choose your spawn point",
+        "next": "start-spawn"
+      }
+    ]
+  },
+  "magical-scrolls": {
+    "title": "You found ancient scrolls!",
+    "text": "You discovered a collection of magical scrolls that can teach new abilities! You got a Scroll of Flight, Scroll of Healing, and Scroll of Magic Missile.",
+    "items": {
+      "scroll-of-flight": 1,
+      "scroll-of-healing": 1,
+      "scroll-of-magic-missile": 1,
+      "potion": 2
     },
     "choices": [
       {

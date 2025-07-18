@@ -1,37 +1,57 @@
-[
-    {
+{
+    "potion": {
         "id": "potion",
         "name": "Potion",
         "file": "items/potion.js"
     },
-    {
+    "super-potion": {
         "id": "super-potion",
         "name": "Super Potion",
         "file": "items/super-potion.js"
     },
-    {
+    "mana-potion": {
         "id": "mana-potion",
         "name": "Mana Potion",
         "file": "items/mana-potion.js"
     },
-    {
+    "super-mana-potion": {
         "id": "super-mana-potion",
         "name": "Super Mana Potion",
         "file": "items/super-mana-potion.js"
     },
-    {
+    "metal-armor": {
         "id": "metal-armor",
         "name": "Metal Armor",
         "file": "items/metal-armor.js"
     },
-    {
+    "metal-helmet": {
         "id": "metal-helmet",
         "name": "Metal Helmet",
         "file": "items/metal-helmet.js"
     },
-    {
+    "leather-helmet": {
         "id": "leather-helmet",
         "name": "Leather Helmet",
         "file": "items/leather-helmet.js"
+    },
+    "scroll-of-flight": {
+        "id": "scroll-of-flight",
+        "name": "Scroll of Flight",
+        "file": "items/scroll-of-flight.js"
+    },
+    "scroll-of-healing": {
+        "id": "scroll-of-healing",
+        "name": "Scroll of Healing",
+        "file": "items/scroll-of-healing.js"
+    },
+    "scroll-of-magic-missile": {
+        "id": "scroll-of-magic-missile",
+        "name": "Scroll of Magic Missile",
+        "file": "items/scroll-of-magic-missile.js"
+    },
+    "scroll-of-ancient-wisdom": {
+        "id": "scroll-of-ancient-wisdom",
+        "name": "Scroll of Ancient Wisdom",
+        "file": "items/scroll-of-ancient-wisdom.js"
     }
-]
+}

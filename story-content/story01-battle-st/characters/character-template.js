@@ -13,53 +13,18 @@ export const player = {
   maxLife: 0,
   potions: 0,
   attributes: { ...baseAttributes },
-  abilities: {
-    defense: {
-      name: "Defense Curl",
-      turns: 5,
-      amount: 10
-    },
-    heal: {
-      name: "Quick Heal",
-      amount: 20
-    },
-    strengthBoost: {
-      name: "Power Up",
-      attribute: "strength",
-      amount: 4,
-      turns: 3
-    },
-    dexterityBoost: {
-      name: "Agility",
-      attribute: "dexterity",
-      amount: 4,
-      turns: 3
-    },
-    constitutionBoost: {
-      name: "Iron Body",
-      attribute: "constitution",
-      amount: 4,
-      turns: 3
-    },
-    charismaBoost: {
-      name: "Inspire",
-      attribute: "charisma",
-      amount: 4,
-      turns: 3
-    },
-    wisdomBoost: {
-      name: "Focus",
-      attribute: "wisdom",
-      amount: 4,
-      turns: 3
-    },
-    intelligenceBoost: {
-      name: "Analyze",
-      attribute: "intelligence",
-      amount: 4,
-      turns: 3
-    }
-  },
+  
+  // List of ability IDs that this character can use
+  abilityIds: [
+    "defenseBoost",
+    "heal",
+    "strengthBoost",
+    "dexterityBoost", 
+    "constitutionBoost",
+    "charismaBoost",
+    "wisdomBoost",
+    "intelligenceBoost"
+  ],
   activeBoosts: {},
   reset() {
     // Reset attributes to base values

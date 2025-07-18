@@ -1,0 +1,82 @@
+[
+    {
+        "id": "quickAttack",
+        "name": "Quick Attack",
+        "file": "quick-attack.js"
+    },
+    {
+        "id": "stomp",
+        "name": "Stomp",
+        "file": "stomp.js"
+    },
+    {
+        "id": "tailWhip",
+        "name": "Tail Whip", 
+        "file": "tail-whip.js"
+    },
+    {
+        "id": "fly",
+        "name": "Fly",
+        "file": "fly.js"
+    },
+    {
+        "id": "windSlash",
+        "name": "Wind Slash",
+        "file": "wind-slash.js"
+    },
+    {
+        "id": "forcePalm",
+        "name": "Force Palm",
+        "file": "force-palm.js"
+    },
+    {
+        "id": "heal",
+        "name": "Quick Heal",
+        "file": "heal.js"
+    },
+    {
+        "id": "defenseBoost",
+        "name": "Defense Curl",
+        "file": "defense-boost.js"
+    },
+    {
+        "id": "strengthBoost",
+        "name": "Power Up",
+        "file": "strength-boost.js"
+    },
+    {
+        "id": "dexterityBoost",
+        "name": "Agility",
+        "file": "dexterity-boost.js"
+    },
+    {
+        "id": "constitutionBoost",
+        "name": "Iron Body",
+        "file": "constitution-boost.js"
+    },
+    {
+        "id": "charismaBoost",
+        "name": "Inspire",
+        "file": "charisma-boost.js"
+    },
+    {
+        "id": "wisdomBoost",
+        "name": "Focus",
+        "file": "wisdom-boost.js"
+    },
+    {
+        "id": "magicMissile",
+        "name": "Magic Missile",
+        "file": "magic-missile.js"
+    },
+    {
+        "id": "poison",
+        "name": "Poison Strike",
+        "file": "poison.js"
+    },
+    {
+        "id": "stun",
+        "name": "Stunning Blow",
+        "file": "stun.js"
+    }
+]

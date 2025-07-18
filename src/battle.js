@@ -4,6 +4,8 @@ import { items } from './items.js';
 import { updateSecondaryStats, regenMp } from './character.js';
 import { updateHistoryPanel, historyLog } from './history.js';
 import { updateLifeBar, updateManaBar } from './ui.js';
+import { applyStatus, updateStatuses, statusSummary, isStatusActive } from './status.js';
+import { getAbilities, getAbility } from './abilities.js';
 
 /*import { updateAttributesBar, createAbilityButtons } from './ui.js';
 import { applyStatus, updateStatuses, statusSummary } from './status/_status.js';*/
@@ -22,11 +24,9 @@ export function startBattle(player, enemy, onBattleEnd) {
     let battleLog = [];            // Current "turn" log messages
     let groupedBattleLogs = [];    // All grouped logs for this battle
 
-
     modal.style.display = "block";
     logDiv.innerHTML = "";
     let playerTurn = true;
-    let playerStatus = { stun: 0, burn: 0, freeze: 0, pin: 0 };
 
     showHistoryBtn.onclick = function () {
         if (logDiv.style.display === "none") {
@@ -41,16 +41,8 @@ export function startBattle(player, enemy, onBattleEnd) {
 
     // Initialize player and enemy stats
     function updateStats() {
-        playerStats.innerHTML = `<b>${player.name}</b> <span>HP: ${player.life}/${player.maxLife}</span> <span>MP: ${player.mana}/${player.maxMana}</span>` +
-            (playerStatus.stun ? " <span style='color:orange'>(Stunned)</span>" : "") +
-            (playerStatus.burn ? " <span style='color:red'>(Burned)</span>" : "") +
-            (playerStatus.freeze ? " <span style='color:cyan'>(Frozen)</span>" : "") +
-            (playerStatus.pin ? " <span style='color:purple'>(Pinned)</span>" : "");
-        //playerStats.innerHTML = `<b>${player.name}</b> HP: ${player.life}/${player.maxLife} MP: ${player.mana}/${player.maxMana} ${statusSummary(player)}`;
-        //enemyStats.innerHTML = `<b>${enemy.name}</b> <span>HP: ${enemy.life}/${enemy.maxLife} ${statusSummary(enemy)}</span>`;
-
-        enemyStats.innerHTML = `<b>${enemy.name}</b> <span>HP: ${enemy.life}/${enemy.maxLife}</span>` ;
-
+        playerStats.innerHTML = `<b>${player.name}</b> <span>HP: ${player.life}/${player.maxLife}</span> <span>MP: ${player.mana}/${player.maxMana}</span> <span>Status: ${statusSummary(player)}</span>`;
+        enemyStats.innerHTML = `<b>${enemy.name}</b> <span>HP: ${enemy.life}/${enemy.maxLife}</span> <span>Status: ${statusSummary(enemy)}</span>`;
     }
 
     // shows the result of the battle in the logDiv
@@ -156,7 +148,7 @@ export function startBattle(player, enemy, onBattleEnd) {
         let effectivePlayerSpeed = player.secondary?.speed || 0;
         let effectivePlayerAccuracy = 1;
         // if player is pinned or frozen, set speed to 0 and accuracy to 0.5
-        if (playerStatus.pin > 0) {
+        if (isStatusActive(player, 'pinned')) {
             effectivePlayerSpeed = 0;
             effectivePlayerAccuracy = 0.5;
         }
@@ -173,10 +165,8 @@ export function startBattle(player, enemy, onBattleEnd) {
         actionsDiv.innerHTML = "";
         /*player turn logic*/ if (playerTurn) {
             separateLog();
-            if (playerStatus.stun > 0 || playerStatus.freeze > 0) {
+            if (isStatusActive(player, 'stunned') || isStatusActive(player, 'frozen')) {
                 addLog(`${player.name} is unable to move!`);
-                playerStatus.stun = Math.max(0, playerStatus.stun - 1);
-                playerStatus.freeze = Math.max(0, playerStatus.freeze - 1);
                 playerTurn = false;
                 setTimeout(nextTurn, 1000);
                 return;
@@ -223,8 +213,9 @@ export function startBattle(player, enemy, onBattleEnd) {
             actionsDiv.appendChild(consumablesDiv);
 
 
-            // Show a button for each ability 
-            Object.entries(player.abilities).forEach(([key, ability]) => {
+            // Show a button for each ability based on player's ability IDs
+            const playerAbilities = getAbilities(player.abilityIds || []);
+            Object.entries(playerAbilities).forEach(([abilityId, ability]) => {
                 const btn = document.createElement("button");
                 btn.textContent = `${ability.name} (${ability.mpCost || 0} MP)`;
 
@@ -248,8 +239,8 @@ export function startBattle(player, enemy, onBattleEnd) {
                         const roll = Math.floor(Math.random() * 100) + 1;
                         if (roll <= finalAccuracy) {
                             addLog(ability.onHit || `${player.name} used ${ability.name}!`);
-                            if (playerStatus.pin > 0) {
-                                playerStatus.pin = 0;
+                            if (isStatusActive(player, 'pinned')) {
+                                applyStatus(player, 'pinned', 0); // Remove pin
                                 addLog(`The attack made ${enemy.name} tumble backward and ${player.name} is no longer pinned!`);
                             }
 
@@ -277,9 +268,14 @@ export function startBattle(player, enemy, onBattleEnd) {
                             }
 
                             if (ability.effect && Math.random() < (ability.effect.chance || 1)) {
-                                enemy.status = enemy.status || {};
-                                enemy.status[ability.effect.type] = ability.effect.turns || 1;
-                                addLog(`${enemy.name} is ${ability.effect.type}${ability.effect.turns > 1 ? ` for ${ability.effect.turns} turns` : ""}!`);
+                                const statusTarget = ability.effect.target === 'self' ? player : enemy;
+                                applyStatus(
+                                    statusTarget,
+                                    ability.effect.type,
+                                    ability.effect.turns || 1,
+                                    addLog,
+                                    ability.effect.permanent || false
+                                );
                             }
                         } else {
                             addLog(ability.onMiss || `${player.name}'s attack misses!`);
@@ -338,7 +334,7 @@ export function startBattle(player, enemy, onBattleEnd) {
             escapeDiv.style.marginTop = "10px";  // optional spacing for separation
 
             // Escape button
-            if (playerStatus.pin > 0) {
+            if (isStatusActive(player, 'pinned')) {
                 // Player is pinned, show struggle button
                 const struggleBtn = document.createElement("button");
                 struggleBtn.textContent = "Struggle";
@@ -351,7 +347,7 @@ export function startBattle(player, enemy, onBattleEnd) {
 
                     if (struggleScore > 10) {
                         addLog(`${player.name} Manages to push ${enemy.name} away!`);
-                        playerStatus.pin = 0;
+                        applyStatus(player, 'pinned', 0); // Remove pin
                         playerTurn = false;
                         setTimeout(nextTurn, 1000);
                     } else {
@@ -392,86 +388,130 @@ export function startBattle(player, enemy, onBattleEnd) {
         } /*Enemy turn logic*/ else {
             separateLog();
             setTimeout(() => {
-                // Filter attacks based on player status
-                let availableAttacks = enemy.attacks.filter(atk => {
-                    if (!atk.requiresStatus) return true;
-                    return playerStatus[atk.requiresStatus] > 0;
+                // Get enemy abilities based on their ability IDs
+                const enemyAbilities = getAbilities(enemy.abilityIds || []);
+                const availableAbilityIds = Object.keys(enemyAbilities).filter(abilityId => {
+                    const ability = enemyAbilities[abilityId];
+                    if (!ability.requiresStatus) return true;
+                    return isStatusActive(player, ability.requiresStatus);
                 });
-                // Fallback: if no attacks are available, use any attack
-                if (availableAttacks.length === 0) availableAttacks = enemy.attacks;
+                
+                // Fallback: if no abilities are available, use any ability
+                if (availableAbilityIds.length === 0) availableAbilityIds = Object.keys(enemyAbilities);
 
-                // Weighted random: favorite attacks appear more often
+                // Weighted random: favorite abilities appear more often
                 let weighted = [];
-                availableAttacks.forEach(atk => {
-                    if (atk.favorite) {
-                        // Add the attack multiple times to increase its chance (e.g., 4x)
-                        weighted.push(atk, atk, atk, atk);
+                availableAbilityIds.forEach(abilityId => {
+                    const ability = enemyAbilities[abilityId];
+                    if (ability.favorite) {
+                        // Add the ability multiple times to increase its chance (e.g., 4x)
+                        weighted.push(abilityId, abilityId, abilityId, abilityId);
                     } else {
-                        weighted.push(atk, atk, atk); // Normal attacks appear three times
+                        weighted.push(abilityId, abilityId, abilityId); // Normal abilities appear three times
                     }
                 });
-                let attack = weighted[Math.floor(Math.random() * weighted.length)];
-                const baseAccuracy = attack.accuracy !== undefined ? attack.accuracy : 100;
+                
+                const selectedAbilityId = weighted[Math.floor(Math.random() * weighted.length)];
+                const ability = enemyAbilities[selectedAbilityId];
+                
+                const baseAccuracy = ability.accuracy !== undefined ? ability.accuracy : 100;
                 let finalAccuracy = baseAccuracy + (effectiveEnemySpeed - effectivePlayerSpeed) * 2;
                 finalAccuracy = Math.max(5, Math.min(100, finalAccuracy));
                 finalAccuracy = Math.floor(finalAccuracy * effectiveEnemyAccuracy);
                 const roll = Math.floor(Math.random() * 100) + 1;
 
 
-                addLog(`${enemy.name} used ${attack.name}` + (attack.description ? `: ${attack.description}` : ""));
+                addLog(`${enemy.name} used ${ability.name}` + (ability.description ? `: ${ability.description}` : ""));
+
+                // Check if ability can hit based on flying status and range
+                if (ability.type === "physical" || ability.type === "magic") {
+                    // Check if player is flying and ability is close range
+                    if (isStatusActive(player, 'flying') && ability.range === "close") {
+                        // Check if enemy is also flying (can hit flying targets with close attacks)
+                        if (!isStatusActive(enemy, 'flying')) {
+                            addLog(`${enemy.name} cannot reach the flying ${player.name} with a close attack!`);
+                            playerTurn = true;
+                            setTimeout(nextTurn, 1000);
+                            return;
+                        }
+                    }
+                }
+
                 if (roll <= finalAccuracy) {
                     // HIT!
-                    addLog(attack.onHit || `${enemy.name}'s attack hits!`);
+                    addLog(ability.onHit || `${enemy.name}'s ability hits!`);
+
+                    // If enemy used a close ability while flying, they land
+                    if (ability.range === "close" && isStatusActive(enemy, 'flying')) {
+                        enemy.status.flying = 0;
+                        addLog(`${enemy.name} lands after using a close ability!`);
+                    }
 
                     // If the player is pinned and the enemy uses a move with removesPin, remove pin
-                    if (playerStatus && playerStatus.pin > 0 && attack.removesPin) {
-                        playerStatus.pin = 0;
+                    if (isStatusActive(player, 'pinned') && ability.removesPin) {
+                        applyStatus(player, 'pinned', 0); // Remove pin
                         addLog(`${player.name} is no longer pinned!`);
                     }
 
                     // If the enemy is pinned and hits the player, remove pin
-                    if (enemy.pin > 0) {
-                        enemy.pin = 0;
+                    if (isStatusActive(enemy, 'pinned')) {
+                        applyStatus(enemy, 'pinned', 0); // Remove pin
                         addLog(`The attack made ${player.name} tumble backward and ${enemy.name} is no longer pinned!`);
                     }
 
-                    // Calculate damage
-                    let base = Math.floor(Math.random() * (attack.maxDamage - attack.minDamage + 1)) + attack.minDamage;
-                    let attackStat;
-                    let defenseStat;
-                    if (attack.type === "magic") {
-                        attackStat = base + enemy.secondary?.magicDamage || 0;
-                        defenseStat = player.secondary?.magicDefense || 0;
-                    } else if (attack.type === "physical") {
-                        attackStat = base + enemy.secondary?.physicalDamage || 0;
-                        defenseStat = player.secondary?.physicalDefense || 0;
-                    } else {
-                        attackStat = 0;
-                        defenseStat = 0;
-                    }
-                    let dmg = Math.max(0, base + attackStat - defenseStat);
+                    // Calculate damage (only for physical/magic abilities)
+                    if (ability.type === "physical" || ability.type === "magic") {
+                        let base = Math.floor(Math.random() * (ability.maxDamage - ability.minDamage + 1)) + ability.minDamage;
+                        let attackStat;
+                        let defenseStat;
+                        if (ability.type === "magic") {
+                            attackStat = base + (enemy.secondary?.magicDamage || 0);
+                            defenseStat = player.secondary?.magicDefense || 0;
+                        } else if (ability.type === "physical") {
+                            attackStat = base + (enemy.secondary?.physicalDamage || 0);
+                            defenseStat = player.secondary?.physicalDefense || 0;
+                        } else {
+                            attackStat = 0;
+                            defenseStat = 0;
+                        }
+                        let dmg = Math.max(0, base + attackStat - defenseStat);
 
-                    if (dmg !== 0) {
-                        // Log the damage dealt
-                        addLog(`${dmg} damage!`);
-                        player.life -= dmg;
-                        updateLifeBar(player.life, player.maxLife);
+                        // If target (player) is flying and hit by ranged ability, they fall and take fall damage
+                        if (isStatusActive(player, 'flying') && ability.range === "ranged") {
+                            applyStatus(player, 'flying', 0); // Remove flying
+                            const fallDamage = Math.floor((player.weight || 70) / 10); // Fall damage based on weight (default 70kg for player)
+                            dmg += fallDamage;
+                            addLog(`${player.name} is knocked out of the air and takes ${fallDamage} fall damage!`);
+                        }
+
+                        if (dmg !== 0) {
+                            // Log the damage dealt
+                            addLog(`${dmg} damage!`);
+                            player.life -= dmg;
+                            updateLifeBar(player.life, player.maxLife);
+                        }
                     }
 
-                    if (attack.effect && Math.random() < (attack.effect.chance || 1)) {
-                        playerStatus[attack.effect.type] = attack.effect.turns || 1;
-                        addLog(`${player.name} is ${attack.effect.type}${attack.effect.turns > 1 ? ` for ${attack.effect.turns} turns` : ""}!`);
+                    if (ability.effect && Math.random() < (ability.effect.chance || 1)) {
+                        const statusTarget = ability.effect.target === 'self' ? enemy : player;
+                        applyStatus(
+                            statusTarget,
+                            ability.effect.type,
+                            ability.effect.turns || 1,
+                            addLog,
+                            ability.effect.permanent || false
+                        );
                     }
                 } else {
                     // MISS!
-                    addLog(`${enemy.name} uses ${attack.name} but you dodge!`);
-                    // addLog(attack.onMiss || `${enemy.name}'s attack misses!`); use this if you want a custom message for each attack
+                    addLog(`${enemy.name} uses ${ability.name} but you dodge!`);
+                    // addLog(ability.onMiss || `${enemy.name}'s ability misses!`); use this if you want a custom message for each ability
                 }
-                if (playerStatus.burn > 0) {
-                    player.life -= 2;
-                    addLog(`${player.name} takes 2 burn damage!`);
-                    playerStatus.burn--;
-                }
+                
+                // Update status effects for both player and enemy
+                updateStatuses(player, addLog);
+                updateStatuses(enemy, addLog);
+                
                 playerTurn = true;
                 nextTurn();
             }, 1000);

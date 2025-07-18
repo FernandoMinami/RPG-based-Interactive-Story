@@ -2,31 +2,31 @@
     {
         "id": "flying",
         "name": "Flying",
-        "file": "./flying.js"
+        "file": "flying.js"
     },
     {
         "id": "burned",
         "name": "Burned",
-        "file": "./burned.js"
+        "file": "burned.js"
     },
     {
         "id": "frozen",
         "name": "Frozen",
-        "file": "./frozen.js"
+        "file": "frozen.js"
     },
     {
         "id": "poisoned",
         "name": "Poisoned",
-        "file": "./poisined.js"
+        "file": "poisoned.js"
     },
     {
         "id": "pinned",
         "name": "Pinned",
-        "file": "./pinned.js"
+        "file": "pinned.js"
     },
     {
         "id": "stunned",
         "name": "Stunned",
-        "file": "./stunned.js"
+        "file": "stunned.js"
     }
 ]

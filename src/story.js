@@ -5,6 +5,8 @@ import { updateCharacterUI, updateStoryUI, updateInventoryBar } from './ui.js';
 import { updateSecondaryStats, handleBoosts, regenMp } from './character.js';
 import { historyLog, updateHistoryPanel } from './history.js';
 import { loadItems, items } from './items.js';
+import { loadStatuses } from './status.js';
+import { loadAbilities } from './abilities.js';
 
 
 let stories = [];
@@ -60,6 +62,15 @@ async function loadStory(file) {
   document.getElementById("inventory-modal").style.display = "none";
   document.getElementById("gameover-container").style.display = "none";
   document.getElementById("attributes-bar-container").style.display = "";
+  
+  // Load statuses for this story
+  const statusManifest = await fetch('../story-content/story01-battle-st/statuses/_status.json').then(res => res.json());
+  await loadStatuses(statusManifest, '../story-content/story01-battle-st/statuses/');
+  
+  // Load abilities for this story
+  const abilityManifest = await fetch('../story-content/story01-battle-st/abilities/_abilities.json').then(res => res.json());
+  await loadAbilities(abilityManifest, '../story-content/story01-battle-st/abilities/');
+  
   // Add cache-busting query param
   const response = await fetch(file + "?v=" + Date.now());
   storyData = await response.json();
@@ -100,9 +111,9 @@ async function showCharacterSelection(story) {
       await loadItems(story.folder.replace('./', ''));
       if (typeof player.reset === "function") player.reset();
       updateSecondaryStats(player);
+      await loadStory(`../story-content/${story.file.replace('./', '')}`);
       updateCharacterUI();
       updateStoryUI();
-      await loadStory(`../story-content/${story.file.replace('./', '')}`);
     };
     charDiv.appendChild(btn);
   });
