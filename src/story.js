@@ -55,7 +55,8 @@ async function loadStory(file) {
     console.error("Player not set before loading story!");
     return;
   }
-  player.reset();
+  // Don't reset here - player was already reset during character selection
+  // player.reset();
   playerPath = [];
   historyLog.length = 0;
   document.getElementById("current-character").style.display = "";
@@ -71,15 +72,22 @@ async function loadStory(file) {
   const abilityManifest = await fetch('../story-content/story01-battle-st/abilities/_abilities.json').then(res => res.json());
   await loadAbilities(abilityManifest, '../story-content/story01-battle-st/abilities/');
   
+
   // Add cache-busting query param
+  console.log("Loading story from file:", file);
   const response = await fetch(file + "?v=" + Date.now());
   storyData = await response.json();
+  console.log("Story data loaded:", storyData);
   if (storyData.start) {
     currentNode = "start";
   } else if (storyData.story) {
     currentNode = "story";
   }
-  document.querySelector(".story-container").style.display = "";
+  console.log("Setting story-container to display block");
+  const storyContainer = document.querySelector(".story-container");
+  console.log("Story container element:", storyContainer);
+  storyContainer.style.display = "block";
+  console.log("Story container display style:", storyContainer.style.display);
   updateSecondaryStats(player);
   updateCharacterUI();
   updateStoryUI();
@@ -108,8 +116,8 @@ async function showCharacterSelection(story) {
       applyAttributes = selectedCharacterModule.applyAttributes; charDiv.style.display = "none";
       document.getElementById("current-character-name").textContent = char.name;
       document.getElementById("current-character").style.display = "";
-      await loadItems(story.folder.replace('./', ''));
       if (typeof player.reset === "function") player.reset();
+      await loadItems(story.folder.replace('./', ''));
       updateSecondaryStats(player);
       await loadStory(`../story-content/${story.file.replace('./', '')}`);
       updateCharacterUI();
@@ -133,6 +141,7 @@ async function loadScenario(storyFolder, scenarioId) {
 
 // --- Main story node function ---
 async function showNode(nodeKey) {
+  console.log("showNode called with nodeKey:", nodeKey);
   if (!player || !player.id) {
     console.error("Player not loaded or missing id!", player);
     return;
@@ -440,6 +449,10 @@ document.getElementById("history-toggle-btn").onclick = function () {
 
 // --- Character stats modal with attribute assignment ---
 document.getElementById("show-character-stats-btn").onclick = function () {
+  // Ensure secondary stats are up to date before displaying
+  updateSecondaryStats(player);
+  // print secondary stats in console
+  console.log("Secondary Stats:", player.secondary);
   const modal = document.getElementById("character-stats-modal");
   const title = document.getElementById("character-stats-title");
   const content = document.getElementById("character-stats-content");
@@ -472,6 +485,33 @@ document.getElementById("show-character-stats-btn").onclick = function () {
   });
   html += "</ul>";
 
+  // Add equipment section
+  html += "<strong>Equipment:</strong><br><ul style='list-style:none;padding-left:0;'>";
+  const equipmentSlots = ["head", "body", "legs", "foot", "hand", "weapon"];
+  equipmentSlots.forEach(slot => {
+    const equippedItem = player.equipment[slot];
+    const slotName = slot.charAt(0).toUpperCase() + slot.slice(1);
+    if (equippedItem) {
+      let modifiersText = "";
+      if (equippedItem.modifiers) {
+        const modifiersList = Object.entries(equippedItem.modifiers)
+          .map(([attr, value]) => `${value > 0 ? '+' : ''}${value} ${attr}`)
+          .join(', ');
+        modifiersText = ` (${modifiersList})`;
+      }
+      html += `<li style="margin-bottom:6px;">
+        <span style="display:inline-block;width:80px;">${slotName}:</span>
+        <span style="color:#0066cc;">${equippedItem.name}</span>
+        <span style="color:#666; font-size:0.9em;">${modifiersText}</span>
+      </li>`;
+    } else {
+      html += `<li style="margin-bottom:6px;">
+        <span style="display:inline-block;width:80px;">${slotName}:</span>
+        <span style="color:#999;">None</span>
+      </li>`;
+    }
+  });
+  html += "</ul>";
 
   content.innerHTML = html;
   modal.style.display = "block";
