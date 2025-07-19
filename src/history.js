@@ -23,11 +23,28 @@ function updateHistoryPanel() {
       if (entry.show) {
         const logDiv = document.createElement("div");
         logDiv.style.fontSize = "75%";
-        entry.log.forEach(line => {
-          const l = document.createElement("div");
-          l.textContent = line;
-          logDiv.appendChild(l);
-        });
+        
+        // Check if log is grouped by turns (array of arrays) or flat (array of strings)
+        if (entry.log.length > 0 && Array.isArray(entry.log[0])) {
+          // Turn-based grouping
+          entry.log.forEach(turnMessages => {
+            const turnDiv = document.createElement("div");
+            turnMessages.forEach(message => {
+              const p = document.createElement("p");
+              p.textContent = message;
+              p.style.margin = "2px 0";
+              turnDiv.appendChild(p);
+            });
+            logDiv.appendChild(turnDiv);
+          });
+        } else {
+          // Fallback for old flat structure
+          entry.log.forEach(line => {
+            const l = document.createElement("div");
+            l.textContent = line;
+            logDiv.appendChild(l);
+          });
+        }
         div.appendChild(logDiv);
       }
       panel.appendChild(div);

@@ -12,13 +12,13 @@ export async function loadItems(storyFolder) {
   // Clear the existing items object
   Object.keys(items).forEach(k => delete items[k]);
 
-  console.log(`Loading items for story: ${storyFolder}`);
+  //console.log(`Loading items for story: ${storyFolder}`);
 
   const manifestUrl = `../story-content/${storyFolder}/items/_items.json?v=${Date.now()}`;
   const itemList = await fetch(manifestUrl).then(r => r.json());
   
-  console.log('📜 Raw manifest data:', itemList);
-  console.log('📊 Manifest keys:', Object.keys(itemList));
+  //console.log('📜 Raw manifest data:', itemList);
+  //console.log('📊 Manifest keys:', Object.keys(itemList));
   
   const totalItems = Object.keys(itemList).length;
   let loadedCount = 0;
@@ -31,21 +31,21 @@ export async function loadItems(storyFolder) {
         const itemModule = await import(`../story-content/${storyFolder}/${itemInfo.file}?v=${Date.now()}`);
         itemId = (itemModule.item.id || id).toLowerCase();
         items[itemId] = itemModule.item;
-        console.log(`✅ Loaded item: ${itemId}`);
+        //console.log(`✅ Loaded item: ${itemId}`);
         loadedCount++;
       } catch (error) {
-        console.error(`❌ Failed to load item ${id} from ${itemInfo.file}:`, error);
+        //console.error(`❌ Failed to load item ${id} from ${itemInfo.file}:`, error);
         failedCount++;
       }
     } else {
       items[itemId] = itemInfo;
-      console.log(`✅ Loaded item (inline): ${itemId}`);
+      //console.log(`✅ Loaded item (inline): ${itemId}`);
       loadedCount++;
     }
   }
   
-  console.log(`📦 Item loading complete: ${loadedCount}/${totalItems} successful, ${failedCount} failed`);
-  console.log('📋 Available items:', Object.keys(items));
+  //console.log(`📦 Item loading complete: ${loadedCount}/${totalItems} successful, ${failedCount} failed`);
+  //console.log('📋 Available items:', Object.keys(items));
 }
 
 export function equipableItems() {
@@ -67,7 +67,7 @@ export function equipableItems() {
       if (player.attributes[attr] !== undefined) {
         player.attributes[attr] += mod;
       }
-      if (attr === "physicalDefense" || attr === "magicDefense") {
+      if (attr === "physicDefense" || attr === "magicDefense") {
         player.secondary[attr] += mod; // Update secondary stats
       }
     }
@@ -80,7 +80,7 @@ export function equipableItems() {
       if (player.attributes[attr] !== undefined) {
         player.attributes[attr] -= mod;
       }
-      if (attr === "physicalDefense" || attr === "magicDefense") {
+      if (attr === "physicDefense" || attr === "magicDefense") {
         player.secondary[attr] -= mod; // Update secondary stats
       }
     }

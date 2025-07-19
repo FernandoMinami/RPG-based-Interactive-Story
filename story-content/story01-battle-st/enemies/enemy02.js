@@ -7,7 +7,8 @@ const baseSecondary = {
 export const enemy = {
   name: "Enemy02",
   id: "enemy02",
-  weight: 60, // Weight in kg
+  height: 210, // Height in cm (large category: 190-230cm)
+  weight: 120, // Heavier than Enemy01, more effective with weight-based abilities
   life: 30,
   maxLife: 30,
   secondary: { ...baseSecondary },
@@ -17,32 +18,11 @@ export const enemy = {
     { item: "potion", chance: 0.5 }, // 50% chance to drop a potion
     { item: "mana-potion", chance: 0.1 } // 10% chance to drop a mana potion
   ],
-  attacks: [
-    {
-      name: "Bite",
-      minDamage: 5,
-      maxDamage: 8,
-      accuracy: 90, // 90% base chance to hit
-      effect: null
-    },
-    {
-      name: "Tail Whip",
-      minDamage: 2,
-      maxDamage: 5,
-      accuracy: 60, // 90% base chance to hit
-      effect: { type: "stun", chance: 1, turns: 2 },
-      favorite: true // This attack is favored
-
-    },
-    {
-      name: "headbutt",
-      minDamage: 4,
-      maxDamage: 6,
-      accuracy: 90, // 90% base chance to hit
-
-      requiresStatus: "stun", // Only use if player is stunned
-      effect: null,
-      favorite: true // This attack is favored
-    }
+  // List of abilities with preference ratings
+  // Ratings: "preferred" (5x), "frequent" (4x), "normal" (3x), "rare" (2x), "super-rare" (1x)
+  abilityIds: [
+    { id: "bite", rate: "normal" },
+    { id: "tailWhip", rate: "preferred" },  // Was marked as favorite
+    { id: "headbutt", rate: "preferred" }   // Was marked as favorite
   ]
 };

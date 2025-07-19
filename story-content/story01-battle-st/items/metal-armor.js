@@ -8,7 +8,7 @@ export const item = {
   slot: "body",
   equipped: false,
   modifiers: {
-    physicalDefense: 3,
+    physicDefense: 3,
     magicDefense: 1,
     strength: 2,
     dexterity: -3

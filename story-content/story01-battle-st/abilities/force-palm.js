@@ -2,12 +2,13 @@ export default {
     name: "Force Palm",
     type: "physical",
     range: "close",
-    minDamage: 10,
-    maxDamage: 18,
+    minDamage: 15,
+    maxDamage: 22,
     accuracy: 90,
-    mpCost: 8,
-    effect: { type: "stunned", chance: 0.3, turns: 1 },
-    description: "A powerful palm strike that may stun the target.",
-    onHit: "The force palm connects!",
+    mpCost: 12,
+    cooldown: 2,                            // 2 turn cooldown
+    effect: { type: "stunned", chance: 0.4, turns: 1 },
+    description: "A powerful palm strike that may stun the target but requires recovery time.",
+    onHit: "The force palm connects with tremendous force!",
     onMiss: "The force palm misses!"
 };

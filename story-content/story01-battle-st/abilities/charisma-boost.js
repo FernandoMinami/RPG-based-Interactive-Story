@@ -8,5 +8,5 @@ export default {
     mpCost: 12,
     description: "Temporarily increases charisma.",
     onHit: "Charisma boosted!",
-    onMiss: null
+    onMiss: ""
 };

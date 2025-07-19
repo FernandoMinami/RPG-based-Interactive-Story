@@ -1,12 +1,12 @@
 export default {
-    name: "Defense Curl",
+    name: "Physical Guard",
     type: "buff",
     range: "self",
-    attribute: "defense",
+    attribute: "physicDefense",
     amount: 10,
     turns: 5,
     mpCost: 10,
-    description: "Increases defense for several turns.",
-    onHit: "Defense increased!",
-    onMiss: null
+    description: "Increases physical defense for several turns.",
+    onHit: "Physical defense increased!",
+    onMiss: ""
 };
