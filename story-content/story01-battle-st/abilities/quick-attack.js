@@ -6,7 +6,9 @@ export default {
     maxDamage: 80,
     accuracy: 95,
     mpCost: 0,
-    description: "A fast physical strike to hit the enemy.",
-    onHit: "The quick attack hits!",
-    onMiss: "The quick attack misses!"
+    critChance: 0.05,        // +5% crit chance bonus (speed-based)
+    description: "A fast physical strike that can find weak points.",
+    onHit: "The quick attack hits! TEST",
+    onMiss: "The quick attack misses!",
+    onCrit: "A swift strike finds a weak spot!"
 };

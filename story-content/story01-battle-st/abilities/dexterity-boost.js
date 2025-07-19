@@ -8,5 +8,5 @@ export default {
     mpCost: 12,
     description: "Temporarily increases dexterity.",
     onHit: "Agility boosted!",
-    onMiss: null
+    onMiss: ""
 };

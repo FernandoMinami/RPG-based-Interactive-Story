@@ -8,7 +8,7 @@ export const item = {
   slot: "head",
   equipped: false,
   modifiers: {
-    physicalDefense: 2
+    physicDefense: 2
   },
   use(player) {
     return equipableItems(player, this);

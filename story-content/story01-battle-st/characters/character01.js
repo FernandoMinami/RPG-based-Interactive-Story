@@ -11,13 +11,15 @@ const baseSecondary = {
   defence: 0, // Total defence stat (don't change this value)
   natDefense: 0, // initial natural defense
   speed: 0,
-  physicalDamage: 0,
+  physicDamage: 0,
   magicDamage: 0
 };
 
 export const player = {
   name: "Character01",
   id: "character01",
+  height: 140, // Height in cm (small category: 120-150cm)
+  weight: 60, // Weight in kg (used to do calculations like pin or fall damage)
   maxLife: 0,
   life: 0,
   mp: 0,
@@ -28,11 +30,18 @@ export const player = {
   attributePoints: 30,
   attributes: { ...baseAttributes },
   secondary: { ...baseSecondary },
-  
+  height: 175, // Height in cm (medium category: 150-190cm)
+  weight: 70, // Weight in kg
+
   // List of ability IDs that this character can use
   abilityIds: [
+    "quickAttack",
+    "powerSurge",
+    "finishingBlow",
+    "flameBurst",
+    "frostSpike",
     "defenseBoost",
-    "dexterityBoost", 
+    "dexterityBoost",
     "constitutionBoost",
     "charismaBoost",
     "intelligenceBoost"

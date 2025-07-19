@@ -10,6 +10,11 @@
         "file": "stomp.js"
     },
     {
+        "id": "bodySlam",
+        "name": "Body Slam",
+        "file": "body-slam.js"
+    },
+    {
         "id": "tailWhip",
         "name": "Tail Whip", 
         "file": "tail-whip.js"
@@ -78,5 +83,65 @@
         "id": "stun",
         "name": "Stunning Blow",
         "file": "stun.js"
+    },
+    {
+        "id": "bite",
+        "name": "Bite",
+        "file": "bite.js"
+    },
+    {
+        "id": "headbutt",
+        "name": "Headbutt",
+        "file": "headbutt.js"
+    },
+    {
+        "id": "armorPierce",
+        "name": "Armor Pierce",
+        "file": "armor-pierce.js"
+    },
+    {
+        "id": "vampiricStrike",
+        "name": "Vampiric Strike",
+        "file": "vampiric-strike.js"
+    },
+    {
+        "id": "soulRend",
+        "name": "Soul Rend",
+        "file": "soul-rend.js"
+    },
+    {
+        "id": "magicShield",
+        "name": "Magic Shield",
+        "file": "magic-shield.js"
+    },
+    {
+        "id": "precisionStrike",
+        "name": "Precision Strike",
+        "file": "precision-strike.js"
+    },
+    {
+        "id": "divineIntervention",
+        "name": "Divine Intervention",
+        "file": "divine-intervention.js"
+    },
+    {
+        "id": "powerSurge",
+        "name": "Power Surge",
+        "file": "power-surge.js"
+    },
+    {
+        "id": "finishingBlow",
+        "name": "Finishing Blow",
+        "file": "finishing-blow.js"
+    },
+    {
+        "id": "flameBurst",
+        "name": "Flame Burst",
+        "file": "flame-burst.js"
+    },
+    {
+        "id": "frostSpike",
+        "name": "Frost Spike",
+        "file": "frost-spike.js"
     }
 ]

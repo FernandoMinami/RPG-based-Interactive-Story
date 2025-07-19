@@ -146,6 +146,13 @@ li {
     margin-bottom: 10px;
 }
 
+.recent-action, .recent-action div {
+    background-color: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
 #story-list button {
     width: 100%;
     padding: 10px;
@@ -196,71 +203,6 @@ li {
     float: right;
 }
 
-/*Text effects*/
-.crushing-effect {
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    font-size: large;
-    animation: crushing-shake 2s;
-    animation-delay: 1s;
-    text-align: center;
-}
-
-.str-crushing-effect {
-    font-style: bold italic;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    font-size: larger;
-    animation: crushing-shake 2s;
-    animation-delay: 1s;
-    text-align: center;
-    font-size: 150%;
-}
-
-.str-crushing-effect:hover {
-    animation: crushing-shake 2s infinite;
-}
-
-.strger-crushing-effect {
-    font-style: italic;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    font-size: larger;
-    animation: crushing-shake 2s infinite;
-    animation-delay: 1s;
-    text-align: center;
-    font-size: 200%;
-}
-
-.trampling-effect {
-    font-weight: bold;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    font-size: large;
-    animation: trampling-shake 2s infinite;
-    animation-delay: 1s;
-    text-align: center;
-}
-
-.str-trampling-effect {
-    font-style: italic;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    font-size: larger;
-    animation: trampling-shake 2s infinite;
-    animation-delay: 1s;
-    text-align: center;
-    font-size: 150%;
-}
-
-.strger-trampling-effect {
-    font-style: italic;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    font-size: larger;
-    animation: trampling-shake 2s infinite;
-    animation-delay: 1s;
-    text-align: center;
-    font-size: 200%;
-}
-
-
-
 .modal {
     display: none;
     position: fixed;
@@ -300,6 +242,35 @@ li {
 #combat-log div {
     margin-bottom: 10px;
     box-shadow: none;
+}
+
+/* Recent actions styling */
+#combat-recent {
+    border:none;
+    background:#303030;
+    color: #fff;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 10px;
+    margin-bottom: 10px;
+}
+
+.recent-action {
+    margin-bottom: 8px;
+    padding: 5px;
+}
+
+.recent-summary {
+    font-weight: bold;
+    color: #fff;
+    margin-bottom: 3px;
+}
+
+.recent-message {
+    font-size: 0.9em;
+    color: #ccc;
+    margin-left: 10px;
+    margin-bottom: 2px;
 }
 
 #combat-enemy-stats {

@@ -13,9 +13,9 @@ const baseSecondary = {
   maxLife: 0,
   maxMana: 0,
   manaRegen: 0,
-  physicalDamage: 0,
+  physicDamage: 0,
   magicDamage: 0,
-  physicalDefense: 0, // Physical defense stat that will be calculated
+  physicDefense: 0, // Physical defense stat that will be calculated
   magicDefense: 0, // Magic defense stat that will be calculated
   speed: 0
 };
@@ -23,6 +23,8 @@ const baseSecondary = {
 export let player = {
   name: "Character00",
   id: "character00",
+  height: 140, // Height in cm (small category: 120-150cm)
+  weight: 60, // Weight in kg (used to do calculations like pin or fall damage)
   life: 0,
   mana: 0,
   level: 1,
@@ -37,6 +39,7 @@ export let player = {
     "forcePalm",
     "heal",
     "defenseBoost",
+    "magicShield",
     "strengthBoost",
     "dexterityBoost",
     "constitutionBoost",

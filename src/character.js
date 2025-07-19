@@ -26,16 +26,16 @@ function updateSecondaryStats(player) {
   if (player.secondary.speed < 0) player.secondary.speed = 0; // Ensure no negative speed
 
   // Physical damage is based on strength, but can be adjusted as needed
-  player.secondary.physicalDamage = Math.floor(player.attributes.strength * 0.5) - 5;
-  if (player.secondary.physicalDamage < 0) player.secondary.physicalDamage = 0; // Ensure no negative damage
+  player.secondary.physicDamage = Math.floor(player.attributes.strength * 0.5) - 5;
+  if (player.secondary.physicDamage < 0) player.secondary.physicDamage = 0; // Ensure no negative damage
 
   // Magic damage is based on intelligence, but can be adjusted as needed
   player.secondary.magicDamage = Math.floor(player.attributes.intelligence * 0.5) - 5;
   if (player.secondary.magicDamage < 0) player.secondary.magicDamage = 0; // Ensure no negative damage
 
   // Physical defense is based on constitution, but can be adjusted as needed
-  player.secondary.physicalDefense = Math.floor(player.attributes.constitution * 0.5) - 5;
-  if (player.secondary.physicalDefense < 0) player.secondary.physicalDefense = 0; // Ensure no negative defense
+  player.secondary.physicDefense = Math.floor(player.attributes.constitution * 0.5) - 5;
+  if (player.secondary.physicDefense < 0) player.secondary.physicDefense = 0; // Ensure no negative defense
 
   // Magic defense is based on intelligence, but can be adjusted as needed
   player.secondary.magicDefense = Math.floor(player.attributes.intelligence * 0.5) - 5;
@@ -44,8 +44,8 @@ function updateSecondaryStats(player) {
     // Add physical defense from all equipped items
   for (const slot of Object.keys(player.equipment)) {
     const eq = player.equipment[slot];
-    if (eq && eq.modifiers && typeof eq.modifiers.physicalDefense === "number") {
-      player.secondary.physicalDefense += eq.modifiers.physicalDefense;
+    if (eq && eq.modifiers && typeof eq.modifiers.physicDefense === "number") {
+      player.secondary.physicDefense += eq.modifiers.physicDefense;
     }
   }
 

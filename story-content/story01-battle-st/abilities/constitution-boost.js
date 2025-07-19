@@ -8,5 +8,5 @@ export default {
     mpCost: 12,
     description: "Temporarily increases constitution.",
     onHit: "Constitution boosted!",
-    onMiss: null
+    onMiss: ""
 };

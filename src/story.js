@@ -7,6 +7,8 @@ import { historyLog, updateHistoryPanel } from './history.js';
 import { loadItems, items } from './items.js';
 import { loadStatuses } from './status.js';
 import { loadAbilities } from './abilities.js';
+import { executeDiceRoll, processChoice, handlePlayerDeath } from './utils.js';
+import { checkForRandomEncounter, triggerForcedBattle } from './encounters.js';
 
 
 let stories = [];
@@ -65,7 +67,8 @@ async function loadStory(file) {
   document.getElementById("attributes-bar-container").style.display = "";
   
   // Load statuses for this story
-  const statusManifest = await fetch('../story-content/story01-battle-st/statuses/_status.json').then(res => res.json());
+  const statusManifest = await fetch('../story-content/story01-battle-st/statuses/_status.json?v=' + Date.now()).then(res => res.json());
+  console.log("Loaded status manifest:", statusManifest);
   await loadStatuses(statusManifest, '../story-content/story01-battle-st/statuses/');
   
   // Load abilities for this story
@@ -231,29 +234,20 @@ async function showNode(nodeKey) {
     return;
   }
 
-  // --- 20% chance for a random battle using enemies manifest ---
-  // Skip if node.noBattle or storyData.noBattle is true
-  if (
-    !battleJustHappened &&
-    !node.noBattle &&
-    !storyData.noBattle &&
-    Math.random() < 0.2
-  ) {
+  // --- Random encounter check ---
+  if (checkForRandomEncounter({
+    battleJustHappened,
+    node,
+    storyData,
+    player,
+    selectedStory,
+    nodeKey,
+    onBattleEnd: (targetNode) => {
+      battleJustHappened = false;
+      showNode(targetNode);
+    }
+  })) {
     battleJustHappened = true;
-    const storyFolder = selectedStory.folder.replace('./', '');
-    const enemy = await getRandomEnemy(storyFolder);
-    startBattle(player, enemy, (result, rewards) => {
-      if (result === "win" || result === "escape") {
-        document.getElementById("combat-modal").style.display = "none";
-        showNode(nodeKey);
-      } else if (result === "respawn") {
-        document.getElementById("combat-modal").style.display = "none";
-        showNode(nodeKey);
-      } else {
-        document.getElementById("combat-modal").style.display = "none";
-        showNode("gameover");
-      }
-    });
     return;
   }
   battleJustHappened = false;
@@ -270,21 +264,9 @@ async function showNode(nodeKey) {
 
         // --- Forced battle support (works for any choice) ---
         if (choice.battle) {
-          const storyFolder = selectedStory.folder.replace('./', '');
-          const enemyModule = await import(`../story-content/${storyFolder}/enemies/${choice.battle}.js?v=${Date.now()}`);
-          const enemy = { ...enemyModule.enemy };
-          startBattle(player, enemy, (result, rewards) => {
-            if (result === "win" || result === "escape") {
-              document.getElementById("combat-modal").style.display = "none";
-              showNode(choice.next);
-            } else if (result === "respawn") {
-              document.getElementById("combat-modal").style.display = "none";
-              showNode(choice.next);
-            } else {
-              document.getElementById("combat-modal").style.display = "none";
-              showNode("gameover");
-            }
+          await triggerForcedBattle(choice, selectedStory, player, (targetNode) => {
             battleJustHappened = false;
+            showNode(targetNode);
           });
           return;
         }
@@ -308,92 +290,21 @@ async function showNode(nodeKey) {
         }
 
         if (choice.dice) {
-          choicesContainer.style.display = "none";
-          const baseRoll = Math.floor(Math.random() * 20) + 1;
-          let bonus = 0;
-          let bonusText = "";
-          let attrValue = 0;
-          if (choice.dice.attribute && player.attributes[choice.dice.attribute] !== undefined) {
-            attrValue = player.attributes[choice.dice.attribute];
-            bonus = Math.floor((attrValue - 10) / 2);
-            bonusText = ` (+${bonus} ${choice.dice.attribute})`;
-          }
-          const totalRoll = baseRoll + bonus;
-          pendingDiceResult = `You rolled ${baseRoll}${bonusText}: total <b>${totalRoll}</b>. `;
-          historyLog.push({ action: pendingDiceResult });
-          updateStoryUI && updateStoryUI();
-          let resultText = pendingDiceResult;
-          let outcome = null;
-          if (choice.dice.outcomes) {
-            outcome = choice.dice.outcomes.find(o => totalRoll >= o.min && o.max >= totalRoll);
-          }
-          if (outcome) {
-            resultText += outcome.text ? outcome.text : "";
-            if (outcome.life !== undefined) {
-              let damage = outcome.life;
-              if (damage < 0) {
-                const defenseValue = player.secondary.defense || 0;
-                damage = Math.min(0, damage + defenseValue);
-              }
-              player.life += damage;
-              if (player.life > player.maxLife) player.life = player.maxLife;
-              if (player.life < 0) player.life = 0;
-              pendingNodeEffect = damage;
-            }
-            if (outcome.attributes && applyAttributes) {
-              applyAttributes(outcome.attributes);
-            }
-            if (outcome.items) {
-              for (const [itemId, amount] of Object.entries(outcome.items)) {
-                addItem(itemId, amount);
-              }
-              updateStoryUI && updateStoryUI();
-            }
-            updateCharacterUI && updateCharacterUI();
-            setTimeout(() => {
-              choicesContainer.style.display = "";
-              showNode(outcome.next);
-            }, 1200);
-          } else {
-            setTimeout(() => {
-              choicesContainer.style.display = "";
-              showNode(nodeKey);
-            }, 1200);
-          }
-        } else {
-          if (choice.life !== undefined) {
-            let damage = choice.life;
-            if (damage < 0) {
-              const defenseValue = player.secondary.defense || 0;
-              damage = Math.min(0, damage + defenseValue);
-            }
-            player.life += damage;
-            if (player.life > player.maxLife) player.life = player.maxLife;
-            if (player.life < 0) player.life = 0;
-            pendingNodeEffect = damage;
-          }
-          if (choice.attributes && applyAttributes) {
-            applyAttributes(choice.attributes);
-          }
-          updateStoryUI && updateStoryUI();
-          updateCharacterUI && updateCharacterUI();
-          historyLog.push({ action: `Chose: ${choice.text}` });
-          updateStoryUI && updateStoryUI();
-
-          // --- If player died from this choice, hide choices and respawn ---
-          if (player.life <= 0) {
-            choicesContainer.innerHTML = ""; // Hide all choices
-            const respawnNodes = storyData.respawn || [];
-            if (respawnNodes.length > 0) {
-              const respawnNode = respawnNodes[Math.floor(Math.random() * respawnNodes.length)];
-              player.life = Math.floor(player.maxLife / 2);
-              updateSecondaryStats(player);
-              showNode(respawnNode);
+          executeDiceRoll(choice, player, applyAttributes, (nextNode, nodeEffect, diceResult) => {
+            if (nodeEffect !== null) pendingNodeEffect = nodeEffect;
+            if (diceResult) pendingDiceResult = diceResult;
+            
+            if (nextNode) {
+              showNode(nextNode);
             } else {
-              player.life = Math.floor(player.maxLife / 2);
-              updateSecondaryStats(player);
-              showNode("start");
+              showNode(nodeKey);
             }
+          });
+        } else {
+          pendingNodeEffect = processChoice(choice, player, applyAttributes);
+
+          // --- If player died from this choice, handle respawn ---
+          if (handlePlayerDeath(player, storyData, showNode, updateSecondaryStats)) {
             return;
           }
 
@@ -402,18 +313,6 @@ async function showNode(nodeKey) {
       };
       choicesContainer.appendChild(btn);
     });
-}
-
-// --- Get a random enemy from the manifest ---
-async function getRandomEnemy(storyFolder) {
-  // Load the enemies manifest for this story
-  const manifestUrl = `../story-content/${storyFolder}/enemies/_enemies.json`;
-  const enemyList = await fetch(manifestUrl).then(r => r.json());
-  // Pick a random enemy id
-  const enemyId = enemyList[Math.floor(Math.random() * enemyList.length)].id;
-  // Import the enemy module
-  const enemyModule = await import(`../story-content/${storyFolder}/enemies/${enemyId}.js?v=${Date.now()}`);
-  return { ...enemyModule.enemy };
 }
 
 // --- Modal open/close handlers ---
@@ -459,7 +358,7 @@ document.getElementById("show-character-stats-btn").onclick = function () {
   title.textContent = document.getElementById("current-character-name").textContent + " Stats";
 
   const mainAttributes = ["strength", "dexterity", "constitution", "charisma", "wisdom", "intelligence"];
-  const secondaryStats = ["speed", "physicalDamage", "magicDamage", "physicalDefense", "magicDefense"];
+  const secondaryStats = ["speed", "physicDamage", "magicDamage", "physicDefense", "magicDefense"];
 
   let html = "<strong>Attributes:</strong><br>";
   html += `<div id="attribute-points-remaining"><b>Attribute Points Left:</b> ${player.attributePoints}</div>`;
