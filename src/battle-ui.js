@@ -76,7 +76,7 @@ export function createAbilityButtons(player, enemy, battleState, onAbilityUse) {
         
         // Update button text to show all information
         btn.textContent = buttonText + requirementMessage;
-        btn.disabled = player.mana < (ability.mpCost || 0) || buffActive || !canUse;
+        btn.disabled = player.mp < (ability.mpCost || 0) || buffActive || !canUse;
 
         btn.onclick = () => onAbilityUse(abilityId, ability);
         abilityDiv.appendChild(btn);
@@ -176,7 +176,7 @@ export function updateBattleStats(player, enemy) {
     const playerStats = document.getElementById("combat-player-stats");
     const enemyStats = document.getElementById("combat-enemy-stats");
     
-    playerStats.innerHTML = `<b>${player.name}</b> <span>HP: ${player.life}/${player.maxLife}</span> <span>MP: ${player.mana}/${player.maxMana}</span> <span>Status: ${statusSummary(player)}</span>`;
+    playerStats.innerHTML = `<b>${player.name}</b> <span>HP: ${player.life}/${player.maxLife}</span> <span>MP: ${player.mp}/${player.maxMp}</span> <span>Status: ${statusSummary(player)}</span>`;
     enemyStats.innerHTML = `<b>${enemy.name}</b> <span>HP: ${enemy.life}/${enemy.maxLife}</span> <span>Status: ${statusSummary(enemy)}</span>`;
 }
 

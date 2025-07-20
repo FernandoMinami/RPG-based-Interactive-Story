@@ -1,0 +1,16 @@
+[
+  {
+    "id": "general-merchant",
+    "name": "General Merchant",
+    "type": "merchant",
+    "file": "general-merchant.js",
+    "description": "A traveling merchant selling basic supplies and equipment"
+  },
+  {
+    "id": "blacksmith",
+    "name": "Village Blacksmith", 
+    "type": "merchant",
+    "file": "blacksmith.js",
+    "description": "A skilled blacksmith specializing in weapons and armor"
+  }
+]

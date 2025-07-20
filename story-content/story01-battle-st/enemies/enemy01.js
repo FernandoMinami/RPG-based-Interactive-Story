@@ -15,10 +15,13 @@ export const enemy = {
   maxLife: 70,
   secondary: { ...baseSecondary },
   exp: 300, // EXP reward
-  gold: 8, // Gold reward
   drops: [
     { item: "potion", chance: 0.5 }, // 50% chance to drop a potion
     { item: "mana-potion", chance: 0.1 } // 10% chance to drop a mana potion
+  ],
+  loot: [
+    { item: "smallBone", chance: 0.7 }, // 70% chance to drop small bone
+    { item: "sharpClaw", chance: 0.1 } // 10% chance to drop sharp claw
   ],
   // List of abilities with preference ratings
   // Ratings determine how often an enemy uses each ability:

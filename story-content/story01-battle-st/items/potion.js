@@ -4,6 +4,7 @@ export const item = {
   description: "Heals 20 HP.",
   type: "consumable",
   restore: 20, // Amount of health restored
+  sellValue: 3, // Gold value when sold to merchant
 
   use(player) {
     const restored = this.restore;

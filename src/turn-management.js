@@ -125,8 +125,8 @@ export function initializeAbilityTracking(player) {
  * Handle escape attempt
  * @param {Object} player - The player object
  * @param {Object} enemy - The enemy object
- * @param {Function} addLog - Logging function
- * @returns {boolean} - True if escape was successful
+ * @param {Function} addLog - Logging function (optional for backwards compatibility)
+ * @returns {Object} - { success: boolean, messages: Array }
  */
 export function handleEscapeAttempt(player, enemy, addLog) {
     const roll = Math.floor(Math.random() * 20) + 1;
@@ -134,23 +134,38 @@ export function handleEscapeAttempt(player, enemy, addLog) {
     const enemySpeed = enemy.secondary?.speed || enemy.speed || 0;
     const escapeScore = Math.floor(roll + playerSpeed - enemySpeed);
     
-    addLog(`${player.name} tries to escape! (Roll: ${roll} + Speed: ${playerSpeed} - Enemy Speed: ${enemySpeed} = ${escapeScore})`);
-
+    const messages = [];
+    const attemptMessage = `${player.name} tries to escape! (Roll: ${roll} + Speed: ${playerSpeed} - Enemy Speed: ${enemySpeed} = ${escapeScore})`;
+    messages.push(attemptMessage);
+    
+    let success = false;
+    let resultMessage = '';
+    
     if (escapeScore > 10) {
-        addLog(`${player.name} escaped successfully!`);
-        return true;
+        resultMessage = `${player.name} escaped successfully!`;
+        success = true;
     } else {
-        addLog(`${player.name} failed to escape!`);
-        return false;
+        resultMessage = `${player.name} failed to escape!`;
+        success = false;
     }
+    
+    messages.push(resultMessage);
+    
+    // For backwards compatibility, still log if addLog is provided
+    if (addLog) {
+        addLog(attemptMessage);
+        addLog(resultMessage);
+    }
+    
+    return { success, messages };
 }
 
 /**
  * Handle struggle attempt when pinned
  * @param {Object} player - The player object
  * @param {Object} enemy - The enemy object
- * @param {Function} addLog - Logging function
- * @returns {boolean} - True if struggle was successful
+ * @param {Function} addLog - Logging function (optional for backwards compatibility)
+ * @returns {Object} - { success: boolean, messages: Array }
  */
 export function handleStruggleAttempt(player, enemy, addLog) {
     const roll = Math.floor(Math.random() * 20) + 1;
@@ -158,13 +173,28 @@ export function handleStruggleAttempt(player, enemy, addLog) {
     const enemyWeight = enemy.weight || 0;
     const struggleScore = Math.floor(roll + playerStrengthBonus - (enemyWeight / 10));
     
-    addLog(`${player.name} Struggles! (Roll: ${roll} + Strength Bonus: ${playerStrengthBonus} - Enemy Weight/10: ${enemyWeight}/10 = ${struggleScore})`);
-
+    const messages = [];
+    const attemptMessage = `${player.name} Struggles! (Roll: ${roll} + Strength Bonus: ${playerStrengthBonus} - Enemy Weight/10: ${enemyWeight}/10 = ${struggleScore})`;
+    messages.push(attemptMessage);
+    
+    let success = false;
+    let resultMessage = '';
+    
     if (struggleScore > 10) {
-        addLog(`${player.name} Manages to push ${enemy.name} away!`);
-        return true;
+        resultMessage = `${player.name} Manages to push ${enemy.name} away!`;
+        success = true;
     } else {
-        addLog(`${player.name} failed to escape!`);
-        return false;
+        resultMessage = `${player.name} failed to escape!`;
+        success = false;
     }
+    
+    messages.push(resultMessage);
+    
+    // For backwards compatibility, still log if addLog is provided
+    if (addLog) {
+        addLog(attemptMessage);
+        addLog(resultMessage);
+    }
+    
+    return { success, messages };
 }

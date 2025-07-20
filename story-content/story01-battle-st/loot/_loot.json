@@ -1,0 +1,17 @@
+[
+    {
+        "id": "smallBone",
+        "name": "Small Bone",
+        "file": "small-bone.js"
+    },
+    {
+        "id": "toughHide", 
+        "name": "Tough Hide",
+        "file": "tough-hide.js"
+    },
+    {
+        "id": "sharpClaw",
+        "name": "Sharp Claw", 
+        "file": "sharp-claw.js"
+    }
+]

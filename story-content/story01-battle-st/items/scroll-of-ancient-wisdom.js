@@ -39,7 +39,7 @@ export const item = {
       if (window.historyLog) {
         window.historyLog.push({ action: message });
       }
-      console.log("📜 " + message);
+      //console.log("📜 " + message);
       return false; // Not consumed
     }
 
@@ -58,7 +58,7 @@ export const item = {
       if (window.historyLog) {
         window.historyLog.push({ action: message });
       }
-      console.log("📜 " + message);
+      //console.log("📜 " + message);
       return false; // Not consumed if no new abilities learned
     } else {
       let message = `${player.name} gained ancient wisdom and learned ${result.learnedCount} new abilities!`;
@@ -68,7 +68,7 @@ export const item = {
       if (window.historyLog) {
         window.historyLog.push({ action: message });
       }
-      console.log("📜 " + message);
+      //console.log("📜 " + message);
       return true; // Consumed
     }
   }

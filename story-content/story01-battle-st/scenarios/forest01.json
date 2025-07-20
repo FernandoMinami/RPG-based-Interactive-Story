@@ -31,6 +31,11 @@
             "text": "It's dark and you hear something moving...",
             "choices": [
                 {
+                    "text": "Visit the merchant",
+                    "scenario": "city01",
+                    "next": "merchant"
+                },
+                {
                     "text": "Investigate",
                     "next": "forest-monster"
                 }

@@ -7,6 +7,7 @@ export const item = {
   type: "equipable",
   slot: "head",
   equipped: false,
+  sellValue: 60,
   modifiers: {
     physicDefense: 20,
     dexterity: 5

@@ -144,7 +144,7 @@ export function learnAbility(player, abilityId, abilityName = null) {
         if (window.historyLog) {
             window.historyLog.push({ action: message });
         }
-        console.log("📜 " + message);
+        //console.log("📜 " + message);
         return false; // Not learned (already known)
     }
 
@@ -160,7 +160,7 @@ export function learnAbility(player, abilityId, abilityName = null) {
     if (window.historyLog) {
         window.historyLog.push({ action: message });
     }
-    console.log("📜 " + message);
+    //console.log("📜 " + message);
 
     return true; // Successfully learned
 }

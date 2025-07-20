@@ -8,40 +8,57 @@ import { getAbilities, getAbility } from './abilities.js';
 
 // --- Grouped UI update functions ---
 function updateCharacterUI() {
-  updateSecondaryStats(player);
+  if (!window.player) {
+    console.error("Player not available in updateCharacterUI");
+    return;
+  }
+  
+  updateSecondaryStats(window.player);
   updateLifeBar();
   updateManaBar();
   updateAttributesBar();
   createAbilityButtons();
-  updateInventoryBar();
+  // updateInventoryBar(); // Commented out - using modal inventory system instead
 
   // Level/EXP/Points UI
-  document.getElementById("player-level").textContent = `Level: ${player.level}`;
-  document.getElementById("player-exp").textContent = `EXP: ${player.exp} / ${getExpForLevel(player.level + 1)}`;
-  document.getElementById("player-attribute-points").textContent = `Attribute Points: ${player.attributePoints}`;
+  document.getElementById("player-level").textContent = `Level: ${window.player.level}`;
+  document.getElementById("player-exp").textContent = `EXP: ${window.player.exp} / ${getExpForLevel(window.player.level + 1)}`;
+  document.getElementById("player-attribute-points").textContent = `Attribute Points: ${window.player.attributePoints}`;
 }
 
 function updateStoryUI() {
-  updateInventoryBar();
+  // updateInventoryBar(); // Commented out - using modal inventory system instead
   updateHistoryPanel();
 }
 
 function updateManaBar() {
+  const player = window.player;
+  if (!player) {
+    console.error("Player not available in updateManaBar");
+    return;
+  }
+  
   const manaBar = document.getElementById("mana-bar");
-  const mana = Number(player.mana) || 0;
-  const maxMana = Number(player.maxMana) || 1;  // Avoid zero max
+  const mp = Number(player.mp) || Number(player.mana) || 0;  // Check mp first, then mana fallback
+  const maxMp = Number(player.maxMp) || Number(player.maxMana) || Number(player.secondary?.maxMp) || 1;
 
-  manaBar.value = Math.max(0, Math.min(mana, maxMana));
-  manaBar.max = maxMana;
+  manaBar.value = Math.max(0, Math.min(mp, maxMp));
+  manaBar.max = maxMp;
 
-  document.getElementById("mp-value").textContent = mana;
-  document.getElementById("max-mp-value").textContent = maxMana;
+  document.getElementById("mp-value").textContent = mp;
+  document.getElementById("max-mp-value").textContent = maxMp;
 }
 
 function updateLifeBar() {
+  const player = window.player;
+  if (!player) {
+    console.error("Player not available in updateLifeBar");
+    return;
+  }
+  
   const lifeBar = document.getElementById("life-bar");
   const life = Number(player.life) || 0;
-  const maxLife = Number(player.secondary.maxLife) || 1;  // Avoid zero max
+  const maxLife = Number(player.maxLife) || Number(player.secondary?.maxLife) || 1;  // Check direct property first
 
   lifeBar.value = Math.max(0, Math.min(life, maxLife));
   lifeBar.max = maxLife;
@@ -178,7 +195,7 @@ function createAbilityButtons() {
     ) {
       buffActive = true;
     }
-    btn.disabled = player.mana < (ability.mpCost || 0) || buffActive;
+    btn.disabled = player.mp < (ability.mpCost || 0) || buffActive;
     if (btn.disabled) {
       btn.style.opacity = "0.5";
       btn.style.cursor = "not-allowed";
@@ -189,7 +206,8 @@ function createAbilityButtons() {
 
     btn.onclick = function () {
       if (btn.disabled) return;
-      player.mana -= ability.mpCost || 0;
+      player.mp -= ability.mpCost || 0;
+      player.mana = player.mp; // Keep in sync
       updateCharacterUI();
       if (ability.type === "buff" && ability.attribute) {
         player.attributes[ability.attribute] += ability.amount;
