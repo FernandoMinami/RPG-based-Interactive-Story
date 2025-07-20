@@ -27,14 +27,26 @@
         },
         "marketplace": {
             "title": "Marketplace",
-            "text": "The marketplace is bustling with activity. You see vendors selling potions, weapons, and various goods.",
+            "text": "The marketplace is bustling with activity. You see vendors selling potions, weapons, and various goods. A traveling merchant has set up shop here, and the local blacksmith's workshop is nearby.",
             "items": {
                 "potion": 1
+            },
+            "npc": {
+                "id": "general-merchant",
+                "name": "Traveling Merchant"
             },
             "choices": [
                 {
                     "text": "Look for work",
                     "next": "work-board"
+                },
+                {
+                    "text": "Visit the blacksmith",
+                    "next": "blacksmith-shop"
+                },
+                {
+                    "text": "Sell monster materials",
+                    "next": "material-merchant"
                 },
                 {
                     "text": "Return to city gate",
@@ -90,6 +102,31 @@
                     "text": "Head to the forest to hunt",
                     "scenario": "forest01",
                     "next": "forest-clearing"
+                }
+            ]
+        },
+        "blacksmith-shop": {
+            "title": "Blacksmith's Workshop",
+            "text": "The air is thick with smoke and the sound of hammering fills the workshop. Master Gareth, a burly blacksmith, looks up from his anvil. His shop is filled with gleaming weapons and sturdy armor.",
+            "npc": {
+                "id": "blacksmith",
+                "name": "Master Blacksmith Gareth"
+            },
+            "choices": [
+                {
+                    "text": "Return to marketplace",
+                    "next": "marketplace"
+                }
+            ]
+        },
+        "material-merchant": {
+            "title": "Material Merchant's Stall",
+            "text": "A weathered merchant sits behind a table filled with coins and scales. 'Ah, a hunter! I buy all sorts of monster parts and materials. What do you have for me?'",
+            "special": "merchant",
+            "choices": [
+                {
+                    "text": "Return to marketplace",
+                    "next": "marketplace"
                 }
             ]
         }

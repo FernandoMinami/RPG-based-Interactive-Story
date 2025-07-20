@@ -1,9 +1,10 @@
 import { addExp, getExpForLevel } from './leveling.js';
-import { getInventory, removeItem } from './inventory.js';
+import { getInventory, removeItem, addLoot } from './inventory.js';
 import { updateSecondaryStats } from './character.js';
 import { updateLifeBar } from './ui.js';
 import { applyStatus, statusSummary, isStatusActive, StatusRegistry } from './status.js';
 import { getAbilities, useAbility, canUseAbility } from './abilities.js';
+import { getLootById } from './loot.js';
 import './history.js'; // Ensure history module is loaded
 import { 
     createAbilityButtons, 
@@ -32,7 +33,7 @@ import {
 
 // Starts a battle between the player and an enemy
 export function startBattle(player, enemy, onBattleEnd) {
-    console.log("Starting battle. StatusRegistry:", Object.keys(StatusRegistry));
+    //console.log("Starting battle. StatusRegistry:", Object.keys(StatusRegistry));
     
     const modal = document.getElementById("combat-modal");
     const actionsDiv = document.getElementById("combat-actions");
@@ -87,6 +88,30 @@ export function startBattle(player, enemy, onBattleEnd) {
         lastEnemyAbility = battleState.lastEnemyAbility;
     }
 
+    // Process enemy loot drops
+    function processLootDrops(enemy, addLog) {
+        if (!enemy.loot || !Array.isArray(enemy.loot)) return [];
+        
+        const lootReceived = [];
+        
+        for (const lootDrop of enemy.loot) {
+            const roll = Math.random();
+            if (roll < lootDrop.chance) {
+                const lootItem = getLootById(lootDrop.item);
+                if (lootItem) {
+                    addLoot(lootDrop.item, 1);
+                    lootReceived.push({
+                        name: lootItem.name,
+                        quantity: 1
+                    });
+                    if (addLog) addLog(`Found: ${lootItem.name}!`);
+                }
+            }
+        }
+        
+        return lootReceived;
+    }
+
     // shows the result of the battle
     function showResult(result) {
         // Separate any remaining logs before ending battle
@@ -103,20 +128,48 @@ export function startBattle(player, enemy, onBattleEnd) {
         }
 
         const logDiv = document.getElementById("combat-log");
+        const rewardsDiv = document.getElementById("combat-rewards");
 
         if (result === "win") {
-            logDiv.innerHTML += `<div style="color:green;font-weight:bold;">You won!</div>`;
+            // Don't add "You won!" to the log, let the recent actions show the final attack
+            
+            // Show rewards in the dedicated rewards area
+            rewardsDiv.style.display = "block";
+            let rewardsHTML = '<h3>Victory Rewards!</h3>';
+            
+            // Process loot drops and collect them for display
+            const lootReceived = processLootDrops(enemy, () => {}); // Don't add to log, collect for display
+            
+            // Add EXP to rewards display
+            const exp = enemy.exp || Math.floor(Math.random() * 10 + 10);
+            rewardsHTML += `<div class="reward-item exp-reward">Gained ${exp} EXP</div>`;
+            
+            // Add loot to rewards display
+            if (lootReceived && lootReceived.length > 0) {
+                lootReceived.forEach(loot => {
+                    rewardsHTML += `<div class="reward-item loot-reward">Found: ${loot.name} x${loot.quantity}</div>`;
+                });
+            }
+            
+            rewardsDiv.innerHTML = rewardsHTML;
+            
             const contBtn = document.createElement("button");
             contBtn.textContent = "Continue";
             contBtn.onclick = () => {
-                const exp = enemy.exp || Math.floor(Math.random() * 10 + 10);
                 const leveledUp = addExp(player, exp);
                 if (typeof window.updateCharacterUI === "function") window.updateCharacterUI();
                 if (leveledUp) {
-                    logDiv.innerHTML += `<div style="color:gold;font-weight:bold;">Level Up! You are now level ${player.level}!</div>`;
+                    // Add level up message to rewards
+                    rewardsDiv.innerHTML += `<div class="reward-item level-up">🌟 Level Up! You are now level ${player.level}! 🌟</div>`;
+                    // Give a moment to see the level up message
+                    setTimeout(() => {
+                        modal.style.display = "none";
+                        onBattleEnd("win");
+                    }, 2000);
+                } else {
+                    modal.style.display = "none";
+                    onBattleEnd("win");
                 }
-                modal.style.display = "none";
-                onBattleEnd("win");
             };
             actionsDiv.appendChild(contBtn);
         } else if (result === "escape") {
@@ -186,10 +239,11 @@ export function startBattle(player, enemy, onBattleEnd) {
 
     // Handle ability use
     function handleAbilityUse(abilityId, ability) {
-        if ((ability.mpCost || 0) > player.mana) return;
+        if ((ability.mpCost || 0) > player.mp) return;
         if (!canUseAbilityInBattle(abilityId, ability)) return;
         
-        player.mana -= ability.mpCost || 0;
+        player.mp -= ability.mpCost || 0;
+        player.mana = player.mp; // Keep in sync
         useAbilityInBattle(abilityId, ability, true);
 
         // Store current log state to capture this action's messages
@@ -221,7 +275,12 @@ export function startBattle(player, enemy, onBattleEnd) {
 
     // Handle escape attempt
     function handleEscape() {
-        if (handleEscapeAttempt(player, enemy, addLog)) {
+        const escapeResult = handleEscapeAttempt(player, enemy);
+        
+        // Add to recent actions display
+        addRecentAction(`${player.name} tried to escape`, escapeResult.messages);
+        
+        if (escapeResult.success) {
             return showResult("escape");
         } else {
             turnManager.switchTurn();
@@ -231,7 +290,12 @@ export function startBattle(player, enemy, onBattleEnd) {
 
     // Handle struggle attempt
     function handleStruggle() {
-        if (handleStruggleAttempt(player, enemy, addLog)) {
+        const struggleResult = handleStruggleAttempt(player, enemy);
+        
+        // Add to recent actions display
+        addRecentAction(`${player.name} struggled to break free`, struggleResult.messages);
+        
+        if (struggleResult.success) {
             applyStatus(player, 'pinned', 0);
         }
         turnManager.switchTurn();

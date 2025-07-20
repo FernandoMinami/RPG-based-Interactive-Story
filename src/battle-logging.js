@@ -107,7 +107,7 @@ export function createBattleLogger() {
     }
 
     /**
-     * Clear all battle logs
+     * Clear all battle logs and rewards
      */
     function clearLogs() {
         battleLog = [];
@@ -115,6 +115,13 @@ export function createBattleLogger() {
         recentActions = [];
         logDiv.innerHTML = "";
         recentDiv.innerHTML = "";
+        
+        // Hide rewards div at battle start
+        const rewardsDiv = document.getElementById("combat-rewards");
+        if (rewardsDiv) {
+            rewardsDiv.style.display = "none";
+            rewardsDiv.innerHTML = "";
+        }
     }
 
     return {

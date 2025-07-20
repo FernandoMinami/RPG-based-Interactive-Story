@@ -10,31 +10,31 @@ export async function loadStatuses(statusManifest, statusBasePath = "../story-co
         throw new TypeError('statusManifest must be an array');
     }
     
-    console.log("Loading statuses:", statusManifest);
+    //console.log("Loading statuses:", statusManifest);
     
     for (let status of statusManifest) {
         try {
-            console.log(`Loading status: ${status.id} from ${statusBasePath}${status.file}`);
+            //console.log(`Loading status: ${status.id} from ${statusBasePath}${status.file}`);
             const statusModule = await import(`${statusBasePath}${status.file}`);
             StatusRegistry[status.id] = statusModule.default;
-            console.log(`Successfully loaded status: ${status.id}`, statusModule.default);
+            //console.log(`Successfully loaded status: ${status.id}`, statusModule.default);
         } catch (e) {
-            console.error(`Failed to load status: ${status.file}`, e);
+            //console.error(`Failed to load status: ${status.file}`, e);
         }
     }
     
-    console.log("Final StatusRegistry:", StatusRegistry);
+    //console.log("Final StatusRegistry:", StatusRegistry);
 }
 
 /**
  * Apply a status effect to a target
  */
 export function applyStatus(target, statusId, turns = 1, addLog = () => {}, permanent = false) {
-    console.log(`Attempting to apply status: ${statusId}`);
-    console.log("Available statuses in registry:", Object.keys(StatusRegistry));
+    //console.log(`Attempting to apply status: ${statusId}`);
+    //  console.log("Available statuses in registry:", Object.keys(StatusRegistry));
     
     if (!StatusRegistry[statusId]) {
-        console.warn(`Status ${statusId} not found in registry`);
+        //console.warn(`Status ${statusId} not found in registry`);
         return;
     }
 

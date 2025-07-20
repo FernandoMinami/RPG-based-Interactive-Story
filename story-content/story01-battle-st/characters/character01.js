@@ -22,8 +22,10 @@ export const player = {
   weight: 60, // Weight in kg (used to do calculations like pin or fall damage)
   maxLife: 0,
   life: 0,
-  mp: 0,
-  maxMp: 0,
+  mp: 0,    // Primary MP property
+  maxMp: 0, // Primary max MP property
+  mana: 0,  // Keep for compatibility
+  maxMana: 0,  // Keep for compatibility
   manaRegen: 0,
   level: 1,
   exp: 0,
@@ -59,10 +61,21 @@ export const player = {
     for (const key in baseAttributes) {
       this.attributes[key] = baseAttributes[key];
     }
+    
+    // Ensure secondary object exists and is properly initialized
+    for (const key in baseSecondary) {
+      this.secondary[key] = baseSecondary[key];
+    }
+    
     this.maxLife = this.attributes.constitution * 10;
     this.life = this.maxLife;
-    this.maxMp = this.attributes.intelligence * 5;
+    
+    // Use mp/maxMp as primary properties
+    this.maxMp = this.attributes.intelligence * 10;
     this.mp = this.maxMp;
+    this.maxMana = this.maxMp; // Keep for compatibility
+    this.mana = this.mp; // Keep for compatibility
+    
     this.manaRegen = Math.floor(this.maxMp / 10);
     this.potions = 0;
     this.activeBoosts = {};
