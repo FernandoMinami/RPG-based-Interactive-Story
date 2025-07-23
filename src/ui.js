@@ -24,6 +24,16 @@ function updateCharacterUI() {
   document.getElementById("player-level").textContent = `Level: ${window.player.level}`;
   document.getElementById("player-exp").textContent = `EXP: ${window.player.exp} / ${getExpForLevel(window.player.level + 1)}`;
   document.getElementById("player-attribute-points").textContent = `Attribute Points: ${window.player.attributePoints}`;
+  
+  // Update race and type display
+  const raceElement = document.getElementById("character-race");
+  const typeElement = document.getElementById("character-type");
+  if (raceElement && window.player.race) {
+    raceElement.textContent = `Race: ${window.player.race.charAt(0).toUpperCase() + window.player.race.slice(1)}`;
+  }
+  if (typeElement && window.player.type) {
+    typeElement.textContent = `Type: ${window.player.type.charAt(0).toUpperCase() + window.player.type.slice(1)}`;
+  }
 }
 
 function updateStoryUI() {

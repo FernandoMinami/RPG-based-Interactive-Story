@@ -1,0 +1,20 @@
+{
+  "id": "elf",
+  "name": "Elf",
+  "description": "Wise and magical",
+  "lore": "Elves are deeply connected to nature and divine magic. They excel in air and light magic, with strong ties to earth's natural forces.",
+  "availableTypes": ["neutral", "air", "light", "earth"],
+  "racialTraits": {
+    "natureMagic": "Strong affinity with air, light, and earth elements",
+    "wisdom": "Enhanced magical abilities and perception"
+  },
+  "baseModifiers": {
+    "strength": -1,
+    "dexterity": 1,
+    "constitution": 0,
+    "intelligence": 1,
+    "wisdom": 2,
+    "charisma": 1
+  },
+  "typeCount": 4
+}

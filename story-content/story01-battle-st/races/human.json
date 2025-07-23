@@ -1,0 +1,20 @@
+{
+  "id": "human",
+  "name": "Human",
+  "description": "Balanced and adaptable",
+  "lore": "Humans are the most versatile of all races, capable of mastering any element or remaining neutral. Their adaptability makes them excellent at any role.",
+  "availableTypes": ["neutral", "fire", "water", "earth", "air", "light"],
+  "racialTraits": {
+    "versatility": "Can access the most combat types",
+    "adaptability": "Balanced stats and growth"
+  },
+  "baseModifiers": {
+    "strength": 0,
+    "dexterity": 0, 
+    "constitution": 0,
+    "intelligence": 0,
+    "wisdom": 0,
+    "charisma": 0
+  },
+  "typeCount": 6
+}

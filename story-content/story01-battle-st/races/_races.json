@@ -1,0 +1,27 @@
+[
+  {
+    "id": "human",
+    "name": "Human",
+    "file": "human.json"
+  },
+  {
+    "id": "elf", 
+    "name": "Elf",
+    "file": "elf.json"
+  },
+  {
+    "id": "dwarf",
+    "name": "Dwarf", 
+    "file": "dwarf.json"
+  },
+  {
+    "id": "halfling",
+    "name": "Halfling",
+    "file": "halfling.json"
+  },
+  {
+    "id": "orc",
+    "name": "Orc",
+    "file": "orc.json"
+  }
+]

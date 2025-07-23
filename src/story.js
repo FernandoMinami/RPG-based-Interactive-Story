@@ -12,6 +12,8 @@ import { executeDiceRoll, processChoice, handlePlayerDeath } from './utils.js';
 import { checkForRandomEncounter, triggerForcedBattle } from './encounters.js';
 import { showMerchantInterface } from './merchant.js';
 import { loadNpcs, showNpcInterface } from './npcs.js';
+import { downloadSave, handleSaveFileUpload, addSaveButton } from './save-load.js';
+import { loadRaces, getAllRaces, getAvailableTypesForRace, getTypeDescriptions, canRaceUseType } from './race.js';
 
 
 let stories = [];
@@ -30,6 +32,47 @@ let pendingDiceResult = "";
 
 let battleJustHappened = false;
 
+// Make variables available globally for save/load system
+window.stories = stories;
+window.storyData = storyData;
+window.currentNode = currentNode;
+window.playerPath = playerPath;
+window.selectedStory = selectedStory;
+window.selectedCharacterModule = selectedCharacterModule;
+window.player = player;
+window.applyAttributes = applyAttributes;
+window.pendingNodeEffect = pendingNodeEffect;
+window.pendingDiceResult = pendingDiceResult;
+window.battleJustHappened = battleJustHappened;
+
+// Function to set player for save loading
+export function setPlayer(playerObj) {
+  player = playerObj;
+  window.player = player;
+}
+
+// Function to restore all story state for save loading
+export function restoreStoryState(saveData, characterModule) {
+  // Restore local variables
+  currentNode = saveData.progress.currentNode;
+  playerPath = [...saveData.progress.playerPath];
+  selectedStory = saveData.story;
+  selectedCharacterModule = characterModule;
+  applyAttributes = characterModule.applyAttributes;
+  battleJustHappened = saveData.gameState.battleJustHappened;
+  storyData = window.storyData; // Use the already loaded story data
+  
+  // Update global references
+  window.currentNode = currentNode;
+  window.playerPath = playerPath;
+  window.selectedStory = selectedStory;
+  window.selectedCharacterModule = selectedCharacterModule;
+  window.applyAttributes = applyAttributes;
+  window.battleJustHappened = battleJustHappened;
+  window.storyData = storyData;
+  window.visitedNodes = [...(saveData.progress.visitedNodes || [])];
+}
+
 // --- Character selection and story loading ---
 async function showStorySelection() {
   document.getElementById("current-character").style.display = "none";
@@ -37,6 +80,7 @@ async function showStorySelection() {
   document.querySelector(".story-container").style.display = "none";
   document.getElementById("gameover-container").style.display = "none";
   document.getElementById("character-selection").style.display = "none";
+  document.getElementById("game-mode-selection").style.display = "none";
   const list = document.getElementById("story-list");
   list.innerHTML = "";
 
@@ -47,7 +91,7 @@ async function showStorySelection() {
     const li = document.createElement("li");
     const btn = document.createElement("button");
     btn.textContent = story.name;
-    btn.onclick = () => showCharacterSelection(story);
+    btn.onclick = () => showGameModeSelection(story);
     li.appendChild(btn);
     list.appendChild(li);
   });
@@ -81,6 +125,9 @@ async function loadStory(file) {
   // Load NPCs for this story
   await loadNpcs('story01-battle-st');
   
+  // Load races for this story
+  await loadRaces('story01-battle-st');
+  
 
   // Add cache-busting query param
   //console.log("Loading story from file:", file);
@@ -103,10 +150,45 @@ async function loadStory(file) {
   showNode(currentNode);
 }
 
+// --- Show game mode selection (New Game vs Load Game) ---
+function showGameModeSelection(story) {
+  selectedStory = story;
+  window.selectedStory = story;
+  
+  document.getElementById("story-selection").style.display = "none";
+  document.getElementById("character-selection").style.display = "none";
+  const gameModeDiv = document.getElementById("game-mode-selection");
+  document.getElementById("game-mode-title").textContent = `${story.name} - Choose Game Mode`;
+  
+  // Set up event listeners for buttons
+  document.getElementById("new-game-btn").onclick = () => showCharacterSelection(story);
+  document.getElementById("load-game-btn").onclick = () => {
+    document.getElementById("load-file-input").click();
+  };
+  document.getElementById("back-to-stories-btn").onclick = () => {
+    showStorySelection();
+  };
+  
+  // Set up file input handler
+  const fileInput = document.getElementById("load-file-input");
+  fileInput.onchange = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      handleSaveFileUpload(file);
+      // Reset file input for future use
+      fileInput.value = '';
+    }
+  };
+  
+  gameModeDiv.style.display = "";
+}
+
 // --- Show character selection for a specific story ---
 async function showCharacterSelection(story) {
   selectedStory = story;
+  window.selectedStory = story;
   document.getElementById("story-selection").style.display = "none";
+  document.getElementById("game-mode-selection").style.display = "none";
   const charDiv = document.getElementById("character-selection");
   charDiv.innerHTML = "<h2>Choose Your Character</h2>";
   const manifestUrl = `../story-content/${story.folder.replace('./', '')}/characters/_characters.json`;
@@ -115,31 +197,159 @@ async function showCharacterSelection(story) {
     const btn = document.createElement("button");
     btn.textContent = char.name;
     btn.onclick = async () => {
-      document.getElementById("status-abilities").style.display = "block";
-      document.getElementById("history-toggle-btn").style.display = "";
-      // Add cache-busting query param to force fresh character load
+      // Load character but don't start game yet - show customization form
       const charPath = `../story-content/${story.folder.replace('./', '')}/characters/${char.file.replace('./', '')}?v=${Date.now()}`;
       selectedCharacterModule = await import(charPath);
       player = selectedCharacterModule.player;
-      window.player = player; // <-- Add this line
-      applyAttributes = selectedCharacterModule.applyAttributes; charDiv.style.display = "none";
-      document.getElementById("current-character-name").textContent = char.name;
-      document.getElementById("current-character").style.display = "";
-      if (typeof player.reset === "function") player.reset();
+      window.player = player;
+      window.selectedCharacterModule = selectedCharacterModule;
+      applyAttributes = selectedCharacterModule.applyAttributes;
+      window.applyAttributes = applyAttributes;
       
-      // Sync mana properties after reset
-      syncManaProperties(player);
-      
-      await loadItems(story.folder.replace('./', ''));
-      await loadLoot(story.folder.replace('./', ''));
-      updateSecondaryStats(player);
-      await loadStory(`../story-content/${story.file.replace('./', '')}`);
-      updateCharacterUI();
-      updateStoryUI();
+      // Show character customization form
+      showCharacterCustomization(char, story);
     };
     charDiv.appendChild(btn);
   });
   charDiv.style.display = "";
+}
+
+// --- Show character customization form ---
+function showCharacterCustomization(baseChar, story) {
+  
+  function updateTypeOptions(selectedRace) {
+    const typeSelect = document.getElementById("char-type");
+    const availableTypes = getAvailableTypesForRace(selectedRace);
+    const typeDescriptions = getTypeDescriptions();
+    
+    typeSelect.innerHTML = "";
+    availableTypes.forEach(type => {
+      const option = document.createElement("option");
+      option.value = type;
+      option.textContent = typeDescriptions[type];
+      option.selected = player.type === type;
+      typeSelect.appendChild(option);
+    });
+    
+    // If current type is not available for the race, reset to neutral
+    if (!canRaceUseType(selectedRace, player.type)) {
+      player.type = "neutral";
+      typeSelect.value = "neutral";
+    }
+  }
+  
+  function buildRaceOptions() {
+    const races = getAllRaces();
+    let raceOptionsHtml = '';
+    
+    Object.values(races).forEach(race => {
+      const selected = player.race === race.id ? 'selected' : '';
+      const typeCount = race.availableTypes.length;
+      raceOptionsHtml += `<option value="${race.id}" ${selected}>${race.name} - ${race.description} (${typeCount} types)</option>`;
+    });
+    
+    return raceOptionsHtml;
+  }
+  
+  const charDiv = document.getElementById("character-selection");
+  charDiv.innerHTML = `
+    <h2>Customize Your Character</h2>
+    <div style="max-width: 500px; margin: 0 auto; text-align: left;">
+      <h3>Character: ${baseChar.name}</h3>
+      
+      <div style="margin-bottom: 15px;">
+        <label for="char-name" style="display: block; margin-bottom: 5px; font-weight: bold;">Character Name:</label>
+        <input type="text" id="char-name" value="${player.name}" 
+               style="width: 100%; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;" 
+               maxlength="20" placeholder="Enter your character name">
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <label for="char-race" style="display: block; margin-bottom: 5px; font-weight: bold;">Race:</label>
+        <select id="char-race" style="width: 100%; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;">
+          ${buildRaceOptions()}
+        </select>
+        <small style="color: #666; font-style: italic;">Race affects available story choices and elemental affinities</small>
+      </div>
+      
+      <div style="margin-bottom: 20px;">
+        <label for="char-type" style="display: block; margin-bottom: 5px; font-weight: bold;">Combat Type:</label>
+        <select id="char-type" style="width: 100%; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;">
+        </select>
+        <small style="color: #666; font-style: italic;">Type affects combat damage and resistances (changes based on race)</small>
+      </div>
+      
+      <div style="text-align: center;">
+        <button id="confirm-character" style="background: #28a745; color: white; border: none; padding: 12px 24px; 
+                font-size: 16px; border-radius: 4px; cursor: pointer; margin-right: 10px;">
+          Start Adventure
+        </button>
+        <button id="back-to-selection" style="background: #6c757d; color: white; border: none; padding: 12px 24px; 
+                font-size: 16px; border-radius: 4px; cursor: pointer;">
+          Back to Character Selection
+        </button>
+      </div>
+    </div>
+  `;
+  
+  // Initialize type options based on current race
+  updateTypeOptions(player.race);
+  
+  // Add race change event listener
+  document.getElementById("char-race").onchange = function() {
+    updateTypeOptions(this.value);
+  };
+  
+  // Add event listeners
+  document.getElementById("confirm-character").onclick = () => {
+    const newName = document.getElementById("char-name").value.trim();
+    const newRace = document.getElementById("char-race").value;
+    const newType = document.getElementById("char-type").value;
+    
+    if (!newName) {
+      alert("Please enter a character name!");
+      return;
+    }
+    
+    // Update player with customizations
+    player.name = newName;
+    player.race = newRace;
+    player.type = newType;
+    
+    // Start the game
+    startGameWithCustomizedCharacter(story);
+  };
+  
+  document.getElementById("back-to-selection").onclick = () => {
+    showCharacterSelection(story);
+  };
+}
+
+// --- Start game with customized character ---
+async function startGameWithCustomizedCharacter(story) {
+  document.getElementById("status-abilities").style.display = "block";
+  document.getElementById("history-toggle-btn").style.display = "";
+  
+  const charDiv = document.getElementById("character-selection");
+  charDiv.style.display = "none";
+  document.getElementById("current-character-name").textContent = player.name;
+  document.getElementById("current-character").style.display = "";
+  
+  if (typeof player.reset === "function") player.reset();
+  
+  // Sync mana properties after reset
+  syncManaProperties(player);
+  
+  await loadItems(story.folder.replace('./', ''));
+  await loadLoot(story.folder.replace('./', ''));
+  updateSecondaryStats(player);
+  await loadStory(`../story-content/${story.file.replace('./', '')}`);
+  
+  // Add save button to UI
+  addSaveButton();
+  
+  updateCharacterUI();
+  updateStoryUI();
 }
 
 // --- Load a specific scenario by ID ---
@@ -154,12 +364,20 @@ async function loadScenario(storyFolder, scenarioId) {
 }
 
 // --- Main story node function ---
-async function showNode(nodeKey) {
-  //console.log("showNode called with nodeKey:", nodeKey);
+export async function showNode(nodeKey) {
+  console.log("showNode called with nodeKey:", nodeKey);
+  console.log("Player check:", !!player, player?.id);
+  console.log("StoryData available:", !!storyData);
+  
   if (!player || !player.id) {
     console.error("Player not loaded or missing id!", player);
     return;
   }
+  
+  // Update global currentNode for save system
+  currentNode = nodeKey;
+  window.currentNode = nodeKey;
+  
   handleBoosts && handleBoosts();
   regenMp && regenMp();
   updateSecondaryStats(player);
@@ -168,15 +386,25 @@ async function showNode(nodeKey) {
   const gameoverContainer = document.getElementById("gameover-container");
   gameoverContainer.style.display = "none";
   playerPath.push(nodeKey);
+  window.playerPath = playerPath;
 
   let node = storyData[nodeKey];
+  console.log("Direct node lookup:", !!node);
+  
   if (!node && storyData.nextScenes && storyData.nextScenes[nodeKey]) {
     node = storyData.nextScenes[nodeKey];
+    console.log("Found in nextScenes:", !!node);
   }
   if (!node && nodeKey === "story") {
     node = storyData.story;
+    console.log("Found as story root:", !!node);
   }
-  if (!node) return;
+  
+  console.log("Final node found:", !!node);
+  if (!node) {
+    console.error("Node not found:", nodeKey, "Available keys:", Object.keys(storyData));
+    return;
+  }
 
   // --- Grant items when entering a node ---
   if (node.items) {
@@ -271,7 +499,13 @@ async function showNode(nodeKey) {
 
   // --- Choices ---
   (node.choices || [])
-    .filter(choice => !choice.character || choice.character === player.id)
+    .filter(choice => {
+      // Check character filter
+      if (choice.character && choice.character !== player.id) return false;
+      // Check race filter
+      if (choice.requiredRace && choice.requiredRace !== player.race) return false;
+      return true;
+    })
     .forEach(choice => {
       const btn = document.createElement("button");
       btn.textContent = choice.text + (choice.dice ? " 🎲" : "");
@@ -294,7 +528,14 @@ async function showNode(nodeKey) {
           const scenarioData = await loadScenario(selectedStory.folder.replace('./', ''), choice.scenario);
           storyData = scenarioData.nodes || scenarioData;
           if (scenarioData.respawn) storyData.respawn = scenarioData.respawn;
-          showNode(choice.next);
+          
+          // --- Determine next node based on race ---
+          let nextNode = choice.next;
+          if (choice.raceNext && choice.raceNext[player.race]) {
+            nextNode = choice.raceNext[player.race];
+          }
+          
+          showNode(nextNode);
           return;
         }
 
@@ -326,7 +567,13 @@ async function showNode(nodeKey) {
             return;
           }
 
-          showNode(choice.next);
+          // --- Determine next node based on race ---
+          let nextNode = choice.next;
+          if (choice.raceNext && choice.raceNext[player.race]) {
+            nextNode = choice.raceNext[player.race];
+          }
+
+          showNode(nextNode);
         }
       };
       choicesContainer.appendChild(btn);
