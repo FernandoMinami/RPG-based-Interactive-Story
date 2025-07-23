@@ -1,0 +1,20 @@
+{
+  "id": "halfling",
+  "name": "Halfling",
+  "description": "Quick and lucky", 
+  "lore": "Halflings are nimble folk with a strong connection to pastoral lands. They excel with earth's growing power and air's swift currents.",
+  "availableTypes": ["neutral", "earth", "air"],
+  "racialTraits": {
+    "nimbleness": "Enhanced dexterity and agility",
+    "luck": "Occasional bonus to dice rolls and critical hits"
+  },
+  "baseModifiers": {
+    "strength": -1,
+    "dexterity": 2,
+    "constitution": 1,
+    "intelligence": 0,
+    "wisdom": 1,
+    "charisma": 1
+  },
+  "typeCount": 3
+}

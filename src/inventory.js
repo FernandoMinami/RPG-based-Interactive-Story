@@ -86,7 +86,39 @@ export function getMoney() {
   return playerMoney;
 }
 
+// Sets the player's money to a specific amount
+export function setMoney(amount) {
+  playerMoney = Math.max(0, amount); // Ensure money is never negative
+}
+
 // Checks if player has enough money
 export function hasMoney(amount) {
   return playerMoney >= amount;
+}
+
+// === SAVE/LOAD FUNCTIONS ===
+
+// Get current inventory state for saving
+export function getInventoryState() {
+  return {
+    items: { ...inventory },
+    loot: { ...lootInventory },
+    money: playerMoney
+  };
+}
+
+// Restore inventory state from save data
+export function restoreInventory(inventoryData) {
+  // Clear current inventory
+  Object.keys(inventory).forEach(key => delete inventory[key]);
+  Object.keys(lootInventory).forEach(key => delete lootInventory[key]);
+  
+  // Restore inventory data
+  Object.assign(inventory, inventoryData.items || {});
+  Object.assign(lootInventory, inventoryData.loot || {});
+  playerMoney = inventoryData.money || 0;
+  
+  // Update global references
+  window.inventory = inventory;
+  window.lootInventory = lootInventory;
 }

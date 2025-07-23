@@ -75,6 +75,11 @@ window.addBattleToHistory = function (enemyName, logArr, summary) {
   updateHistoryPanel();
 };
 
-
+// Restore history log from save data
+export function restoreHistoryLog(savedHistory) {
+  historyLog.length = 0;
+  historyLog.push(...savedHistory);
+  window.historyLog = historyLog;
+}
 
 export { updateHistoryPanel };

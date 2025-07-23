@@ -75,7 +75,14 @@ export function executeDiceRoll(choice, player, applyAttributes, onComplete) {
         
         setTimeout(() => {
             choicesContainer.style.display = "";
-            onComplete(outcome.next, pendingNodeEffect, pendingDiceResult);
+            
+            // --- Determine next node based on race ---
+            let nextNode = outcome.next;
+            if (outcome.raceNext && outcome.raceNext[window.player.race]) {
+                nextNode = outcome.raceNext[window.player.race];
+            }
+            
+            onComplete(nextNode, pendingNodeEffect, pendingDiceResult);
         }, 1200);
     } else {
         setTimeout(() => {

@@ -1,0 +1,20 @@
+{
+  "id": "dwarf",
+  "name": "Dwarf", 
+  "description": "Strong and resilient",
+  "lore": "Dwarves are master smiths and underground dwellers. Their connection to forge fires and mountain stone makes them experts in fire and earth magic.",
+  "availableTypes": ["neutral", "fire", "earth"],
+  "racialTraits": {
+    "forgemaster": "Natural affinity with fire and earth elements",
+    "resilience": "Enhanced physical defense and constitution"
+  },
+  "baseModifiers": {
+    "strength": 2,
+    "dexterity": -1,
+    "constitution": 2,
+    "intelligence": 0,
+    "wisdom": 1,
+    "charisma": -1
+  },
+  "typeCount": 3
+}

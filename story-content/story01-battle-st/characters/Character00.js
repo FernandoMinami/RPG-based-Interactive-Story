@@ -23,6 +23,8 @@ const baseSecondary = {
 export let player = {
   name: "Character00",
   id: "character00",
+  race: "human", // Player race (affects story choices)
+  type: "neutral", // Combat type (affects damage/resistance)
   height: 140, // Height in cm (small category: 120-150cm)
   weight: 60, // Weight in kg (used to do calculations like pin or fall damage)
   life: 0,

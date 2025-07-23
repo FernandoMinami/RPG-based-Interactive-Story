@@ -27,7 +27,7 @@
         },
         "marketplace": {
             "title": "Marketplace",
-            "text": "The marketplace is bustling with activity. You see vendors selling potions, weapons, and various goods. A traveling merchant has set up shop here, and the local blacksmith's workshop is nearby.",
+            "text": "The marketplace is bustling with activity. You see vendors selling potions, weapons, and various goods. A traveling merchant has set up shop here, and the local blacksmith's workshop is nearby. A mysterious hooded woman watches you from the shadows.",
             "items": {
                 "potion": 1
             },
@@ -49,6 +49,17 @@
                     "next": "material-merchant"
                 },
                 {
+                    "text": "Say hello to the mysterious woman",
+                    "next": "mysterious-woman-default",
+                    "raceNext": {
+                        "human": "mysterious-woman-human",
+                        "elf": "mysterious-woman-elf",
+                        "dwarf": "mysterious-woman-dwarf",
+                        "halfling": "mysterious-woman-halfling",
+                        "orc": "mysterious-woman-orc"
+                    }
+                },
+                {
                     "text": "Return to city gate",
                     "next": "city-gate"
                 }
@@ -64,6 +75,34 @@
                     "next": "temple-healed"
                 },
                 {
+                    "text": "Pray to your ancestors (Dwarf only)",
+                    "requiredRace": "dwarf",
+                    "life": 70,
+                    "mana": 20,
+                    "next": "temple-dwarf-prayer"
+                },
+                {
+                    "text": "Commune with nature spirits (Elf only)",
+                    "requiredRace": "elf",
+                    "life": 40,
+                    "mana": 40,
+                    "next": "temple-elf-commune"
+                },
+                {
+                    "text": "Offer a small sacrifice (Halfling only)",
+                    "requiredRace": "halfling",
+                    "life": 60,
+                    "exp": 5,
+                    "next": "temple-halfling-sacrifice"
+                },
+                {
+                    "text": "Challenge the priest's faith (Orc only)",
+                    "requiredRace": "orc",
+                    "life": 30,
+                    "str": 2,
+                    "next": "temple-orc-challenge"
+                },
+                {
                     "text": "Leave the temple",
                     "next": "city-gate"
                 }
@@ -75,6 +114,46 @@
             "choices": [
                 {
                     "text": "Thank the priest and leave",
+                    "next": "city-gate"
+                }
+            ]
+        },
+        "temple-dwarf-prayer": {
+            "title": "Temple - Ancestral Prayer",
+            "text": "You kneel before the altar and pray to your dwarven ancestors. Ancient wisdom flows through you, healing both body and spirit. The priest watches with reverence.",
+            "choices": [
+                {
+                    "text": "Share your ancestral wisdom with the priest",
+                    "next": "city-gate"
+                }
+            ]
+        },
+        "temple-elf-commune": {
+            "title": "Temple - Nature Communion",
+            "text": "You reach out to the nature spirits that dwell even within this stone temple. Gentle energy flows through you, restoring your magical essence. The priest marvels at your connection to the natural world.",
+            "choices": [
+                {
+                    "text": "Explain the balance of nature to the priest",
+                    "next": "city-gate"
+                }
+            ]
+        },
+        "temple-halfling-sacrifice": {
+            "title": "Temple - Sacred Offering",
+            "text": "You place a small offering of food on the altar, a halfling tradition of sharing abundance. The act of giving fills you with warmth and the gods smile upon your generosity, granting you insight.",
+            "choices": [
+                {
+                    "text": "Share a meal with the priest",
+                    "next": "city-gate"
+                }
+            ]
+        },
+        "temple-orc-challenge": {
+            "title": "Temple - Spiritual Challenge",
+            "text": "You challenge the priest to prove his faith through action, not just words. The heated discussion awakens your warrior spirit. Though you part on tense terms, you feel stronger for the confrontation.",
+            "choices": [
+                {
+                    "text": "Leave with renewed determination",
                     "next": "city-gate"
                 }
             ]
@@ -126,6 +205,78 @@
             "choices": [
                 {
                     "text": "Return to marketplace",
+                    "next": "marketplace"
+                }
+            ]
+        },
+        "mysterious-woman-default": {
+            "title": "The Mysterious Woman",
+            "text": "The hooded woman nods politely but says nothing. She seems to be studying you carefully before melting back into the crowd.",
+            "choices": [
+                {
+                    "text": "Return to marketplace",
+                    "next": "marketplace"
+                }
+            ]
+        },
+        "mysterious-woman-human": {
+            "title": "The Mysterious Woman - Human Bond",
+            "text": "'Ah, a fellow human,' she says softly, lowering her hood to reveal kind eyes. 'I sense great potential in you. Take this - it will serve you well.' She hands you a small coin that seems to shimmer with inner light.",
+            "items": {
+                "super-potion": 1
+            },
+            "exp": 15,
+            "choices": [
+                {
+                    "text": "Thank her and return to marketplace",
+                    "next": "marketplace"
+                }
+            ]
+        },
+        "mysterious-woman-elf": {
+            "title": "The Mysterious Woman - Elven Recognition",
+            "text": "'Your elven grace does not go unnoticed,' she whispers, her eyes glowing briefly. 'The ancient magic recognizes its own.' She touches your forehead, and you feel your magical essence expand.",
+            "mana": 30,
+            "wis": 1,
+            "choices": [
+                {
+                    "text": "Bow respectfully and return to marketplace",
+                    "next": "marketplace"
+                }
+            ]
+        },
+        "mysterious-woman-dwarf": {
+            "title": "The Mysterious Woman - Dwarven Respect",
+            "text": "'A dwarf of honor,' she nods approvingly. 'Your people's craftsmanship is legendary. Let me share some of that legendary resilience with you.' She speaks a word that makes your bones feel stronger.",
+            "life": 40,
+            "con": 1,
+            "choices": [
+                {
+                    "text": "Grunt appreciatively and return to marketplace",
+                    "next": "marketplace"
+                }
+            ]
+        },
+        "mysterious-woman-halfling": {
+            "title": "The Mysterious Woman - Halfling Luck",
+            "text": "'Such curiosity and courage in one so small,' she chuckles warmly. 'The halfling spirit burns bright in you. May fortune favor your journey.' She blesses you with a touch that makes you feel incredibly lucky.",
+            "exp": 20,
+            "dex": 1,
+            "choices": [
+                {
+                    "text": "Smile widely and return to marketplace",
+                    "next": "marketplace"
+                }
+            ]
+        },
+        "mysterious-woman-orc": {
+            "title": "The Mysterious Woman - Orcish Strength",
+            "text": "'Your warrior's heart beats strong,' she says, not flinching at your imposing presence. 'Raw power flows through your veins. Let me help you channel it.' Her touch ignites a fire in your muscles.",
+            "str": 2,
+            "life": 20,
+            "choices": [
+                {
+                    "text": "Growl acknowledgment and return to marketplace",
                     "next": "marketplace"
                 }
             ]

@@ -1,0 +1,20 @@
+{
+  "id": "orc",
+  "name": "Orc",
+  "description": "Fierce and powerful",
+  "lore": "Orcs are primal warriors who channel raw fury and dark energies. Their mastery of fire's destruction and shadow's power makes them formidable fighters.",
+  "availableTypes": ["neutral", "fire", "dark"],
+  "racialTraits": {
+    "primalFury": "Access to destructive fire and dark magic",
+    "warrior": "Enhanced strength and combat prowess"
+  },
+  "baseModifiers": {
+    "strength": 3,
+    "dexterity": 0,
+    "constitution": 2,
+    "intelligence": -1,
+    "wisdom": -1,
+    "charisma": -1
+  },
+  "typeCount": 3
+}

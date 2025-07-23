@@ -15,10 +15,34 @@
         <ul id="story-list"></ul>
     </div>
 
+    <div id="game-mode-selection" style="display:none;">
+        <h2 id="game-mode-title">Choose Game Mode</h2>
+        <div style="text-align: center; margin: 20px 0;">
+            <button id="new-game-btn" style="background: #28a745; color: white; border: none; padding: 15px 30px; border-radius: 5px; margin: 10px; font-size: 16px; cursor: pointer;">
+                🎮 New Game
+            </button>
+            <button id="load-game-btn" style="background: #17a2b8; color: white; border: none; padding: 15px 30px; border-radius: 5px; margin: 10px; font-size: 16px; cursor: pointer;">
+                📁 Load Game
+            </button>
+        </div>
+        <div style="text-align: center;">
+            <button id="back-to-stories-btn" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 3px; cursor: pointer;">
+                ← Back to Stories
+            </button>
+        </div>
+        
+        <!-- Hidden file input for load game -->
+        <input type="file" id="load-file-input" accept=".json" style="display: none;">
+    </div>
+
     <div id="character-selection" style="display:none; margin-bottom:20px;"></div>
 
     <div id="current-character" style="margin-bottom: 20px; display:none;">
         <strong>Character:</strong> <span id="current-character-name"></span>
+        <div style="font-size: 14px; color: #666; margin: 5px 0;">
+            <span id="character-race" style="margin-right: 10px;"></span>
+            <span id="character-type"></span>
+        </div>
         <button id="show-character-stats-btn">Show Stats</button>
         <div id="player-attribute-points"></div>
 

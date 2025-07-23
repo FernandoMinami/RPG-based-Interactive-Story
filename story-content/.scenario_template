@@ -1,0 +1,460 @@
+{
+  "_documentation": {
+    "_description": "COMPREHENSIVE SCENARIO TEMPLATE - This shows all available features",
+    "_raceTypeSystem": {
+      "human": ["neutral", "fire", "water", "earth", "air", "light"],
+      "elf": ["neutral", "air", "light", "earth"],
+      "dwarf": ["neutral", "fire", "earth"],
+      "halfling": ["neutral", "earth", "air"],
+      "orc": ["neutral", "fire", "dark"]
+    },
+    "_nodeProperties": {
+      "title": "Display title for the node",
+      "text": "Description text shown to player",
+      "life": "Heal (+) or damage (-) player health",
+      "mana": "Restore (+) or drain (-) player mana",
+      "exp": "Grant experience points",
+      "str": "Increase strength attribute",
+      "dex": "Increase dexterity attribute", 
+      "con": "Increase constitution attribute",
+      "int": "Increase intelligence attribute",
+      "wis": "Increase wisdom attribute",
+      "cha": "Increase charisma attribute",
+      "items": "Object with item IDs and quantities to give",
+      "npc": "NPC interaction object with id and name",
+      "special": "Special node type (merchant)"
+    },
+    "_choiceProperties": {
+      "text": "Display text for the choice button",
+      "next": "Target node ID",
+      "scenario": "Switch to different scenario file",
+      "battle": "Trigger forced battle with enemies array, winNode, loseNode",
+      "character": "Restrict to specific character ID",
+      "requiredRace": "Restrict to specific race (human/elf/dwarf/halfling/orc)",
+      "requiredItem": "Require player to have specific item",
+      "raceNext": "Object mapping races to different outcome nodes",
+      "dice": "Dice roll configuration object with attribute and outcomes",
+      "effects": "life/mana/exp/attributes effects applied when choice is selected"
+    },
+    "_diceRollStructure": {
+      "attribute": "Which attribute to add as modifier (str/dex/con/int/wis/cha)",
+      "outcomes": "Array of outcome objects based on roll result",
+      "outcomeProperties": {
+        "min": "Minimum roll value for this outcome",
+        "max": "Maximum roll value for this outcome", 
+        "text": "Description of the result",
+        "next": "Target node for this outcome",
+        "raceNext": "Race-specific outcome nodes",
+        "effects": "life/mana/exp/items/attributes effects for this outcome"
+      }
+    }
+  },
+  
+  "id": "example-scenario",
+  "title": "Example Scenario Title",
+  "noBattle": false,
+  "respawn": [
+    "respawn-node-1",
+    "respawn-node-2"
+  ],
+  "nodes": {
+    "example-node": {
+      "title": "Example Node Title",
+      "text": "This is the description text that appears when the player reaches this node.",
+      
+      "life": 50,
+      "mana": 25,
+      "exp": 100,
+      "str": 1,
+      "dex": 1,
+      "con": 1,
+      "int": 1,
+      "wis": 1,
+      "cha": 1,
+      
+      "items": {
+        "potion": 3,
+        "super-potion": 1,
+        "scroll-of-healing": 2,
+        "metal-armor": 1
+      },
+      
+      "npc": {
+        "id": "blacksmith",
+        "name": "Master Blacksmith"
+      },
+      
+      "special": "merchant",
+      
+      "choices": [
+        {
+          "text": "Continue forward",
+          "next": "next-node"
+        },
+        {
+          "text": "Drink from the well",
+          "life": 30,
+          "mana": 20,
+          "next": "well-outcome"
+        },
+        {
+          "text": "Enter the forest",
+          "scenario": "forest01",
+          "next": "forest-clearing"
+        },
+        {
+          "text": "Challenge the guard",
+          "battle": {
+            "enemies": ["guard"],
+            "winNode": "victory-node",
+            "loseNode": "defeat-node"
+          }
+        },
+        {
+          "text": "Use warrior skills",
+          "character": "character01",
+          "next": "warrior-path"
+        },
+        {
+          "text": "Call upon ancient magic (Elf only)",
+          "requiredRace": "elf",
+          "mana": 50,
+          "next": "elf-magic-node"
+        },
+        {
+          "text": "Negotiate with the locals",
+          "next": "negotiate-default",
+          "raceNext": {
+            "human": "negotiate-human-success",
+            "elf": "negotiate-elf-mystical",
+            "dwarf": "negotiate-dwarf-respect",
+            "halfling": "negotiate-halfling-charm",
+            "orc": "negotiate-orc-intimidation"
+          }
+        },
+        {
+          "text": "Attempt to pick the lock 🎲",
+          "dice": {
+            "attribute": "dex",
+            "outcomes": [
+              {
+                "min": 1,
+                "max": 5,
+                "text": "You fumble with the lock and trigger a trap!",
+                "life": -20,
+                "next": "trap-triggered"
+              },
+              {
+                "min": 6,
+                "max": 14,
+                "text": "You struggle with the lock but eventually succeed.",
+                "exp": 10,
+                "next": "lock-opened"
+              },
+              {
+                "min": 15,
+                "max": 20,
+                "text": "You expertly pick the lock in seconds!",
+                "exp": 25,
+                "items": {
+                  "potion": 1
+                },
+                "next": "lock-opened-perfectly"
+              }
+            ]
+          }
+        },
+        {
+          "text": "Try to climb the wall 🎲",
+          "dice": {
+            "attribute": "str",
+            "outcomes": [
+              {
+                "min": 15,
+                "max": 20,
+                "text": "You successfully climb the wall!",
+                "next": "climb-success",
+                "raceNext": {
+                  "dwarf": "climb-success-dwarf-technique",
+                  "halfling": "climb-success-halfling-agility"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "text": "Use the magic key",
+          "requiredItem": "magic-key",
+          "next": "secret-door"
+        }
+      ]
+    },
+    
+    "next-node": {
+      "title": "Next Location",
+      "text": "You continue on your journey...",
+      "choices": [
+        {
+          "text": "Keep going",
+          "next": "another-node"
+        }
+      ]
+    },
+    
+    "well-outcome": {
+      "title": "Magical Well",
+      "text": "The water from the well fills you with renewed energy and magical power.",
+      "choices": [
+        {
+          "text": "Continue",
+          "next": "next-node"
+        }
+      ]
+    },
+    
+    "victory-node": {
+      "title": "Victory!",
+      "text": "You have defeated your opponent!",
+      "exp": 50,
+      "choices": [
+        {
+          "text": "Continue",
+          "next": "next-node"
+        }
+      ]
+    },
+    
+    "defeat-node": {
+      "title": "Defeat",
+      "text": "You have been defeated but you manage to escape.",
+      "life": -50,
+      "choices": [
+        {
+          "text": "Retreat",
+          "next": "next-node"
+        }
+      ]
+    },
+    
+    "dice-roll-examples": {
+      "title": "Dice Roll Examples",
+      "text": "Here are various dice roll examples you can use:",
+      "choices": [
+        {
+          "text": "Simple strength check 🎲",
+          "dice": {
+            "attribute": "str",
+            "outcomes": [
+              {
+                "min": 1,
+                "max": 10,
+                "text": "You fail the strength test.",
+                "life": -10,
+                "next": "failure-node"
+              },
+              {
+                "min": 11,
+                "max": 20,
+                "text": "You succeed with your strength!",
+                "exp": 15,
+                "next": "success-node"
+              }
+            ]
+          }
+        },
+        {
+          "text": "Dexterity stealth check 🎲",
+          "dice": {
+            "attribute": "dex",
+            "outcomes": [
+              {
+                "min": 1,
+                "max": 8,
+                "text": "You make too much noise and alert the guards!",
+                "next": "caught-by-guards"
+              },
+              {
+                "min": 9,
+                "max": 15,
+                "text": "You move quietly but it takes time.",
+                "next": "stealth-partial"
+              },
+              {
+                "min": 16,
+                "max": 20,
+                "text": "You move like a shadow, completely undetected!",
+                "exp": 20,
+                "next": "stealth-perfect"
+              }
+            ]
+          }
+        },
+        {
+          "text": "Intelligence puzzle 🎲",
+          "dice": {
+            "attribute": "int",
+            "outcomes": [
+              {
+                "min": 1,
+                "max": 12,
+                "text": "The puzzle confuses you.",
+                "next": "puzzle-confused"
+              },
+              {
+                "min": 13,
+                "max": 20,
+                "text": "You solve the puzzle brilliantly!",
+                "exp": 30,
+                "items": {
+                  "scroll-of-ancient-wisdom": 1
+                },
+                "next": "puzzle-solved"
+              }
+            ]
+          }
+        },
+        {
+          "text": "Wisdom perception check 🎲",
+          "dice": {
+            "attribute": "wis",
+            "outcomes": [
+              {
+                "min": 1,
+                "max": 10,
+                "text": "You miss the hidden details.",
+                "next": "missed-clues"
+              },
+              {
+                "min": 11,
+                "max": 20,
+                "text": "Your keen perception reveals hidden secrets!",
+                "exp": 25,
+                "next": "found-secrets"
+              }
+            ]
+          }
+        },
+        {
+          "text": "Charisma persuasion 🎲",
+          "dice": {
+            "attribute": "cha",
+            "outcomes": [
+              {
+                "min": 1,
+                "max": 8,
+                "text": "Your words fall on deaf ears.",
+                "next": "persuasion-failed"
+              },
+              {
+                "min": 9,
+                "max": 16,
+                "text": "You make a reasonable argument.",
+                "next": "persuasion-partial"
+              },
+              {
+                "min": 17,
+                "max": 20,
+                "text": "Your words are incredibly persuasive!",
+                "exp": 20,
+                "items": {
+                  "super-potion": 1
+                },
+                "next": "persuasion-perfect"
+              }
+            ]
+          }
+        },
+        {
+          "text": "Constitution endurance test 🎲",
+          "dice": {
+            "attribute": "con",
+            "outcomes": [
+              {
+                "min": 1,
+                "max": 9,
+                "text": "You become exhausted from the effort.",
+                "life": -15,
+                "mana": -10,
+                "next": "exhausted"
+              },
+              {
+                "min": 10,
+                "max": 20,
+                "text": "Your endurance serves you well!",
+                "life": 10,
+                "next": "endurance-success"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    
+    "race-specific-examples": {
+      "title": "Race-Specific Choice Examples",
+      "text": "Examples of how to create race-specific content:",
+      "choices": [
+        {
+          "text": "Examine the ancient runes",
+          "next": "runes-human",
+          "raceNext": {
+            "elf": "runes-elf-understanding",
+            "dwarf": "runes-dwarf-craftsmanship",
+            "halfling": "runes-halfling-curiosity",
+            "orc": "runes-orc-destruction"
+          }
+        },
+        {
+          "text": "Enter the sacred grove (Elf only)",
+          "requiredRace": "elf",
+          "mana": 50,
+          "wis": 1,
+          "next": "sacred-grove"
+        },
+        {
+          "text": "Use dwarven mining knowledge (Dwarf only)",
+          "requiredRace": "dwarf",
+          "items": {
+            "metal-ore": 3
+          },
+          "next": "mining-success"
+        },
+        {
+          "text": "Sneak through small passages (Halfling only)",
+          "requiredRace": "halfling",
+          "dex": 1,
+          "next": "halfling-passages"
+        },
+        {
+          "text": "Intimidate with orcish presence (Orc only)",
+          "requiredRace": "orc",
+          "str": 1,
+          "next": "orc-intimidation"
+        }
+      ]
+    },
+    
+    "battle-examples": {
+      "title": "Battle Examples",
+      "text": "Different ways to trigger battles:",
+      "choices": [
+        {
+          "text": "Fight a single goblin",
+          "battle": {
+            "enemies": ["enemy01"],
+            "winNode": "goblin-victory",
+            "loseNode": "goblin-defeat"
+          }
+        },
+        {
+          "text": "Face multiple enemies",
+          "battle": {
+            "enemies": ["enemy01", "enemy02"],
+            "winNode": "group-victory",
+            "loseNode": "group-defeat"
+          }
+        }
+      ]
+    }
+  }
+}
