@@ -65,6 +65,7 @@ export default {
     onHit: "Message shown when the ability successfully hits.",
     onMiss: "Message shown when the ability misses.",
     onCrit: "Message shown on critical hit.",
+    onOverkill: "The crushing weight completely overwhelms the target!",
     learnMessage: "Message shown when this ability is learned.",
 
     /*

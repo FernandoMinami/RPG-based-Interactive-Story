@@ -1,6 +1,7 @@
 export default {
     name: "Wind Slash",
     type: "magic",
+    elementalType: "air",
     range: "ranged",
     minDamage: 4,
     maxDamage: 7,

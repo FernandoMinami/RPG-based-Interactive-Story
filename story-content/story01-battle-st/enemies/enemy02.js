@@ -7,6 +7,8 @@ const baseSecondary = {
 export const enemy = {
   name: "Enemy02",
   id: "enemy02",
+  type: "fire",
+  imagePath: "../story-content/story01-battle-st/img/enemies/enemy02.jpg", // Optional: path to enemy image
   height: 210, // Height in cm (large category: 190-230cm)
   weight: 120, // Heavier than Enemy01, more effective with weight-based abilities
   life: 30,

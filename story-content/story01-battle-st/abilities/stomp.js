@@ -1,6 +1,7 @@
 export default {
     name: "Stomp",
     type: "physical",
+    elementalType: "earth",
     range: "close",
     minDamage: 3,
     maxDamage: 8,

@@ -1,0 +1,85 @@
+{
+  "id": "underwater",
+  "name": "Underwater Environment",
+  "description": "Deep water with limited air and pressure",
+  "icon": "🌊",
+  "temperature": "cold",
+  "immuneType": "water",
+  
+  "effects": {
+    "baseDamage": 5,
+    "damageType": "water",
+    "interval": 4,
+    "description": "Water pressure and lack of air cause strain"
+  },
+  
+  "typeInteractions": {
+    "water": {
+      "environmentalDamageMultiplier": 0.0,
+      "bonusRegeneration": 6,
+      "description": "Water types are in their element underwater"
+    },
+    "fire": {
+      "environmentalDamageMultiplier": 2.0,
+      "penaltyEffect": "flame_extinguish",
+      "speedPenalty": 0.4,
+      "description": "Fire types struggle underwater"
+    },
+    "lightning": {
+      "environmentalDamageMultiplier": 0.8,
+      "bonusAreaDamage": true,
+      "speedPenalty": 0.2,
+      "description": "Lightning conducts well through water"
+    },
+    "earth": {
+      "environmentalDamageMultiplier": 1.2,
+      "speedPenalty": 0.3,
+      "description": "Earth types move slowly underwater"
+    },
+    "air": {
+      "environmentalDamageMultiplier": 1.5,
+      "speedPenalty": 0.5,
+      "description": "Air types struggle greatly underwater"
+    },
+    "neutral": {
+      "environmentalDamageMultiplier": 1.0,
+      "speedPenalty": 0.3,
+      "description": "Standard underwater movement penalties"
+    }
+  },
+  
+  "combatModifiers": {
+    "waterAbilities": {
+      "damageBonus": 1.4,
+      "accuracyBonus": 0.15
+    },
+    "fireAbilities": {
+      "damageReduction": 0.3,
+      "accuracyPenalty": 0.3
+    }
+  },
+  
+  "statusEffects": {
+    "drowning": {
+      "chance": 0.2,
+      "duration": 3,
+      "description": "Struggling for air underwater"
+    }
+  },
+  
+  "attributeModifiers": {
+    "dexterityPenalty": {
+      "appliesTo": ["fire", "earth", "air", "neutral"],
+      "exemptTypes": ["water"],
+      "effects": {
+        "baseAttributeDebuffs": [
+          { "attribute": "dexterity", "amount": 2 }
+        ]
+      },
+      "description": "Non-water types move clumsily underwater",
+      "statusTag": "underwaterClumsiness",
+      "statusDesc": "Underwater Clumsiness",
+      "durationType": "conditional"
+    }
+  }
+}

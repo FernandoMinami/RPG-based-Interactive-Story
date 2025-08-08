@@ -1,0 +1,67 @@
+{
+  "id": "dark",
+  "name": "Dark",
+  "description": "Shadow and corruption - drains life, strong vs light",
+  "color": "#4B0082",
+  "icon": "🌑",
+  "lore": "Dark represents shadow, corruption, and life drain. Dark masters can sap enemy strength and hide in shadows, but are vulnerable to purifying light.",
+  
+  "combatProperties": {
+    "resistances": ["dark"],
+    "weaknesses": ["light"],
+    "immunities": [],
+    "bonusDamageTypes": ["light"],
+    "baseModifier": 1.1,
+    "lifeDrainBonus": 1.4,
+    "stealthBonus": 1.5
+  },
+  
+  "environmentalEffects": {
+    "darkness": {
+      "environmentalDamageMultiplier": 0.6,
+      "description": "Complete darkness empowers shadow",
+      "bonusRegeneration": 7,
+      "bonusLifeDrain": 1.5
+    },
+    "shadows": {
+      "environmentalDamageMultiplier": 0.8,
+      "description": "Shadowy areas strengthen dark types",
+      "bonusStealth": 1.3
+    },
+    "daylight": {
+      "environmentalDamageMultiplier": 1.4,
+      "description": "Bright sunlight weakens shadow power",
+      "penaltyEffect": "reduced_stealth"
+    },
+    "holy_ground": {
+      "environmentalDamageMultiplier": 1.8,
+      "description": "Sacred places severely weaken dark energy"
+    }
+  },
+  
+  "abilityTypeBonus": {
+    "dark": 1.2,
+    "corruption": 1.2,
+    "life-drain": 1.2
+  },
+  
+  "statusEffectInteractions": {
+    "curse": {
+      "immunity": true,
+      "description": "Dark types cannot be cursed"
+    },
+    "corruption": {
+      "immunity": true,
+      "description": "Dark energy cannot be corrupted further"
+    },
+    "blindness": {
+      "immunity": true,
+      "description": "Dark types see through shadows"
+    },
+    "purification": {
+      "vulnerability": true,
+      "damageMultiplier": 2.5,
+      "description": "Purification effects are devastating to dark"
+    }
+  }
+}

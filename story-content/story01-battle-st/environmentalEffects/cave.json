@@ -1,0 +1,191 @@
+{
+    "type": "cave",
+    "name": "Cave Environment",
+    "description": "Dark underground caverns with poor visibility and unstable terrain",
+    "icon": "🕳️",
+    "immuneType": "earth",
+    "defaultIntensity": 5,
+    "intensityLevels": {
+        "1": {
+            "name": "Shallow Cave",
+            "description": "A well-lit cave entrance with some visibility",
+            "effects": {
+                "accuracyPenalty": 0.15,
+                "message": "The dim lighting makes it harder to see clearly."
+            }
+        },
+        "2": {
+            "name": "Cave Tunnel",
+            "description": "Deeper into the cave with reduced lighting",
+            "effects": {
+                "accuracyPenalty": 0.15,
+                "message": "The deeper cave tunnel reduces visibility."
+            }
+        },
+        "3": {
+            "name": "Dark Cave",
+            "description": "Limited natural light, navigation becomes difficult",
+            "effects": {
+                "accuracyPenalty": 0.15,
+                "message": "The darkness makes precise movements challenging."
+            }
+        },
+        "4": {
+            "name": "Deep Cave",
+            "description": "Very limited visibility, echo effects",
+            "effects": {
+                "accuracyPenalty": 0.15,
+                "message": "The deep cave's darkness hampers your vision."
+            }
+        },
+        "5": {
+            "name": "Underground Chamber",
+            "description": "Large cave chamber with falling rocks and uneven ground",
+            "effects": {
+                "damage": 2,
+                "accuracyPenalty": 0.30,
+                "damagePenalty": 0.25,
+                "trippingChance": 6,
+                "trippingDamage": 3,
+                "statusChance": 8,
+                "statusType": "stunned",
+                "message": "Loose rocks and uneven ground create hazards in the darkness."
+            }
+        },
+        "6": {
+            "name": "Dangerous Cavern",
+            "description": "Unstable cave system with frequent rockfalls",
+            "effects": {
+                "damage": 2,
+                "accuracyPenalty": 0.30,
+                "damagePenalty": 0.25,
+                "trippingChance": 6,
+                "trippingDamage": 3,
+                "statusChance": 8,
+                "statusType": "stunned",
+                "message": "The dangerous cavern threatens with falling rocks and poor footing."
+            }
+        },
+        "7": {
+            "name": "Treacherous Depths",
+            "description": "Deep cave system with significant hazards",
+            "effects": {
+                "damage": 2,
+                "accuracyPenalty": 0.30,
+                "damagePenalty": 0.25,
+                "trippingChance": 6,
+                "trippingDamage": 3,
+                "statusChance": 8,
+                "statusType": "stunned",
+                "message": "The treacherous cave depths endanger you with falling debris."
+            }
+        },
+        "8": {
+            "name": "Abyssal Cavern",
+            "description": "Near-complete darkness with frequent rockfalls",
+            "effects": {
+                "damage": 4,
+                "accuracyPenalty": 0.40,
+                "damagePenalty": 0.40,
+                "trippingChance": 12,
+                "trippingDamage": 6,
+                "statusChance": 15,
+                "statusType": "stunned",
+                "message": "The abyssal cavern's complete darkness and unstable ceiling create extreme danger."
+            }
+        },
+        "9": {
+            "name": "Nightmare Depths",
+            "description": "Pitch-black depths with constant cave-ins",
+            "effects": {
+                "damage": 4,
+                "accuracyPenalty": 0.40,
+                "damagePenalty": 0.40,
+                "trippingChance": 12,
+                "trippingDamage": 6,
+                "statusChance": 15,
+                "statusType": "stunned",
+                "message": "The nightmare depths assault you with total darkness and falling rocks."
+            }
+        },
+        "10": {
+            "name": "Collapsing Abyss",
+            "description": "Extremely unstable cave system on the verge of collapse",
+            "effects": {
+                "damage": 4,
+                "accuracyPenalty": 0.40,
+                "damagePenalty": 0.40,
+                "trippingChance": 12,
+                "trippingDamage": 6,
+                "statusChance": 15,
+                "statusType": "stunned",
+                "message": "The collapsing abyss threatens to bury you under tons of rock."
+            }
+        }
+    },
+    
+    "typeInteractions": {
+        "earth": {
+            "environmentalDamageMultiplier": 0.0,
+            "accuracyBonus": 0.2,
+            "description": "Earth types are immune to cave hazards and see well in darkness"
+        },
+        "fire": {
+            "environmentalDamageMultiplier": 1.0,
+            "accuracyPenalty": 0.3,
+            "description": "Fire types struggle with the darkness and damp conditions"
+        },
+        "water": {
+            "environmentalDamageMultiplier": 1.0,
+            "accuracyPenalty": 0.2,
+            "description": "Water types are hindered by the dry, rocky environment"
+        },
+        "air": {
+            "environmentalDamageMultiplier": 1.0,
+            "accuracyPenalty": 0.25,
+            "description": "Air types struggle in the confined, still air of caves"
+        },
+        "lightning": {
+            "environmentalDamageMultiplier": 1.0,
+            "accuracyPenalty": 0.2,
+            "description": "Lightning types have difficulty in the grounded environment"
+        },
+        "neutral": {
+            "environmentalDamageMultiplier": 1.0,
+            "accuracyPenalty": 0.2,
+            "description": "Standard cave navigation difficulties"
+        }
+    },
+    
+    "protectionItems": [
+        {
+            "name": "Spelunker's Helmet",
+            "protection": "full",
+            "description": "Complete protection from cave hazards with built-in lighting and head protection"
+        },
+        {
+            "name": "Torch",
+            "protection": "partial",
+            "description": "Provides light to reduce visibility penalties but offers no physical protection"
+        },
+        {
+            "name": "Climbing Boots",
+            "protection": "partial",
+            "description": "Reduces tripping hazards but doesn't help with falling rocks or visibility"
+        }
+    ],
+    "encounterText": {
+        "entry": "You enter the cave system, where shadows dance and rocks threaten to fall...",
+        "immunity": "Your earth type nature allows you to navigate the cave with natural ease!",
+        "protection": "Your protective gear shields you from the cave's hazards.",
+        "damage": "The unstable cave environment tests your endurance!",
+        "statusEffect": "The treacherous terrain and falling rocks disorient you!"
+    },
+    "battleMessages": {
+        "environmentActive": "The cave's darkness and unstable terrain affect the battle!",
+        "immunityMessage": "Earth types move through caves with natural confidence!",
+        "damageMessage": "Falling rocks and poor footing create additional hazards!",
+        "accuracyPenalty": "The cave's darkness makes accurate attacks difficult!",
+        "tripping": "Uneven ground and loose rocks create tripping hazards!"
+    }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "half-elf",
+  "name": "Half-Elf",
+  "description": "Human and elven heritage - versatile with magical affinity",
+  "lore": "Born of both human and elven blood, half-elves inherit the adaptability of humans and the magical prowess of elves. They often feel caught between two worlds but can excel in both.",
+  "availableTypes": ["neutral", "air", "light", "fire", "water"],
+  "racialTraits": {
+    "dual_heritage": "Balanced between human versatility and elven magic",
+    "magical_affinity": "Enhanced mana regeneration"
+  },
+  "baseModifiers": {
+    "strength": -1,
+    "dexterity": 1, 
+    "constitution": 0,
+    "intelligence": 1,
+    "wisdom": 1,
+    "charisma": 1
+  },
+  "typeCount": 5
+}

@@ -28,6 +28,30 @@
         "id": "stunned",
         "name": "Stunned",
         "file": "stunned.js"
+    },
+    {
+        "id": "poison",
+        "name": "Poison",
+        "file": "poison.js"
+    },
+    {
+        "id": "burn",
+        "name": "Burn",
+        "file": "burn.js"
+    },
+    {
+        "id": "bleed",
+        "name": "Bleed",
+        "file": "bleed.js"
+    },
+    {
+        "id": "frostbite",
+        "name": "Frostbite",
+        "file": "frostbite.js"
+    },
+    {
+        "id": "acid",
+        "name": "Acid Burn",
+        "file": "acid.js"
     }
-
 ]

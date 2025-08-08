@@ -1,8 +1,14 @@
 // turn-management.js - Battle turn order and state management
 
 import { regenMp } from './character.js';
-import { updateStatuses, isStatusActive } from './status.js';
+import { updateStatuses, isStatusActive, applyStatus, canCharacterAct } from './status.js';
 import { getAbilities } from './abilities.js';
+import { 
+    calculateEnvironmentalHealing, 
+    calculateEnvironmentalDamage,
+    getEnvironmentalEffectsForBattle,
+    getEnvironmentalPenalties
+} from './environmental.js';
 
 /**
  * Create turn management system
@@ -13,6 +19,12 @@ import { getAbilities } from './abilities.js';
 export function createTurnManager(player, enemy) {
     let currentTurn = 0;
     let playerTurn = true;
+    
+    // Underwater breath tracking
+    let breathTracking = {
+        player: { turnsUnderwater: 0, hasBreathDamage: false },
+        enemy: { turnsUnderwater: 0, hasBreathDamage: false }
+    };
 
     /**
      * Calculate effective speed and accuracy for a character
@@ -28,6 +40,19 @@ export function createTurnManager(player, enemy) {
             // Pinned reduces speed by 20% and accuracy by 30%
             effectiveSpeed = Math.floor(effectiveSpeed * 0.8);
             effectiveAccuracy = 0.7; // 30% accuracy reduction
+        }
+        
+        // Apply environmental speed penalties using new unified system
+        if (window.battleEnvironment) {
+            const { type: environmentType, intensity } = window.battleEnvironment;
+            const penalties = getEnvironmentalPenalties(character, environmentType, intensity);
+            
+            // Apply speed penalty
+            if (penalties.speedPenalty > 0) {
+                effectiveSpeed = Math.floor(effectiveSpeed * (1 - penalties.speedPenalty));
+            }
+            
+            // Note: Environmental accuracy penalties are now handled in calculateAccuracy()
         }
 
         return { effectiveSpeed, effectiveAccuracy };
@@ -50,24 +75,126 @@ export function createTurnManager(player, enemy) {
      * @returns {boolean} - True if player can act
      */
     function canPlayerAct() {
-        return !isStatusActive(player, 'stunned') && !isStatusActive(player, 'frozen');
+        return canCharacterAct(player);
+    }
+
+    /**
+     * Check if enemy can act (not stunned/frozen)
+     * @returns {boolean} - True if enemy can act
+     */
+    function canEnemyAct() {
+        return canCharacterAct(enemy);
     }
 
     /**
      * Advance to next turn
      * @param {Object} battleState - Battle state object
      * @param {Function} addLog - Logging function
+     * @param {string} environment - Current battle environment (optional)
      */
-    function nextTurn(battleState, addLog) {
+    function nextTurn(battleState, addLog, environment = null, addSystemMessage = null) {
         currentTurn++;
         updateCooldowns(battleState.abilityCooldowns);
         
         // Regenerate mana
         if (regenMp) regenMp();
 
-        // Update status effects for both characters
-        updateStatuses(player, addLog);
-        updateStatuses(enemy, addLog);
+        // Only apply environmental effects and status updates if both characters are alive
+        if (player.life > 0 && enemy.life > 0) {
+            // Apply environmental effects (default to neutral if not specified)
+            const currentEnvironment = environment || "neutral";
+            applyEnvironmentalEffects(player, currentEnvironment, addLog);
+            applyEnvironmentalEffects(enemy, currentEnvironment, addLog);
+
+            // Update status effects for both characters, but only on player's turn
+            // This ensures buffs/debuffs last for full rounds, not individual actions
+            if (playerTurn) {
+                // Use addSystemMessage for status updates to avoid interfering with recent actions
+                const statusLogger = addSystemMessage || addLog;
+                updateStatuses(player, statusLogger);
+                updateStatuses(enemy, statusLogger);
+                // Round end - no need to show "End of Round" message to players
+            }
+        }
+    }
+
+    /**
+     * Apply environmental effects to a character
+     * @param {Object} character - The character to affect
+     * @param {string|Object} environment - The environment type or environment object
+     * @param {Function} addLog - Logging function
+     */
+    function applyEnvironmentalEffects(character, environment, addLog) {
+        let environmentType = "neutral";
+        let intensity = 1;
+        
+        // Handle both string and object environment formats
+        if (typeof environment === "string") {
+            environmentType = environment;
+        } else if (environment && environment.type) {
+            environmentType = environment.type;
+            intensity = environment.intensity || 1;
+        }
+        
+        // Skip neutral environments
+        if (environmentType === "neutral") return;
+        
+        // Check for environmental healing/regeneration first
+        const healing = calculateEnvironmentalHealing(character, environmentType);
+        if (healing.healingAmount > 0) {
+            const oldLife = character.life;
+            character.life = Math.min(character.maxLife, character.life + healing.healingAmount);
+            const actualHealing = character.life - oldLife;
+            if (actualHealing > 0) {
+                addLog(`${character.name || "Character"} regenerates ${actualHealing} HP from the ${environmentType} environment! ${healing.description}`);
+            }
+        }
+
+        // Use the new unified environmental system
+        const envEffects = getEnvironmentalEffectsForBattle(character, environmentType, intensity, currentTurn);
+        
+        // Skip if character is immune or protected
+        if (envEffects.hasImmunity || envEffects.isProtected) {
+            if (envEffects.allMessages.length > 0) {
+                addLog(envEffects.allMessages[0]);
+            }
+            return;
+        }
+        
+        // Apply regular environmental damage
+        if (envEffects.environmentalDamage > 0) {
+            character.life = Math.max(0, character.life - envEffects.environmentalDamage);
+            addLog(`🌡️ ${character.name} takes ${envEffects.environmentalDamage} environmental damage!`);
+        }
+        
+        // Apply special environmental effects (lightning, tripping, breath loss, etc.)
+        if (envEffects.specialDamage > 0) {
+            character.life = Math.max(0, character.life - envEffects.specialDamage);
+            envEffects.specialMessages.forEach(message => addLog(message));
+        }
+        
+        // Apply status effects
+        if (envEffects.statusChance > 0 && envEffects.statusType) {
+            const roll = Math.floor(Math.random() * 100) + 1;
+            if (roll <= envEffects.statusChance) {
+                applyStatus(character, envEffects.statusType, 2, addLog);
+                addLog(`${character.name} is affected by ${envEffects.statusType} from the harsh environment!`);
+            }
+        }
+        
+        // Handle underwater breath tracking (special case for legacy system)
+        if (environmentType === 'underwater' && !envEffects.hasImmunity) {
+            const characterKey = character === player ? 'player' : 'enemy';
+            breathTracking[characterKey].turnsUnderwater++;
+            
+            // Check for breath damage after 6 turns (medium/deep water only)
+            if (intensity >= 5 && breathTracking[characterKey].turnsUnderwater >= 6) {
+                if (!breathTracking[characterKey].hasBreathDamage) {
+                    breathTracking[characterKey].hasBreathDamage = true;
+                    addLog(`${character.name} is running out of breath underwater!`);
+                }
+            }
+        }
     }
 
     /**
@@ -87,7 +214,8 @@ export function createTurnManager(player, enemy) {
             playerTurn,
             playerStats: calculateEffectiveStats(player),
             enemyStats: calculateEffectiveStats(enemy),
-            canPlayerAct: canPlayerAct()
+            canPlayerAct: canPlayerAct(),
+            canEnemyAct: canEnemyAct()
         };
     }
 
@@ -97,7 +225,8 @@ export function createTurnManager(player, enemy) {
         getTurnInfo,
         calculateEffectiveStats,
         updateCooldowns,
-        canPlayerAct
+        canPlayerAct,
+        canEnemyAct
     };
 }
 

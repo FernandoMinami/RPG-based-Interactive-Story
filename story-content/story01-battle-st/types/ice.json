@@ -1,0 +1,67 @@
+{
+  "id": "ice",
+  "name": "Ice",
+  "description": "Freezing cold and crystalline hardness - slows enemies, strong vs fire",
+  "color": "#B0E0E6",
+  "icon": "❄️",
+  "lore": "Ice represents absolute cold, preservation, and crystalline perfection. Ice masters can freeze enemies solid and create impenetrable barriers.",
+  
+  "combatProperties": {
+    "resistances": ["ice", "water"],
+    "weaknesses": ["fire", "earth"],
+    "immunities": [],
+    "bonusDamageTypes": ["fire", "air"],
+    "baseModifier": 1.0,
+    "slowEffect": 1.4,
+    "defenseBonus": 1.2
+  },
+  
+  "environmentalEffects": {
+    "frozen": {
+      "damageMultiplier": 0.5,
+      "description": "Frozen environments empower ice types",
+      "bonusRegeneration": 8,
+      "bonusFreeze": 1.5
+    },
+    "winter": {
+      "damageMultiplier": 0.7,
+      "description": "Cold weather strengthens ice power",
+      "bonusDefense": 1.2
+    },
+    "volcanic": {
+      "damageMultiplier": 1.6,
+      "description": "Extreme heat melts ice power",
+      "penaltyEffect": "constant_melting"
+    },
+    "desert": {
+      "damageMultiplier": 1.4,
+      "description": "Hot, dry environments weaken ice"
+    }
+  },
+  
+  "abilities": {
+    "canLearn": ["freeze", "ice-shard", "blizzard", "ice-armor", "absolute-zero"],
+    "bonusEffectiveness": ["ice-attacks", "freeze-abilities", "slow-effects"]
+  },
+  
+  "statusEffectInteractions": {
+    "freeze": {
+      "immunity": true,
+      "description": "Ice types cannot be frozen"
+    },
+    "slow": {
+      "resistance": true,
+      "description": "Ice types are naturally methodical"
+    },
+    "burn": {
+      "resistance": true,
+      "durationMultiplier": 0.3,
+      "description": "Ice resists burning effects"
+    },
+    "melt": {
+      "vulnerability": true,
+      "damageMultiplier": 2.0,
+      "description": "Melting effects are devastating to ice"
+    }
+  }
+}

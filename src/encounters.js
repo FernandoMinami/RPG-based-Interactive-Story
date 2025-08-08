@@ -92,6 +92,9 @@ export async function triggerForcedBattle(choice, selectedStory, player, onBattl
     const enemyModule = await import(`../story-content/${storyFolder}/enemies/${choice.battle}.js?v=${Date.now()}`);
     const enemy = { ...enemyModule.enemy };
     
+    // Get battle environment if specified, default to neutral
+    const battleEnvironment = choice.battleEnvironment || "neutral";
+    
     startBattle(player, enemy, (result, rewards) => {
         const modal = document.getElementById("combat-modal");
         modal.style.display = "none";
@@ -101,5 +104,5 @@ export async function triggerForcedBattle(choice, selectedStory, player, onBattl
         } else {
             onBattleEnd("gameover");
         }
-    });
+    }, battleEnvironment);
 }

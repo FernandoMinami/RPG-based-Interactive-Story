@@ -1,0 +1,62 @@
+{
+  "id": "earth",
+  "name": "Earth",
+  "description": "Solid defense and crushing force - high defense, slow but powerful",
+  "color": "#8B4513",
+  "icon": "🗿",
+  "lore": "Earth represents stability, endurance, and overwhelming force. Earth masters have incredible defense but are vulnerable to water erosion and ice cracking.",
+  
+  "combatProperties": {
+    "resistances": ["earth", "fire", "lightning"],
+    "weaknesses": ["water", "ice", "air"],
+    "immunities": [],
+    "bonusDamageTypes": ["fire", "lightning"],
+    "baseModifier": 0.9,
+    "defenseBonus": 1.4
+  },
+  
+  "environmentalEffects": {
+    "underground": {
+      "environmentalDamageMultiplier": 0.4,
+      "description": "Earth types are strongest underground",
+      "bonusRegeneration": 8,
+      "bonusDefense": 1.3
+    },
+    "mountain": {
+      "environmentalDamageMultiplier": 0.7,
+      "description": "Rocky terrain strengthens earth types",
+      "bonusDefense": 1.2
+    },
+    "underwater": {
+      "environmentalDamageMultiplier": 1.4,
+      "description": "Water erodes earth strength"
+    },
+    "flying": {
+      "environmentalDamageMultiplier": 1.3,
+      "description": "Earth types struggle when airborne",
+      "penaltyEffect": "reduced_accuracy"
+    }
+  },
+  
+  "abilityTypeBonus": {
+    "earth": 1.2,
+    "description": "Earth type users gain 20% bonus damage with earth abilities"
+  },
+  
+  "statusEffectInteractions": {
+    "stun": {
+      "resistance": true,
+      "durationMultiplier": 0.7,
+      "description": "Earth types resist stunning effects"
+    },
+    "poison": {
+      "resistance": true,
+      "description": "Earth's stability resists toxins"
+    },
+    "erosion": {
+      "vulnerability": true,
+      "damageMultiplier": 2.0,
+      "description": "Water-based erosion is devastating to earth"
+    }
+  }
+}

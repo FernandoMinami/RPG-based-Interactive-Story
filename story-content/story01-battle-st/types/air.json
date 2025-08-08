@@ -1,0 +1,64 @@
+{
+  "id": "air",
+  "name": "Air",
+  "description": "Swift winds and lightning - high speed and evasion",
+  "color": "#87CEEB",
+  "icon": "💨",
+  "lore": "Air represents freedom, speed, and electrical power. Air masters are incredibly fast and can harness lightning, but struggle against fire and earth.",
+  
+  "combatProperties": {
+    "resistances": ["air", "earth"],
+    "weaknesses": ["fire", "ice"],
+    "immunities": [],
+    "bonusDamageTypes": ["earth"],
+    "baseModifier": 1.1,
+    "speedBonus": 1.5,
+    "evasionBonus": 1.3
+  },
+  
+  "environmentalEffects": {
+    "flying": {
+      "environmentalDamageMultiplier": 0.6,
+      "description": "Air types excel when airborne",
+      "bonusSpeed": 1.4,
+      "bonusEvasion": 1.5
+    },
+    "storm": {
+      "environmentalDamageMultiplier": 0.5,
+      "description": "Storms empower air types",
+      "bonusRegeneration": 7,
+      "bonusLightning": 1.6
+    },
+    "underground": {
+      "environmentalDamageMultiplier": 1.4,
+      "description": "Confined spaces weaken air flow",
+      "penaltyEffect": "reduced_speed"
+    },
+    "vacuum": {
+      "environmentalDamageMultiplier": 2.0,
+      "description": "Air types cannot function without atmosphere"
+    }
+  },
+  
+  "abilityTypeBonus": {
+    "air": 1.2,
+    "lightning": 1.2,
+    "description": "Air type users gain 20% bonus damage with air and lightning abilities"
+  },
+  
+  "statusEffectInteractions": {
+    "paralysis": {
+      "immunity": true,
+      "description": "Air types' electrical nature prevents paralysis"
+    },
+    "slow": {
+      "resistance": true,
+      "durationMultiplier": 0.6,
+      "description": "Air's natural speed resists slowing effects"
+    },
+    "suffocation": {
+      "vulnerability": true,
+      "description": "Air types need constant airflow"
+    }
+  }
+}

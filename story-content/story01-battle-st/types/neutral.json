@@ -1,0 +1,36 @@
+{
+  "id": "neutral",
+  "name": "Neutral",
+  "description": "No special elemental affinity - balanced but no advantages",
+  "color": "#808080",
+  "icon": "⚪",
+  "lore": "Neutral energy represents balance and stability. It has no special strengths or weaknesses, making it reliable but unremarkable.",
+  
+  "combatProperties": {
+    "resistances": [],
+    "weaknesses": [],
+    "immunities": [],
+    "bonusDamageTypes": [],
+    "baseModifier": 1.0
+  },
+  
+  "environmentalEffects": {
+    "volcanic": {
+      "damageMultiplier": 1.0,
+      "description": "No special interaction with volcanic environments"
+    },
+    "underwater": {
+      "damageMultiplier": 1.0,
+      "description": "No special interaction with water environments"
+    },
+    "frozen": {
+      "damageMultiplier": 1.0,
+      "description": "No special interaction with ice environments"
+    }
+  },
+  
+  "abilities": {
+    "canLearn": ["heal", "precision-strike", "defense-boost"],
+    "bonusEffectiveness": []
+  }
+}

@@ -51,7 +51,6 @@ export async function loadNpcs(storyFolder) {
   try {
     const manifestUrl = `../story-content/${storyFolder}/npcs/_npcs.json?v=${Date.now()}`;
     npcManifest = await fetch(manifestUrl).then(r => r.json());
-    //console.log("Loaded NPC manifest:", npcManifest);
   } catch (error) {
     console.warn("No NPC manifest found for story:", storyFolder);
     npcManifest = [];
@@ -102,7 +101,6 @@ export async function showNpcInterface(npcId, storyFolder, player) {
     showMerchantNpcInterface(npc, player);
   } else {
     // Future: handle quest NPCs, info NPCs, etc.
-    console.log("NPC type not yet implemented:", npc.type);
   }
 }
 
@@ -113,8 +111,8 @@ export async function showNpcInterface(npcId, storyFolder, player) {
  */
 function showMerchantNpcInterface(npc, player) {
   const modal = document.getElementById("inventory-modal");
-  const title = modal.querySelector("h2");
-  const content = modal.querySelector(".modal-content > div");
+  const title = modal.querySelector(".modal-header h2");
+  const content = modal.querySelector(".modal-content > div:last-child");
   
   title.textContent = `Buy from ${npc.name}`;
   
@@ -292,8 +290,8 @@ window.showNpcShopInterface = function(npcId, storyFolder, player) {
     }
 
     const modal = document.getElementById("inventory-modal");
-    const title = modal.querySelector("h2");
-    const content = modal.querySelector(".modal-content > div");
+    const title = modal.querySelector(".modal-header h2");
+    const content = modal.querySelector(".modal-content > div:last-child");
     
     title.textContent = `Shop at ${npc.name}`;
     
@@ -372,9 +370,9 @@ window.showShopBuyTab = function(npcId, storyFolder) {
           const item = items[itemId];
           if (!item) return;
           
-          if (item.type === "equipable") {
+          if (item.type === "equipable" || item.type === "armor" || item.type === "weapon") {
             categories.equipment.push({ id: itemId, item, ...itemData });
-          } else if (itemId.includes("scroll")) {
+          } else if (itemId.includes("scroll-of") || item.name.toLowerCase().includes("scroll")) {
             categories.scrolls.push({ id: itemId, item, ...itemData });
           } else {
             categories.consumables.push({ id: itemId, item, ...itemData });
@@ -538,18 +536,22 @@ window.showShopSellTab = function(npcId, npcName) {
           const quantity = inventory[itemId];
           const item = items[itemId];
           
-          if (item && item.sellValue) {
+          if (item) {
             // Check if this item is currently equipped
             let equipped = false;
-            if (item.type === "equipable" && item.slot && window.player.equipment) {
-              const equippedItem = window.player.equipment[item.slot];
-              equipped = equippedItem && equippedItem.id === itemId;
+            if ((item.type === "equipable" && item.slot) || (item.type === "armor" && item.category)) {
+              const itemSlot = item.slot || item.category;
+              if (window.player.equipment) {
+                const equippedItem = window.player.equipment[itemSlot];
+                equipped = equippedItem && equippedItem.id === itemId;
+              }
             }
             
-            // Only add to categories if NOT equipped
+            // Add all items to categories (we'll handle NPC preferences in the UI)
             if (!equipped) {
-              if (item.type === "equipable" && item.slot) {
-                categories[item.slot].push({ id: itemId, item, quantity });
+              if ((item.type === "equipable" && item.slot) || (item.type === "armor" && item.category)) {
+                const itemSlot = item.slot || item.category;
+                categories[itemSlot].push({ id: itemId, item, quantity });
               } else {
                 categories.consumables.push({ id: itemId, item, quantity });
               }
@@ -572,22 +574,24 @@ window.showShopSellTab = function(npcId, npcName) {
           
           if (hasItems) {
             items.forEach(({ id, item, quantity }) => {
-              const totalValue = Math.floor(item.sellValue * quantity);
-              const singleValue = item.sellValue;
+              // Calculate sell value from either sellValue or price
+              const baseValue = item.sellValue || (item.price ? Math.floor(item.price * 0.5) : 10);
+              const singleValue = baseValue; // Use base value for display, actual check happens on click
+              const totalValue = Math.floor(singleValue * quantity);
               
               html += `
-                <div class="item-row">
+                <div class="item-row" id="item-row-${id}">
                   <div>
                     <strong>${item.name}</strong> x${quantity}<br>
                     <small style="color: #666;">${item.description}</small><br>
-                    <small style="color: #999;">Sell value: ${item.sellValue} gold each</small>
+                    <small style="color: #999;">Base value: ${singleValue} gold each</small>
                   </div>
                   <div style="display: flex; gap: 5px; flex-direction: column;">
-                    <button onclick="sellItemInShop('${id}', 1, ${singleValue}, '${npcId}')" 
+                    <button onclick="attemptSellItem('${id}', 1, ${singleValue}, '${npcId}', '${item.name}')" 
                             style="background: #17a2b8; color: white; border: none; padding: 3px 8px; border-radius: 3px; font-size: 12px;">
                       Sell 1 (${singleValue} gold)
                     </button>
-                    <button onclick="sellItemInShop('${id}', ${quantity}, ${totalValue}, '${npcId}')" 
+                    <button onclick="attemptSellItem('${id}', ${quantity}, ${totalValue}, '${npcId}', '${item.name}')" 
                             style="background: #28a745; color: white; border: none; padding: 5px 10px; border-radius: 3px;">
                       Sell All (${totalValue} gold)
                     </button>
@@ -617,8 +621,12 @@ window.showShopSellTab = function(npcId, npcName) {
         
         equipmentSlots.forEach(slot => {
           const equippedItem = window.player.equipment[slot];
-          if (equippedItem && equippedItem.sellValue) {
-            equippedItems.push({ slot, item: equippedItem });
+          if (equippedItem) {
+            // Check for both sellValue and price properties
+            const hasValue = equippedItem.sellValue || equippedItem.price;
+            if (hasValue) {
+              equippedItems.push({ slot, item: equippedItem });
+            }
           }
         });
         
@@ -633,16 +641,18 @@ window.showShopSellTab = function(npcId, npcName) {
         
         if (hasEquippedItems) {
           equippedItems.forEach(({ slot, item }) => {
-            const sellValue = Math.floor(item.sellValue);
+            // Calculate sell value from either sellValue or price
+            const baseValue = item.sellValue || (item.price ? Math.floor(item.price * 0.5) : 10);
+            const sellValue = Math.floor(baseValue);
             html += `
-              <div class="item-row">
+              <div class="item-row" id="equipped-row-${slot}">
                 <div>
                   <strong>${item.name}</strong> <span style="color: #6c757d;">(${slot})</span><br>
                   <small style="color: #666;">${item.description || 'Equipped item'}</small><br>
-                  <small style="color: #999;">Sell value: ${item.sellValue} gold</small>
+                  <small style="color: #999;">Base value: ${sellValue} gold</small>
                 </div>
                 <div>
-                  <button onclick="sellEquippedItemInShop('${slot}', ${sellValue}, '${npcId}')" 
+                  <button onclick="attemptSellEquippedItem('${slot}', ${sellValue}, '${npcId}', '${item.name}')" 
                           style="background: #fd7e14; color: white; border: none; padding: 5px 10px; border-radius: 3px;">
                     Sell (${sellValue} gold)
                   </button>
@@ -719,6 +729,15 @@ window.buyFromNpcInShop = function(npcId, itemId, price, storyFolder) {
         notification.textContent = `Purchased ${item.name} for ${price} gold!`;
         document.body.appendChild(notification);
         setTimeout(() => notification.remove(), 3000);
+        
+        // Update NPC dialogue to show purchase response
+        getNpcById(npcId, window.selectedStory.folder.replace('./', '')).then((npc) => {
+          const dialogueDiv = document.querySelector('#inventory-modal .modal-content div[style*="font-style: italic"]');
+          if (dialogueDiv) {
+            const purchaseMessage = npc.dialogue.purchase || "Thank you for your business!";
+            dialogueDiv.textContent = `"${purchaseMessage}"`;
+          }
+        });
       }
     });
   });
@@ -756,6 +775,15 @@ window.sellItemInShop = function(itemId, quantity, totalValue, npcId) {
       notification.textContent = `Sold ${quantity}x ${item.name} for ${totalValue} gold!`;
       document.body.appendChild(notification);
       setTimeout(() => notification.remove(), 3000);
+      
+      // Update NPC dialogue to show selling response
+      getNpcById(npcId, window.selectedStory.folder.replace('./', '')).then((npc) => {
+        const dialogueDiv = document.querySelector('#inventory-modal .modal-content div[style*="font-style: italic"]');
+        if (dialogueDiv) {
+          const sellingMessage = npc.dialogue.selling || "A fine transaction! Your goods are much appreciated.";
+          dialogueDiv.textContent = `"${sellingMessage}"`;
+        }
+      });
     });
   });
 };
@@ -791,6 +819,15 @@ window.sellLootItemInShop = function(lootId, quantity, totalValue, npcId) {
       notification.textContent = `Sold ${quantity}x ${lootItem.name} for ${totalValue} gold!`;
       document.body.appendChild(notification);
       setTimeout(() => notification.remove(), 3000);
+      
+      // Update NPC dialogue to show monster parts selling response
+      getNpcById(npcId, window.selectedStory.folder.replace('./', '')).then((npc) => {
+        const dialogueDiv = document.querySelector('#inventory-modal .modal-content div[style*="font-style: italic"]');
+        if (dialogueDiv) {
+          const monsterPartsMessage = npc.dialogue.sellingMonsterParts || npc.dialogue.selling || "A fine transaction! Your goods are much appreciated.";
+          dialogueDiv.textContent = `"${monsterPartsMessage}"`;
+        }
+      });
     });
   });
 };
@@ -809,6 +846,16 @@ window.sellEquippedItemInShop = function(slot, sellValue, npcId) {
         // Also remove it from inventory if it exists there
         if (equippedItem.id) {
           removeItem(equippedItem.id, 1);
+        }
+        
+        // Ensure player.secondary exists before calling updateSecondaryStats
+        if (window.player && window.player.secondary && typeof updateSecondaryStats === 'function') {
+          updateSecondaryStats(window.player);
+        }
+        
+        // Update character UI if available
+        if (typeof updateCharacterUI === 'function') {
+          updateCharacterUI();
         }
         
         // Ensure player.secondary exists before calling updateSecondaryStats
@@ -841,7 +888,164 @@ window.sellEquippedItemInShop = function(slot, sellValue, npcId) {
         notification.textContent = `Sold ${equippedItem.name} for ${sellValue} gold!`;
         document.body.appendChild(notification);
         setTimeout(() => notification.remove(), 3000);
+        
+        // Update NPC dialogue to show selling response
+        getNpcById(npcId, window.selectedStory.folder.replace('./', '')).then((npc) => {
+          const dialogueDiv = document.querySelector('#inventory-modal .modal-content div[style*="font-style: italic"]');
+          if (dialogueDiv) {
+            const sellingMessage = npc.dialogue.selling || "A fine transaction! Your goods are much appreciated.";
+            dialogueDiv.textContent = `"${sellingMessage}"`;
+          }
+        });
       }
+    });
+  });
+};
+
+/**
+ * Check if an NPC will buy a specific item based on their buying preferences
+ * @param {Object} npc - The NPC object
+ * @param {Object} item - The item to check
+ * @returns {boolean} - Whether the NPC will buy this item
+ */
+function checkNpcBuyingPreference(npc, item) {
+  if (!npc.buyingPreferences) return true; // If no preferences set, buy everything
+  
+  const prefs = npc.buyingPreferences;
+  
+  // Check category acceptance
+  const itemCategory = item.slot || item.category;
+  if (prefs.acceptedCategories && itemCategory && !prefs.acceptedCategories.includes(itemCategory)) {
+    return false;
+  }
+  
+  // Check type acceptance
+  if (prefs.acceptedTypes && !prefs.acceptedTypes.includes(item.type)) {
+    return false;
+  }
+  
+  return true;
+}
+
+/**
+ * Calculate how much an NPC will offer for an item
+ * @param {Object} npc - The NPC object
+ * @param {Object} item - The item being sold
+ * @param {number} baseValue - The base value of the item
+ * @returns {number} - The offer price
+ */
+function calculateNpcOfferPrice(npc, item, baseValue) {
+  if (!npc.buyingPreferences) return baseValue;
+  
+  const prefs = npc.buyingPreferences;
+  
+  // Check for custom price first
+  if (prefs.customPrices && prefs.customPrices[item.id]) {
+    return prefs.customPrices[item.id];
+  }
+  
+  // Use price multiplier
+  const multiplier = prefs.priceMultiplier || 0.5;
+  return Math.floor(baseValue * multiplier);
+}
+
+/**
+ * Show NPC refusal message when they won't buy an item
+ * @param {string} npcId - The NPC ID
+ * @param {string} itemName - The name of the item
+ */
+window.showNpcRefusalMessage = function(npcId, itemName) {
+  getNpcById(npcId, window.selectedStory.folder.replace('./', '')).then((npc) => {
+    const message = npc.dialogue.cantBuy || `Sorry, I'm not interested in buying ${itemName}.`;
+    
+    // Update the dialogue div without auto-reset
+    const dialogueDiv = document.querySelector('#inventory-modal .modal-content div[style*="font-style: italic"]');
+    if (dialogueDiv) {
+      dialogueDiv.textContent = `"${message}"`;
+    } else {
+      // Fallback to alert if dialogue div not found
+      alert(message);
+    }
+  });
+};
+
+/**
+ * Attempt to sell an equipped item to NPC with preference checking
+ * @param {string} slot - The equipment slot
+ * @param {number} baseValue - Base value of the item
+ * @param {string} npcId - The NPC ID
+ * @param {string} itemName - The item name for error messages
+ */
+window.attemptSellEquippedItem = function(slot, baseValue, npcId, itemName) {
+  const equippedItem = window.player.equipment[slot];
+  if (!equippedItem) {
+    alert("No item equipped in that slot!");
+    return;
+  }
+  
+  // Check NPC preferences
+  getNpcById(npcId, window.selectedStory.folder.replace('./', '')).then((npc) => {
+    const canBuy = checkNpcBuyingPreference(npc, equippedItem);
+    
+      if (!canBuy) {
+        // Show refusal message in dialogue div
+        const dialogueDiv = document.querySelector('#inventory-modal .modal-content div[style*="font-style: italic"]');
+        if (dialogueDiv) {
+          const message = npc.dialogue.cantBuy || `Sorry, I'm not interested in buying ${itemName}.`;
+          dialogueDiv.textContent = `"${message}"`;
+        } else {
+          // Fallback to alert if dialogue div not found
+          alert(npc.dialogue.cantBuy || `Sorry, I'm not interested in buying ${itemName}.`);
+        }
+        return;
+      }    // Calculate final offer price
+    const finalValue = calculateNpcOfferPrice(npc, equippedItem, baseValue);
+    
+    // Proceed with sale
+    sellEquippedItemInShop(slot, finalValue, npcId);
+  });
+};
+
+/**
+ * Attempt to sell an item to NPC with preference checking
+ * @param {string} itemId - The item ID
+ * @param {number} quantity - Quantity to sell
+ * @param {number} baseValue - Base value per item
+ * @param {string} npcId - The NPC ID
+ * @param {string} itemName - The item name for error messages
+ */
+window.attemptSellItem = function(itemId, quantity, baseValue, npcId, itemName) {
+  // Get the item data
+  import('./items.js').then(({ items }) => {
+    const item = items[itemId]; // items is an object, not an array
+    if (!item) {
+      alert("Item not found!");
+      return;
+    }
+    
+    // Check NPC preferences
+    getNpcById(npcId, window.selectedStory.folder.replace('./', '')).then((npc) => {
+      const canBuy = checkNpcBuyingPreference(npc, item);
+      
+      if (!canBuy) {
+        // Show refusal message in dialogue div
+        const dialogueDiv = document.querySelector('#inventory-modal .modal-content div[style*="font-style: italic"]');
+        if (dialogueDiv) {
+          const message = npc.dialogue.cantBuy || `Sorry, I'm not interested in buying ${itemName}.`;
+          dialogueDiv.textContent = `"${message}"`;
+        } else {
+          // Fallback to alert if dialogue div not found
+          alert(npc.dialogue.cantBuy || `Sorry, I'm not interested in buying ${itemName}.`);
+        }
+        return;
+      }
+      
+      // Calculate final offer price
+      const finalValue = calculateNpcOfferPrice(npc, item, baseValue);
+      const totalValue = Math.floor(finalValue * quantity);
+      
+      // Proceed with sale
+      sellItemInShop(itemId, quantity, totalValue, npcId);
     });
   });
 };

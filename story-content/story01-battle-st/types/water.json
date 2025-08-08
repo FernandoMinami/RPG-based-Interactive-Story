@@ -1,0 +1,62 @@
+{
+  "id": "water",
+  "name": "Water",
+  "description": "Healing flows and crushing waves - defensive and healing focused",
+  "color": "#0066CC",
+  "icon": "💧",
+  "lore": "Water represents flow, adaptation, and healing. Water masters can heal allies and douse flames but struggle against earth and lightning.",
+  
+  "combatProperties": {
+    "resistances": ["water", "fire"],
+    "weaknesses": ["earth", "lightning"],
+    "immunities": [],
+    "bonusDamageTypes": ["fire"],
+    "baseModifier": 1.0,
+    "healingBonus": 1.3
+  },
+  
+  "environmentalEffects": {
+    "underwater": {
+      "environmentalDamageMultiplier": 0.5,
+      "description": "Water types are in their element underwater",
+      "bonusRegeneration": 10,
+      "bonusHealing": 1.5
+    },
+    "desert": {
+      "environmentalDamageMultiplier": 1.3,
+      "description": "Dry environments weaken water types",
+      "penaltyEffect": "reduced_healing"
+    },
+    "frozen": {
+      "environmentalDamageMultiplier": 1.1,
+      "description": "Ice slightly weakens water flow"
+    },
+    "volcanic": {
+      "environmentalDamageMultiplier": 1.2,
+      "description": "Extreme heat evaporates water power"
+    }
+  },
+  
+  "abilityTypeBonus": {
+    "water": 1.2,
+    "ice": 1.2,
+    "description": "Water type users gain 20% bonus damage with water and ice abilities"
+  },
+  
+  "statusEffectInteractions": {
+    "burn": {
+      "resistance": true,
+      "durationMultiplier": 0.5,
+      "description": "Water types resist burning effects"
+    },
+    "poison": {
+      "resistance": true,
+      "description": "Water can purify toxins"
+    },
+    "shock": {
+      "vulnerability": true,
+      "damageMultiplier": 1.5,
+      "description": "Water conducts electricity, increasing shock damage"
+    }
+  }
+}

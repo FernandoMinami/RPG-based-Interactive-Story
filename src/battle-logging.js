@@ -8,6 +8,7 @@ export function createBattleLogger() {
     let battleLog = [];            // Current "turn" log messages
     let groupedBattleLogs = [];    // All grouped logs for this battle
     let recentActions = [];        // Last few actions for recent display (max 2-3 actions)
+    let systemMessages = [];       // System messages like buff expiration
 
     const logDiv = document.getElementById("combat-log");
     const recentDiv = document.getElementById("combat-recent");
@@ -19,12 +20,18 @@ export function createBattleLogger() {
     function addLog(msg) {
         battleLog.push(msg);
 
-        // Show current turn messages in the recentDiv
-        const recentGroups = battleLog.slice().map(m => `<div>${m}</div>`).join("");
-        recentDiv.innerHTML = recentGroups;
-
-        // Auto-scroll log
+        // Don't update recentDiv here - let updateRecentDisplay handle it
+        // Auto-scroll main log
         logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    /**
+     * Add a system message (like buff expiration) that appears below recent actions
+     * @param {string} msg - System message to add
+     */
+    function addSystemMessage(msg) {
+        systemMessages.push(msg);
+        updateRecentDisplay();
     }
 
     /**
@@ -45,6 +52,9 @@ export function createBattleLogger() {
             recentActions.shift();
         }
 
+        // Clear system messages when new actions occur
+        systemMessages = [];
+
         // Update recent display
         updateRecentDisplay();
     }
@@ -53,6 +63,7 @@ export function createBattleLogger() {
      * Update the recent actions display
      */
     function updateRecentDisplay() {
+        // Build recent actions HTML
         const recentHTML = recentActions.map(action => {
             const messagesHTML = action.messages.map(msg => `<div class="recent-message">${msg}</div>`).join("");
             return `<div class="recent-action">
@@ -61,7 +72,13 @@ export function createBattleLogger() {
             </div>`;
         }).join("");
 
-        recentDiv.innerHTML = recentHTML;
+        // Build system messages HTML
+        const systemHTML = systemMessages.map(msg => 
+            `<div class="system-message" style="color: #ccc; font-style: italic; margin-top: 8px;">${msg}</div>`
+        ).join("");
+
+        // Combine both in recentDiv
+        recentDiv.innerHTML = recentHTML + systemHTML;
     }
 
     /**
@@ -113,6 +130,7 @@ export function createBattleLogger() {
         battleLog = [];
         groupedBattleLogs = [];
         recentActions = [];
+        systemMessages = [];
         logDiv.innerHTML = "";
         recentDiv.innerHTML = "";
         
@@ -126,6 +144,7 @@ export function createBattleLogger() {
 
     return {
         addLog,
+        addSystemMessage,
         addRecentAction,
         getBattleLogLength,
         getCurrentBattleLogMessages,
@@ -141,19 +160,34 @@ export function createBattleLogger() {
  * @param {Object} critInfo - Critical hit information
  * @param {Object} ability - The ability used
  * @param {Function} addLog - Logging function
+ * @param {number} actualFinalDamage - The actual final damage after all calculations (optional)
+ * @param {boolean} isOverkill - Whether this attack was an overkill (optional)
  */
-export function logDamage(damageInfo, critInfo, ability, addLog) {
-    if (damageInfo.finalDamage > 0) {
-        if (critInfo.isCritical) {
-            addLog(`CRITICAL HIT! ${critInfo.finalDamage} damage!`);
+export function logDamage(damageInfo, critInfo, ability, addLog, actualFinalDamage = null, isOverkill = false) {
+    const displayDamage = actualFinalDamage || damageInfo.finalDamage;
+    
+    if (displayDamage > 0) {
+        // Priority 1: Overkill message (replaces normal hit message entirely)
+        if (isOverkill && ability.onOverkill) {
+            addLog(ability.onOverkill);
+            addLog(`${displayDamage} damage!`);
+        }
+        // Priority 2: Critical hit message
+        else if (critInfo.isCritical) {
+            addLog(`CRITICAL HIT! ${displayDamage} damage!`);
             if (ability.onCrit) {
                 addLog(ability.onCrit);
             }
-        } else {
-            addLog(`${critInfo.finalDamage} damage!`);
+        }
+        // Priority 3: Regular hit message
+        else {
+            if (ability.onHit) {
+                addLog(ability.onHit);
+            }
+            addLog(`${displayDamage} damage!`);
         }
 
-        // Log size advantage/disadvantage
+        /*// Log size advantage/disadvantage
         if (damageInfo.sizeBonus > 0) {
             addLog("Size advantage increases damage!");
         } else if (damageInfo.sizeBonus < 0) {
@@ -167,7 +201,7 @@ export function logDamage(damageInfo, critInfo, ability, addLog) {
 
         if (damageInfo.defenseBypass) {
             addLog("Defense bypassed!");
-        }
+        }*/
     }
 }
 

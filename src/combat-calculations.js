@@ -1,61 +1,227 @@
 // combat-calculations.js - Combat damage, accuracy, and critical hit calculations
 
-import { isStatusActive, applyStatus } from './status.js';
+import { isStatusActive, applyStatus, applyPinnedStatus, applyStunnedStatus, isCharacterTrapped, BuffRegistry, StatusRegistry, applyStatusDoT } from './status.js';
 import { updateLifeBar } from './ui.js';
+import { calculateTypeEffectiveness, calculateAbilityTypeBonus } from './types.js';
+import { getEnvironmentalPenalties } from './environmental.js';
 
 /**
- * Calculate final accuracy for an attack
+ * Calculate final accuracy for an attack including size and weight factors
+ * 🎯 HIT DETECTION SYSTEM: This calculates the % chance to hit (30-100%)
+ * The battle system then rolls 1-100 and compares: roll <= accuracy = HIT
  * @param {Object} ability - The ability being used
+ * @param {Object} attacker - The attacking character
+ * @param {Object} defender - The defending character
  * @param {number} attackerSpeed - Attacker's effective speed
  * @param {number} defenderSpeed - Defender's effective speed
  * @param {number} accuracyMultiplier - Accuracy multiplier (for status effects)
- * @returns {number} - Final accuracy percentage
+ * @returns {number} - Final accuracy percentage (minimum 30%, maximum 100%)
  */
-export function calculateAccuracy(ability, attackerSpeed, defenderSpeed, accuracyMultiplier = 1) {
+export function calculateAccuracy(ability, attacker, defender, attackerSpeed, defenderSpeed, accuracyMultiplier = 1) {
     const baseAccuracy = ability.accuracy !== undefined ? ability.accuracy : 100;
+    
+    // Base accuracy from speed difference
     let finalAccuracy = baseAccuracy + (attackerSpeed - defenderSpeed) * 2;
-    finalAccuracy = Math.max(5, Math.min(100, finalAccuracy));
-    return Math.floor(finalAccuracy * accuracyMultiplier);
+    
+    // Size-based accuracy modifiers
+    const attackerHeight = attacker.height || 175; // Default: 175cm (medium)
+    const defenderHeight = defender.height || 175; // Default: 175cm (medium)
+    
+    // Convert height to size categories for accuracy calculations
+    const heightToSizeCategory = (height) => {
+        if (height < 85) return 'tiny';
+        if (height < 150) return 'small';
+        if (height < 220) return 'medium';
+        if (height < 290) return 'large';
+        if (height < 360) return 'huge';
+        if (height < 500) return 'massive';
+        return 'colossal';
+    };
+    
+    const attackerSize = heightToSizeCategory(attackerHeight);
+    const defenderSize = heightToSizeCategory(defenderHeight);
+    
+    // Target size modifier (smaller = harder to hit, larger = easier to hit)
+    let targetSizeModifier = 0;
+    switch(defenderSize) {
+        case 'tiny': targetSizeModifier = -15; break;    // Tiny targets are very hard to hit
+        case 'small': targetSizeModifier = -8; break;    // Small targets are harder to hit
+        case 'medium': targetSizeModifier = 0; break;    // Medium is baseline
+        case 'large': targetSizeModifier = +5; break;    // Large targets are easier to hit
+        case 'huge': targetSizeModifier = +10; break;    // Huge targets are much easier to hit
+        case 'massive': targetSizeModifier = +15; break; // Massive targets are very easy to hit
+        case 'colossal': targetSizeModifier = +20; break; // Colossal targets are extremely easy to hit
+    }
+    
+    // Weight-based agility modifiers
+    const attackerWeight = attacker.weight || 65; // Default: 65kg (average human)
+    const defenderWeight = defender.weight || 65; // Default: 65kg (average human)
+    
+    // Attacker weight modifier (heavier = less accurate)
+    let attackerAgilityModifier = 0;
+    if (attackerWeight < 50) attackerAgilityModifier = +8;      // Very light = more agile
+    else if (attackerWeight < 70) attackerAgilityModifier = +3; // Light = slightly more agile
+    else if (attackerWeight < 90) attackerAgilityModifier = 0;  // Medium weight = baseline
+    else if (attackerWeight < 120) attackerAgilityModifier = -3; // Heavy = less agile
+    else attackerAgilityModifier = -8;                          // Very heavy = much less agile
+    
+    // Defender weight modifier (heavier = easier to hit, lighter = harder to hit)
+    let defenderAgilityModifier = 0;
+    if (defenderWeight < 50) defenderAgilityModifier = -8;      // Very light = harder to hit
+    else if (defenderWeight < 70) defenderAgilityModifier = -3; // Light = slightly harder to hit
+    else if (defenderWeight < 90) defenderAgilityModifier = 0;  // Medium weight = baseline
+    else if (defenderWeight < 120) defenderAgilityModifier = +3; // Heavy = easier to hit
+    else defenderAgilityModifier = +8;                          // Very heavy = much easier to hit
+    
+    // Apply all modifiers
+    finalAccuracy += targetSizeModifier + attackerAgilityModifier + defenderAgilityModifier;
+    
+    // Apply environmental accuracy penalties
+    if (window.battleEnvironment && attacker.type) {
+        const penalties = getEnvironmentalPenalties(attacker, window.battleEnvironment.type, window.battleEnvironment.intensity);
+        if (penalties.accuracyPenalty > 0) {
+            finalAccuracy *= (1 - penalties.accuracyPenalty);
+        }
+    }
+    
+    // Apply status multiplier and clamp to valid range (minimum 30%, maximum 100%)
+    finalAccuracy = Math.max(30, Math.min(100, finalAccuracy * accuracyMultiplier));
+    
+    // Debug log for accuracy calculation
+    /*console.log(`🎯 ACCURACY CALCULATION:
+    Base Accuracy: ${baseAccuracy}%
+    Speed Modifier: ${(attackerSpeed - defenderSpeed) * 2} (${attackerSpeed} - ${defenderSpeed})
+    Target Size: ${defenderSize} = ${targetSizeModifier}%
+    Attacker Agility: ${attackerWeight}kg = ${attackerAgilityModifier}%
+    Defender Agility: ${defenderWeight}kg = ${defenderAgilityModifier}%
+    Status Multiplier: ${accuracyMultiplier}x
+    FINAL ACCURACY: ${Math.floor(finalAccuracy)}%`);*/
+    
+    return Math.floor(finalAccuracy);
 }
 
 /**
- * Calculate damage for an attack
+ * Calculate damage for an attack using organized step-by-step formula
  * @param {Object} ability - The ability being used
  * @param {Object} attacker - The attacking character
  * @param {Object} defender - The defending character
  * @returns {Object} - Object containing damage info
  */
 export function calculateDamage(ability, attacker, defender) {
-    let base = Math.floor(Math.random() * (ability.maxDamage - ability.minDamage + 1)) + ability.minDamage;
-    let attackStat = 0;
-    let defenseStat = 0;
-
-    if (ability.type === "magic") {
-        attackStat = base + (attacker.secondary?.magicDamage || 0);
-        defenseStat = ability.breaksDefense ? 0 : (defender.secondary?.magicDefense || 0);
-    } else if (ability.type === "physical") {
-        attackStat = base + (attacker.secondary?.physicDamage || 0);
-        defenseStat = ability.breaksDefense ? 0 : (defender.secondary?.physicDefense || 0);
+    // Step 1: Calculate base damage from ability's min/max damage
+    const baseDamage = Math.floor(Math.random() * (ability.maxDamage - ability.minDamage + 1)) + ability.minDamage;
+    
+    // Step 2: Initialize damage components
+    let weightBonusDamage = 0;
+    let sizeDifferenceDamage = 0;
+    let flyingMultiplier = 1.0;
+    let defense = 0;
+    
+    // Step 3: Check if ability is physical
+    if (ability.type === "physical") {
+        // Use physical defense
+        defense = ability.breaksDefense ? 0 : (defender.secondary?.physicDefense || 0);
         
-        // Add size bonus for physical attacks
-        const sizeBonus = calculateSizeBonus(attacker, defender);
-        attackStat += sizeBonus;
+        // Step 4: Calculate weight bonus if ability uses weight
+        if (ability.usesWeight) {
+            weightBonusDamage = calculateWeightBonus(ability, attacker);
+        }
         
-        // Add weight bonus for specific abilities
-        const weightBonus = calculateWeightBonus(ability, attacker);
-        attackStat += weightBonus;
+        // Step 5: Calculate size difference damage
+        sizeDifferenceDamage = calculateSizeBonus(attacker, defender);
+        
+        // Step 6: Check if attacker is flying (diving attack)
+        if (isStatusActive(attacker, 'flying')) {
+            flyingMultiplier = 1.6;
+        }
     }
-
-    const damage = Math.max(0, base + attackStat - defenseStat);
+    // Step 7: Check if ability is magic
+    else if (ability.type === "magic") {
+        // Use magic defense
+        defense = ability.breaksDefense ? 0 : (defender.secondary?.magicDefense || 0);
+    }
+    
+    // Step 8: Calculate type effectiveness multiplier
+    let typeMultiplier = 1.0;
+    let typeEffectivenessText = "";
+    if (ability.elementalType && defender.type) {
+        typeMultiplier = calculateTypeEffectiveness(ability.elementalType, defender.type);
+        if (typeMultiplier === 0) {
+            typeEffectivenessText = "It has no effect!";
+        } else if (typeMultiplier === 0.7) {
+            typeEffectivenessText = "It's not very effective...";
+        } else if (typeMultiplier === 1.5) {
+            typeEffectivenessText = "It's super effective!";
+        }
+    }
+    
+    // Step 9: Calculate ability type bonus (mastery bonus)
+    let abilityTypeBonus = 1.0;
+    let abilityBonusText = "";
+    if (ability.elementalType && attacker.type) {
+        abilityTypeBonus = calculateAbilityTypeBonus(attacker.type, ability.elementalType);
+        if (abilityTypeBonus > 1.0) {
+            abilityBonusText = `${attacker.type} type mastery enhances the ${ability.elementalType} ability!`;
+        }
+    }
+    
+    // Step 10: Calculate environmental damage reduction
+    let environmentalMultiplier = 1.0;
+    let environmentalEffectText = "";
+    
+    // Check if there's an active battle environment that affects the attacker
+    if (window.battleEnvironment && attacker.type) {
+        const penalties = getEnvironmentalPenalties(attacker, window.battleEnvironment.type, window.battleEnvironment.intensity);
+        if (penalties.damagePenalty > 0) {
+            environmentalMultiplier = 1.0 - penalties.damagePenalty;
+            environmentalEffectText = `${window.battleEnvironment.type} environment reduces ${attacker.type} attack power!`;
+        }
+    }
+    
+    // Step 11: Apply the complete damage formula
+    // ((((baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier) * typeMultiplier * abilityTypeBonus * environmentalMultiplier) - defense)
+    const preDefenseDamage = (baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier * typeMultiplier * abilityTypeBonus * environmentalMultiplier;
+    const finalDamage = Math.max(0, Math.floor(preDefenseDamage - defense));
+    
+    // Debug log for damage calculation (temporarily disabled)
+    /*console.log(`🔥 DAMAGE CALCULATION BREAKDOWN:
+    Base Damage: ${baseDamage}
+    Weight Bonus: ${weightBonusDamage}
+    Size Difference: ${sizeDifferenceDamage}
+    Flying Multiplier: ${flyingMultiplier}x
+    Type Multiplier: ${typeMultiplier}x
+    Ability Type Bonus: ${abilityTypeBonus}x
+    Defense: ${defense}
+    
+    Formula: ((((${baseDamage} + ${weightBonusDamage} + ${sizeDifferenceDamage}) * ${flyingMultiplier}) * ${typeMultiplier} * ${abilityTypeBonus}) - ${defense})
+    Step 1: ${baseDamage} + ${weightBonusDamage} + ${sizeDifferenceDamage} = ${baseDamage + weightBonusDamage + sizeDifferenceDamage}
+    Step 2: ${baseDamage + weightBonusDamage + sizeDifferenceDamage} * ${flyingMultiplier} = ${(baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier}
+    Step 3: ${(baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier} * ${typeMultiplier} = ${(baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier * typeMultiplier}
+    Step 4: ${(baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier * typeMultiplier} * ${abilityTypeBonus} = ${preDefenseDamage}
+    Step 5: ${preDefenseDamage} - ${defense} = ${finalDamage}
+    
+    FINAL DAMAGE (before crit): ${finalDamage}`)*/;
     
     return {
-        baseDamage: base,
-        attackStat,
-        defenseStat,
-        finalDamage: damage,
+        baseDamage,
+        weightBonusDamage,
+        sizeDifferenceDamage,
+        flyingMultiplier,
+        typeMultiplier,
+        abilityTypeBonus,
+        environmentalMultiplier,
+        defense,
+        preDefenseDamage: Math.floor(preDefenseDamage),
+        finalDamage,
         defenseBypass: ability.breaksDefense,
-        sizeBonus: ability.type === "physical" ? calculateSizeBonus(attacker, defender) : 0,
-        weightBonus: ability.type === "physical" ? calculateWeightBonus(ability, attacker) : 0
+        typeEffectivenessText,
+        abilityBonusText,
+        environmentalEffectText,
+        // Legacy properties for compatibility
+        attackStat: weightBonusDamage + sizeDifferenceDamage,
+        defenseStat: defense,
+        sizeBonus: sizeDifferenceDamage,
+        weightBonus: weightBonusDamage
     };
 }
 
@@ -102,9 +268,9 @@ function calculateWeightBonus(ability, attacker) {
     }
     
     const weight = attacker.weight || 65; // Default weight: 65kg (average human)
-    
-    // Weight bonus: 1 point per 10 kg, with minimum of 1
-    return Math.max(1, Math.floor(weight / 10));
+
+    // Weight bonus: 1 point per 15 kg, with minimum of 1
+    return Math.max(1, Math.floor(weight / 15));
 }
 
 /**
@@ -155,10 +321,25 @@ export function calculateCriticalHit(ability, attacker, baseDamage, isPlayer = t
  * @param {Object} ability - The ability used
  * @param {Object} attacker - The attacking character
  * @param {Function} addLog - Logging function
+ * @returns {Object} - Object containing overkill info
  */
 export function applyDamage(target, damage, ability, attacker, addLog) {
+    let isOverkill = false;
+    
     if (damage > 0) {
+        const originalLife = target.life;
         target.life -= damage;
+        
+        // Check for overkill (damage would leave target below -20 HP)
+        if (target.life < -20) {
+            isOverkill = true;
+        }
+        
+        // Clamp life to 0 for visual display (no negative life shown to players)
+        if (target.life < 0) {
+            target.life = 0;
+        }
+        
         updateLifeBar(target.life, target.maxLife);
 
         // Life steal mechanic
@@ -171,6 +352,8 @@ export function applyDamage(target, damage, ability, attacker, addLog) {
             }
         }
     }
+    
+    return { isOverkill };
 }
 
 /**
@@ -231,13 +414,43 @@ export function handleAbilityEffects(ability, attacker, target, addLog) {
     // Apply status effects
     if (ability.effect && Math.random() < (ability.effect.chance || 1)) {
         const statusTarget = ability.effect.target === 'self' ? attacker : target;
-        applyStatus(
-            statusTarget,
-            ability.effect.type,
-            ability.effect.turns || 1,
-            addLog,
-            ability.effect.permanent || false
-        );
+        
+        // Special handling for pinned status
+        if (ability.effect.type === 'pinned') {
+            applyPinnedStatus(attacker, statusTarget, addLog);
+        } 
+        // Special handling for stunned status
+        else if (ability.effect.type === 'stunned') {
+            applyStunnedStatus(attacker, statusTarget, addLog);
+        }
+        // Special handling for DoT effects (poisoned, burned, etc.)
+        else if (ability.effect.type === 'poisoned' || ability.effect.type === 'burned') {
+            // Check if this is a DoT status by looking in StatusRegistry
+            const statusDef = StatusRegistry[ability.effect.type];
+            if (statusDef && statusDef.type === 'dot') {
+                // Use the DoT system
+                applyStatusDoT(attacker, statusTarget, ability.effect.type, addLog);
+            } else {
+                // Fall back to legacy system
+                applyStatus(
+                    statusTarget,
+                    ability.effect.type,
+                    ability.effect.turns || 1,
+                    addLog,
+                    ability.effect.permanent || false
+                );
+            }
+        } 
+        else {
+            // Use legacy status system for other effects
+            applyStatus(
+                statusTarget,
+                ability.effect.type,
+                ability.effect.turns || 1,
+                addLog,
+                ability.effect.permanent || false
+            );
+        }
     }
 
     // Handle status removal from self
@@ -280,16 +493,16 @@ export function handlePinnedInteractions(ability, attacker, target, addLog) {
     let shouldRemovePinFromTarget = false;
     let shouldStunTarget = false;
 
-    // Check if attacker is pinned and will hit successfully (this gets called after hit confirmation)
-    if (isStatusActive(attacker, 'pinned')) {
-        // Pinned character breaks free and stuns opponent when hitting
+    // Check if attacker is trapped (including pinned) and will hit successfully
+    if (isCharacterTrapped(attacker)) {
+        // Trapped character breaks free and stuns opponent when hitting
         addLog(`${attacker.name} breaks free and stuns ${target.name}!`);
         shouldRemovePinFromAttacker = true;
         shouldStunTarget = true;
     }
 
-    // Check if target is pinned and opponent attacks without pin effect
-    if (isStatusActive(target, 'pinned')) {
+    // Check if target is trapped and opponent attacks without pin effect
+    if (isCharacterTrapped(target)) {
         // If opponent's attack doesn't have pinned effect, release the pin
         if (!ability.effect || ability.effect.type !== 'pinned') {
             addLog(`${target.name} is released from the pin!`);
@@ -297,9 +510,32 @@ export function handlePinnedInteractions(ability, attacker, target, addLog) {
         }
     }
 
-    return { 
-        shouldRemovePinFromAttacker, 
-        shouldRemovePinFromTarget, 
-        shouldStunTarget 
+    return {
+        shouldRemovePinFromAttacker,
+        shouldRemovePinFromTarget,
+        shouldStunTarget
+    };
+}
+
+/**
+ * Calculate environmental penalty for damage based on character type and environment (Legacy compatibility)
+ * @param {string} characterType - The character's elemental type
+ * @param {string} environmentType - The environment type (volcanic, underwater, etc.)
+ * @param {number} intensity - Environment intensity (1-10)
+ * @returns {Object} Environmental penalty information
+ */
+export function calculateEnvironmentalPenalty(characterType, environmentType, intensity = 1) {
+    // Create a mock character object for the new system
+    const mockCharacter = { type: characterType };
+    const penalties = getEnvironmentalPenalties(mockCharacter, environmentType, intensity);
+    
+    // Convert to old format for backwards compatibility
+    return {
+        damageReduction: penalties.damagePenalty,
+        description: penalties.damagePenalty > 0 ? 
+            `${environmentType} environment reduces ${characterType} attack power by ${Math.round(penalties.damagePenalty * 100)}%!` : "",
+        environmentType,
+        intensity,
+        characterType
     };
 }

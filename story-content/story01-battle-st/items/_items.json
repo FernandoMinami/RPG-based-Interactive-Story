@@ -53,5 +53,65 @@
         "id": "scroll-of-ancient-wisdom",
         "name": "Scroll of Ancient Wisdom",
         "file": "items/scroll-of-ancient-wisdom.js"
+    },
+    "fire-protection-potion": {
+        "id": "fire-protection-potion",
+        "name": "Fire Protection Potion",
+        "file": "items/fire-protection-potion.js"
+    },
+    "heat-resistant-armor": {
+        "id": "heat-resistant-armor",
+        "name": "Heat Resistant Armor",
+        "file": "items/heat-resistant-armor.js"
+    },
+    "volcanic-cloak": {
+        "id": "volcanic-cloak",
+        "name": "Volcanic Cloak",
+        "file": "items/volcanic-cloak.js"
+    },
+    "diving-suit": {
+        "id": "diving-suit",
+        "name": "Diving Suit",
+        "file": "items/diving-suit.js"
+    },
+    "water-breathing-potion": {
+        "id": "water-breathing-potion",
+        "name": "Water Breathing Potion",
+        "file": "items/water-breathing-potion.js"
+    },
+    "aquatic-gear": {
+        "id": "aquatic-gear",
+        "name": "Aquatic Gear",
+        "file": "items/aquatic-gear.js"
+    },
+    "storm-cloak": {
+        "id": "storm-cloak",
+        "name": "Storm Cloak",
+        "file": "items/storm-cloak.js"
+    },
+    "lightning-rod": {
+        "id": "lightning-rod",
+        "name": "Lightning Rod",
+        "file": "items/lightning-rod.js"
+    },
+    "grounding-boots": {
+        "id": "grounding-boots",
+        "name": "Grounding Boots",
+        "file": "items/grounding-boots.js"
+    },
+    "spelunkers-helmet": {
+        "id": "spelunkers-helmet",
+        "name": "Spelunker's Helmet",
+        "file": "items/spelunkers-helmet.js"
+    },
+    "torch": {
+        "id": "torch",
+        "name": "Torch",
+        "file": "items/torch.js"
+    },
+    "climbing-boots": {
+        "id": "climbing-boots",
+        "name": "Climbing Boots",
+        "file": "items/climbing-boots.js"
     }
 }

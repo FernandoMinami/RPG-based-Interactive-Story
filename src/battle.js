@@ -2,10 +2,21 @@ import { addExp, getExpForLevel } from './leveling.js';
 import { getInventory, removeItem, addLoot } from './inventory.js';
 import { updateSecondaryStats } from './character.js';
 import { updateLifeBar } from './ui.js';
-import { applyStatus, statusSummary, isStatusActive, StatusRegistry } from './status.js';
+import { 
+    applyStatus, 
+    updateStatuses, 
+    statusSummary, 
+    isStatusActive, 
+    isCharacterTrapped, 
+    BuffRegistry,
+    applyStunnedStatus
+} from './status.js';
 import { getAbilities, useAbility, canUseAbility } from './abilities.js';
 import { getLootById } from './loot.js';
 import './history.js'; // Ensure history module is loaded
+import { getTypeMatchupDescription, calculateAbilityTypeBonus, getStatusEffectInteraction } from './types.js';
+import { calculateEnvironmentalHealing, calculateEnvironmentalDamage } from './environmental.js';
+import { calculateStatusBasedStruggle } from './special-effects.js';
 import { 
     createAbilityButtons, 
     createConsumableButtons, 
@@ -32,15 +43,32 @@ import {
 } from './turn-management.js';
 
 // Starts a battle between the player and an enemy
-export function startBattle(player, enemy, onBattleEnd) {
-    //console.log("Starting battle. StatusRegistry:", Object.keys(StatusRegistry));
-    
+export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null) {
+  
     const modal = document.getElementById("combat-modal");
     const actionsDiv = document.getElementById("combat-actions");
 
+    // Set up global battle environment for damage calculations
+    if (battleEnvironment) {
+        if (typeof battleEnvironment === "string") {
+            // Convert string environment to object format
+            window.battleEnvironment = {
+                type: battleEnvironment,
+                intensity: getDefaultIntensity(battleEnvironment)
+            };
+        } else if (battleEnvironment.type) {
+            // Use object format directly
+            window.battleEnvironment = battleEnvironment;
+        } else {
+            window.battleEnvironment = null;
+        }
+    } else {
+        window.battleEnvironment = null;
+    }
+
     // Initialize battle logging
     const logger = createBattleLogger();
-    const { addLog, addRecentAction, getBattleLogLength, getCurrentBattleLogMessages, separateLog, getGroupedLogs, clearLogs } = logger;
+    const { addLog, addSystemMessage, addRecentAction, getBattleLogLength, getCurrentBattleLogMessages, separateLog, getGroupedLogs, clearLogs } = logger;
 
     // Initialize turn management
     const turnManager = createTurnManager(player, enemy);
@@ -65,6 +93,66 @@ export function startBattle(player, enemy, onBattleEnd) {
 
     // Setup battle history
     setupBattleHistory();
+
+    // Display environmental information if present and not neutral
+    if (window.battleEnvironment && window.battleEnvironment.type !== "neutral") {
+        const envType = window.battleEnvironment.type;
+        const intensity = window.battleEnvironment.intensity;
+        
+        addLog(`⚠️ Battle Environment: ${envType.charAt(0).toUpperCase() + envType.slice(1)} (Intensity: ${intensity})`);
+        addLog(`Environmental effects will occur each turn based on elemental types.`);
+        
+        // Show intensity-based warnings
+        if (intensity >= 8) {
+            if (envType === "volcanic") {
+                addLog(`🔥 EXTREME INTENSITY: Non-resistant types will suffer severe penalties and status effects!`);
+            } else if (envType === "underwater") {
+                addLog(`🌊 DEEP UNDERWATER: Non-water types suffer massive speed penalties, pressure damage, and breath loss!`);
+            } else if (envType === "storm") {
+                addLog(`⚡ SEVERE STORM: Non-air types suffer major accuracy penalties, lightning strikes, and debris damage!`);
+            } else if (envType === "cave") {
+                addLog(`🕳️ ABYSSAL DEPTHS: Non-earth types suffer severe darkness penalties, rockfall, and frequent tripping!`);
+            } else {
+                addLog(`⚡ EXTREME INTENSITY: Non-resistant types will suffer severe penalties and status effects!`);
+            }
+        } else if (intensity >= 5) {
+            if (envType === "volcanic") {
+                addLog(`⚠️ HIGH INTENSITY: Non-resistant types will take damage and suffer attack penalties!`);
+            } else if (envType === "underwater") {
+                addLog(`💧 MEDIUM DEPTH: Non-water types will lose breath after 6 turns and move slower!`);
+            } else if (envType === "storm") {
+                addLog(`🌪️ HEAVY STORM: Non-air types suffer accuracy penalties and risk lightning strikes!`);
+            } else if (envType === "cave") {
+                addLog(`🪨 DEEP CAVES: Non-earth types suffer accuracy penalties, falling rocks, and tripping hazards!`);
+            } else {
+                addLog(`⚠️ HIGH INTENSITY: Non-resistant types will take damage and suffer attack penalties!`);
+            }
+        } else if (intensity >= 1) {
+            if (envType === "underwater") {
+                addLog(`🏊 SHALLOW WATER: Non-water types will have reduced movement speed.`);
+            } else if (envType === "storm") {
+                addLog(`💨 LIGHT STORM: Non-air types will have reduced accuracy and attack power.`);
+            } else if (envType === "cave") {
+                addLog(`🔦 DIM CAVES: Non-earth types will have reduced accuracy from poor visibility.`);
+            } else {
+                addLog(`💫 MILD INTENSITY: Non-resistant types will have reduced attack power.`);
+            }
+        }
+        
+        // Show specific environmental effects for current characters
+        if (player.type) {
+            const playerEnvEffect = calculateEnvironmentalDamage(player, envType, intensity);
+            
+            if (playerEnvEffect.hasImmunity) {
+                addLog(`🌟 ${player.name}'s ${player.type} type is immune to ${envType} environments!`);
+            } else if (playerEnvEffect.perTurnDamage > 0) {
+                addLog(`⚠️ ${player.name}'s ${player.type} type will take ${playerEnvEffect.perTurnDamage} environmental damage per turn!`);
+                if (playerEnvEffect.statusChance > 0) {
+                    addLog(`🔥 ${playerEnvEffect.statusChance}% chance per turn of being affected by ${playerEnvEffect.statusType}!`);
+                }
+            }
+        }
+    }
 
     // Check if an ability can be used (considering cooldowns, uses, and combos)
     function canUseAbilityInBattle(abilityId, ability) {
@@ -131,8 +219,6 @@ export function startBattle(player, enemy, onBattleEnd) {
         const rewardsDiv = document.getElementById("combat-rewards");
 
         if (result === "win") {
-            // Don't add "You won!" to the log, let the recent actions show the final attack
-            
             // Show rewards in the dedicated rewards area
             rewardsDiv.style.display = "block";
             let rewardsHTML = '<h3>Victory Rewards!</h3>';
@@ -195,7 +281,7 @@ export function startBattle(player, enemy, onBattleEnd) {
     // Main turn function
     function nextTurn() {
         // Update turn state
-        turnManager.nextTurn(battleState, addLog);
+        turnManager.nextTurn(battleState, addLog, battleEnvironment, addSystemMessage);
         updateBattleStats(player, enemy);
 
         if (player.life <= 0) return showResult("lose");
@@ -290,14 +376,39 @@ export function startBattle(player, enemy, onBattleEnd) {
 
     // Handle struggle attempt
     function handleStruggle() {
-        const struggleResult = handleStruggleAttempt(player, enemy);
-        
-        // Add to recent actions display
-        addRecentAction(`${player.name} struggled to break free`, struggleResult.messages);
-        
-        if (struggleResult.success) {
-            applyStatus(player, 'pinned', 0);
+        // Get the pinned status definition
+        const pinnedStatusDef = StatusRegistry['pinned'];
+        if (!pinnedStatusDef) {
+            addLog('Error: Cannot struggle - pinned status not found!');
+            return;
         }
+
+        // Capture detailed struggle logs for recent action display
+        const struggleMessages = [];
+        const captureLog = (message) => {
+            addLog(message); // Still add to main battle log
+            struggleMessages.push(message); // Also capture for recent action
+        };
+
+        // Use the new status-based struggle system with opponent data
+        const success = calculateStatusBasedStruggle(player, pinnedStatusDef, captureLog, enemy);
+        
+        // Add the final result message
+        const resultMessage = success ? 
+            `${player.name} breaks free from ${pinnedStatusDef.name}!` : 
+            `${player.name} fails to break free and wastes their turn.`;
+        
+        struggleMessages.push(resultMessage);
+        
+        // Add to recent actions display with all the detailed messages
+        addRecentAction(`${player.name} struggled to break free`, struggleMessages);
+        
+        if (success) {
+            // Remove pinned status using BuffRegistry
+            BuffRegistry.removeBuff(player, 'pinned', addLog);
+        }
+        
+        // Continue the battle - switch turn and proceed
         turnManager.switchTurn();
         setTimeout(nextTurn, 1000);
     }
@@ -309,9 +420,11 @@ export function startBattle(player, enemy, onBattleEnd) {
         if (ability.type === "physical" || ability.type === "magic") {
             addLog(`${player.name} used ${ability.name}`);
             
-            const accuracy = calculateAccuracy(ability, turnInfo.playerStats.effectiveSpeed, turnInfo.enemyStats.effectiveSpeed, turnInfo.playerStats.effectiveAccuracy);
+            // 🎯 PLAYER ATTACK HIT DETECTION - Calculate accuracy and roll for hit/miss
+            const accuracy = calculateAccuracy(ability, player, enemy, turnInfo.playerStats.effectiveSpeed, turnInfo.enemyStats.effectiveSpeed, turnInfo.playerStats.effectiveAccuracy);
             const roll = Math.floor(Math.random() * 100) + 1;
             
+            // 🎯 HIT CHECK: Roll must be <= accuracy to hit (minimum 30% chance guaranteed)
             if (roll <= accuracy) {
                 logAttackResult(true, ability, player.name, addLog);
 
@@ -324,35 +437,41 @@ export function startBattle(player, enemy, onBattleEnd) {
                 // Check pinned interactions
                 const pinnedResult = handlePinnedInteractions(ability, player, enemy, addLog);
 
-                // Calculate damage
+                // Calculate all damage using the organized formula
                 const damageInfo = calculateDamage(ability, player, enemy);
-                const critInfo = calculateCriticalHit(ability, player, damageInfo.finalDamage, true);
                 
-                // Apply diving attack multiplier if flying
-                let adjustedDamage = critInfo.finalDamage;
-                if (flyingResult.damageMultiplier > 1.0) {
-                    adjustedDamage = Math.floor(critInfo.finalDamage * flyingResult.damageMultiplier);
+                // Log type effectiveness message only
+                if (damageInfo.typeEffectivenessText) {
+                    addLog(damageInfo.typeEffectivenessText);
                 }
                 
-                // Apply extra damage from flying interactions
-                const finalDamage = adjustedDamage + flyingResult.extraDamage;
+                // Log environmental effect message if present
+                if (damageInfo.environmentalEffectText) {
+                    addLog(damageInfo.environmentalEffectText);
+                }
+                
+                // Apply critical hit to the final damage
+                const critInfo = calculateCriticalHit(ability, player, damageInfo.finalDamage, true);
+                
+                // Apply extra damage from flying interactions (fall damage)
+                const finalDamage = critInfo.finalDamage + flyingResult.extraDamage;
                 
                 if (finalDamage > 0) {
-                    applyDamage(enemy, finalDamage, ability, player, addLog);
-                    logDamage({...damageInfo, finalDamage}, critInfo, ability, addLog);
+                    const damageResult = applyDamage(enemy, finalDamage, ability, player, addLog);
+                    logDamage(damageInfo, critInfo, ability, addLog, finalDamage, damageResult.isOverkill);
                     
                     // Handle pinned status changes after successful hit
                     if (pinnedResult.shouldRemovePinFromAttacker) {
-                        applyStatus(player, 'pinned', 0);
+                        BuffRegistry.removeBuff(player, 'pinned', addLog);
                     }
                     if (pinnedResult.shouldStunTarget) {
-                        applyStatus(enemy, 'stunned', 1, addLog);
+                        applyStunnedStatus(player, enemy, addLog);
                     }
                 }
 
                 // Handle pinned status changes for target
                 if (pinnedResult.shouldRemovePinFromTarget) {
-                    applyStatus(enemy, 'pinned', 0);
+                    BuffRegistry.removeBuff(enemy, 'pinned', addLog);
                 }
 
                 // Handle ability effects
@@ -364,16 +483,13 @@ export function startBattle(player, enemy, onBattleEnd) {
             player.life = Math.min(player.maxLife, player.life + ability.amount);
             addLog(`${player.name} heals for ${ability.amount} HP!`);
         } else if (ability.type === "buff") {
-            if (!player.activeBoosts[ability.attribute] || player.activeBoosts[ability.attribute].turns <= 0) {
-                player.attributes[ability.attribute] += ability.amount;
-                player.activeBoosts[ability.attribute] = {
-                    amount: ability.amount,
-                    turns: ability.turns
-                };
-                if (typeof window.updateSecondaryStats === "function") window.updateSecondaryStats(player);
-                addLog(`${player.name} uses ${ability.name} and gains +${ability.amount} ${ability.attribute} for ${ability.turns} turns!`);
+            // Use the new modular buff system
+            if (ability.apply) {
+                // New system - ability handles its own application
+                ability.apply(player, player, addLog);
             } else {
-                addLog(`${ability.name} is already active!`);
+                console.error(`Buff ability ${ability.name} has no apply function - cannot be used`);
+                addLog(`${ability.name} cannot be used - missing application logic!`);
             }
         }
     }
@@ -382,6 +498,15 @@ export function startBattle(player, enemy, onBattleEnd) {
     function handleEnemyTurn(turnInfo) {
         separateLog();
         setTimeout(() => {
+            // Check if enemy can act (not stunned)
+            if (!turnInfo.canEnemyAct) {
+                addLog(`${enemy.name} is stunned and cannot act!`);
+                addRecentAction(`${enemy.name} is stunned`, [`${enemy.name} cannot act due to being stunned!`]);
+                turnManager.switchTurn();
+                nextTurn();
+                return;
+            }
+
             const enemyAbilities = getAbilities(enemy.abilityIds || []);
             
             // Select enemy ability (weighted random based on preferences)
@@ -419,48 +544,48 @@ export function startBattle(player, enemy, onBattleEnd) {
         // Check pinned interactions
         const pinnedResult = handlePinnedInteractions(ability, enemy, player, addLog);
 
-        const accuracy = calculateAccuracy(ability, turnInfo.enemyStats.effectiveSpeed, turnInfo.playerStats.effectiveSpeed, turnInfo.enemyStats.effectiveAccuracy);
+        // 🎯 ENEMY ATTACK HIT DETECTION - Calculate accuracy and roll for hit/miss
+        const accuracy = calculateAccuracy(ability, enemy, player, turnInfo.enemyStats.effectiveSpeed, turnInfo.playerStats.effectiveSpeed, turnInfo.enemyStats.effectiveAccuracy);
         const roll = Math.floor(Math.random() * 100) + 1;
 
+        // 🎯 HIT CHECK: Roll must be <= accuracy to hit (minimum 30% chance guaranteed)
         if (roll <= accuracy) {
-            logAttackResult(true, ability, enemy.name, addLog);
-
             if (ability.type === "physical" || ability.type === "magic") {
-                // Calculate damage
+                // Calculate all damage using the organized formula  
                 const damageInfo = calculateDamage(ability, enemy, player);
-                const critInfo = calculateCriticalHit(ability, enemy, damageInfo.finalDamage, false);
                 
-                // Apply diving attack multiplier if flying
-                let adjustedDamage = critInfo.finalDamage;
-                if (flyingResult.damageMultiplier > 1.0) {
-                    adjustedDamage = Math.floor(critInfo.finalDamage * flyingResult.damageMultiplier);
+                // Log type effectiveness message only
+                if (damageInfo.typeEffectivenessText) {
+                    addLog(damageInfo.typeEffectivenessText);
                 }
                 
-                // Apply extra damage from flying interactions
-                const finalDamage = adjustedDamage + flyingResult.extraDamage;
+                // Log environmental effect message if present
+                if (damageInfo.environmentalEffectText) {
+                    addLog(damageInfo.environmentalEffectText);
+                }
+                
+                // Apply critical hit to the final damage
+                const critInfo = calculateCriticalHit(ability, enemy, damageInfo.finalDamage, false);
+                
+                // Apply extra damage from flying interactions (fall damage)
+                const finalDamage = critInfo.finalDamage + flyingResult.extraDamage;
                 
                 if (finalDamage > 0) {
-                    applyDamage(player, finalDamage, ability, enemy, addLog);
+                    const damageResult = applyDamage(player, finalDamage, ability, enemy, addLog);
+                    logDamage(damageInfo, critInfo, ability, addLog, finalDamage, damageResult.isOverkill);
                     
                     // Handle pinned status changes after successful hit
                     if (pinnedResult.shouldRemovePinFromAttacker) {
-                        applyStatus(enemy, 'pinned', 0);
+                        BuffRegistry.removeBuff(enemy, 'pinned', addLog);
                     }
                     if (pinnedResult.shouldStunTarget) {
-                        applyStatus(player, 'stunned', 1, addLog);
-                    }
-                    
-                    if (critInfo.isCritical) {
-                        addLog(`${enemy.name} scores a CRITICAL HIT! ${finalDamage} damage!`);
-                        if (ability.onCrit) addLog(ability.onCrit);
-                    } else {
-                        addLog(`${finalDamage} damage!`);
+                        applyStunnedStatus(enemy, player, addLog);
                     }
                 }
 
                 // Handle pinned status changes for target
                 if (pinnedResult.shouldRemovePinFromTarget) {
-                    applyStatus(player, 'pinned', 0);
+                    BuffRegistry.removeBuff(player, 'pinned', addLog);
                 }
             }
 
@@ -516,4 +641,21 @@ export function startBattle(player, enemy, onBattleEnd) {
 
     // Start the battle
     nextTurn();
+}
+
+/**
+ * Get default intensity for environment types
+ * @param {string} environmentType - The environment type
+ * @returns {number} Default intensity value
+ */
+function getDefaultIntensity(environmentType) {
+    const defaultIntensities = {
+        volcanic: 5,
+        underwater: 4,
+        storm: 5,
+        cave: 4,
+        neutral: 1
+    };
+    
+    return defaultIntensities[environmentType] || 3;
 }

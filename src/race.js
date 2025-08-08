@@ -2,6 +2,8 @@
  * Race management system for the Interactive Story Game
  */
 
+import { getAllTypes } from './types.js';
+
 let races = {};
 
 /**
@@ -20,11 +22,10 @@ export async function loadRaces(storyFolder) {
       races[raceData.id] = raceData;
     }
     
-    console.log("Races loaded:", Object.keys(races));
   } catch (error) {
     console.error("Error loading races:", error);
-    // Fallback to hardcoded races if loading fails
-    races = getDefaultRaces();
+    // No fallback - races will remain empty and functions will handle gracefully
+    races = {};
   }
 }
 
@@ -42,7 +43,49 @@ export function getRaceById(raceId) {
  * @returns {Object} All loaded races
  */
 export function getAllRaces() {
+  // If no races are loaded, return no-race fallback
+  if (Object.keys(races).length === 0) {
+    console.warn("No races loaded, using no-race fallback");
+    return {
+      "no-race": {
+        id: "no-race",
+        name: "No Race",
+        description: "Default fallback - no special bonuses or restrictions",
+        availableTypes: ["neutral"]
+      }
+    };
+  }
   return races;
+}
+
+/**
+ * Get available races for a specific character
+ * @param {Object} character - The character object with availableRaces property
+ * @returns {Object} Object containing only the races this character can use
+ */
+export function getAvailableRacesForCharacter(character) {
+  const allRaces = getAllRaces();
+  const availableRaces = {};
+  
+  // If character has specific race restrictions, use those
+  if (character && character.availableRaces && Array.isArray(character.availableRaces)) {
+    character.availableRaces.forEach(raceId => {
+      if (allRaces[raceId]) {
+        availableRaces[raceId] = allRaces[raceId];
+      }
+    });
+    
+    // If no valid races found, fall back to all races
+    if (Object.keys(availableRaces).length === 0) {
+      console.warn("No valid races found for character, falling back to all races");
+      return allRaces;
+    }
+    
+    return availableRaces;
+  }
+  
+  // If no restrictions, return all races
+  return allRaces;
 }
 
 /**
@@ -56,19 +99,26 @@ export function getAvailableTypesForRace(raceId) {
 }
 
 /**
- * Get type descriptions
+ * Get type descriptions from the types system
  * @returns {Object} Object mapping type IDs to descriptions
  */
 export function getTypeDescriptions() {
-  return {
-    neutral: "Neutral - No special combat bonuses or weaknesses",
-    fire: "Fire - Strong against ice, weak against water",
-    water: "Water - Strong against fire, weak against earth", 
-    earth: "Earth - Strong against water, weak against air",
-    air: "Air - Strong against earth, weak against fire",
-    light: "Light - Strong against dark, weak against shadow",
-    dark: "Dark - Strong against light, weak against holy"
-  };
+  const types = getAllTypes();
+  const descriptions = {};
+  
+  for (const typeId in types) {
+    const typeData = types[typeId];
+    descriptions[typeId] = `${typeData.name} - ${typeData.description}`;
+  }
+  
+  // Simple fallback if no types loaded
+  if (Object.keys(descriptions).length === 0) {
+    return {
+      neutral: "Neutral - No special combat bonuses or weaknesses"
+    };
+  }
+  
+  return descriptions;
 }
 
 /**
@@ -80,45 +130,6 @@ export function getTypeDescriptions() {
 export function canRaceUseType(raceId, typeId) {
   const availableTypes = getAvailableTypesForRace(raceId);
   return availableTypes.includes(typeId);
-}
-
-/**
- * Get default races as fallback
- * @returns {Object} Default race data
- */
-function getDefaultRaces() {
-  return {
-    human: {
-      id: "human",
-      name: "Human",
-      description: "Balanced and adaptable",
-      availableTypes: ["neutral", "fire", "water", "earth", "air", "light"]
-    },
-    elf: {
-      id: "elf", 
-      name: "Elf",
-      description: "Wise and magical",
-      availableTypes: ["neutral", "air", "light", "earth"]
-    },
-    dwarf: {
-      id: "dwarf",
-      name: "Dwarf",
-      description: "Strong and resilient", 
-      availableTypes: ["neutral", "fire", "earth"]
-    },
-    halfling: {
-      id: "halfling",
-      name: "Halfling",
-      description: "Quick and lucky",
-      availableTypes: ["neutral", "earth", "air"]
-    },
-    orc: {
-      id: "orc",
-      name: "Orc", 
-      description: "Fierce and powerful",
-      availableTypes: ["neutral", "fire", "dark"]
-    }
-  };
 }
 
 // Export races object for direct access if needed

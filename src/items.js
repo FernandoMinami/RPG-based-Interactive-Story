@@ -12,13 +12,10 @@ export async function loadItems(storyFolder) {
   // Clear the existing items object
   Object.keys(items).forEach(k => delete items[k]);
 
-  //console.log(`Loading items for story: ${storyFolder}`);
 
   const manifestUrl = `../story-content/${storyFolder}/items/_items.json?v=${Date.now()}`;
   const itemList = await fetch(manifestUrl).then(r => r.json());
   
-  //console.log('📜 Raw manifest data:', itemList);
-  //console.log('📊 Manifest keys:', Object.keys(itemList));
   
   const totalItems = Object.keys(itemList).length;
   let loadedCount = 0;
@@ -29,23 +26,23 @@ export async function loadItems(storyFolder) {
     if (itemInfo.file) {
       try {
         const itemModule = await import(`../story-content/${storyFolder}/${itemInfo.file}?v=${Date.now()}`);
-        itemId = (itemModule.item.id || id).toLowerCase();
-        items[itemId] = itemModule.item;
-        //console.log(`✅ Loaded item: ${itemId}`);
+        // Handle both export patterns: export default {...} and export const item = {...}
+        const itemData = itemModule.default || itemModule.item;
+        if (!itemData) {
+          throw new Error(`Item data not found in module. Expected 'default' or 'item' export.`);
+        }
+        itemId = (itemData.id || id).toLowerCase();
+        items[itemId] = itemData;
         loadedCount++;
       } catch (error) {
-        //console.error(`❌ Failed to load item ${id} from ${itemInfo.file}:`, error);
+        console.error(`❌ Failed to load item ${id} from ${itemInfo.file}:`, error);
         failedCount++;
       }
     } else {
       items[itemId] = itemInfo;
-      //console.log(`✅ Loaded item (inline): ${itemId}`);
       loadedCount++;
     }
   }
-  
-  //console.log(`📦 Item loading complete: ${loadedCount}/${totalItems} successful, ${failedCount} failed`);
-  //console.log('📋 Available items:', Object.keys(items));
 }
 
 export function equipableItems() {

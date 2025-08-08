@@ -14,16 +14,31 @@ window.abilities = {
 export async function loadAbilities(abilityManifest, abilityBasePath = "../story-content/story01-battle-st/abilities/") {
     if (!Array.isArray(abilityManifest)) {
         throw new TypeError('abilityManifest must be an array');
+    }    
+    // Clear registry to prevent conflicts
+    for (const key in AbilityRegistry) {
+        delete AbilityRegistry[key];
     }
 
     for (let ability of abilityManifest) {
-        try {
-            const abilityModule = await import(`${abilityBasePath}${ability.file}`);
-            AbilityRegistry[ability.id] = abilityModule.default;
+        try {            
+            // Add cache-busting timestamp to ensure fresh import
+            const timestamp = Date.now();
+            const abilityModule = await import(`${abilityBasePath}${ability.file}?t=${timestamp}`);
+            
+            // Handle both export formats: 'export default' and 'export const ability'
+            const abilityData = abilityModule.default || abilityModule.ability;
+            
+            if (abilityData) {
+                AbilityRegistry[ability.id] = abilityData;
+            } else {
+                console.error(`Ability ${ability.id} has no default export or ability export in ${ability.file}`);
+            }
         } catch (e) {
             console.error(`Failed to load ability: ${ability.file}`, e);
         }
     }
+    
 }
 
 /**
@@ -37,6 +52,7 @@ export function getAbility(abilityId) {
  * Get multiple abilities by their IDs
  */
 export function getAbilities(abilityIds) {
+    
     const abilities = {};
     for (const abilityData of abilityIds) {
         // Handle both old format (string) and new format (object with id and rate)
@@ -144,7 +160,6 @@ export function learnAbility(player, abilityId, abilityName = null) {
         if (window.historyLog) {
             window.historyLog.push({ action: message });
         }
-        //console.log("📜 " + message);
         return false; // Not learned (already known)
     }
 
@@ -160,7 +175,6 @@ export function learnAbility(player, abilityId, abilityName = null) {
     if (window.historyLog) {
         window.historyLog.push({ action: message });
     }
-    //console.log("📜 " + message);
 
     return true; // Successfully learned
 }

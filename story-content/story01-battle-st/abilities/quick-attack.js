@@ -1,9 +1,10 @@
 export default {
     name: "Quick Attack",
     type: "physical",
+    elementalType: "neutral",
     range: "close",
-    minDamage: 80,
-    maxDamage: 80,
+    minDamage: 40,
+    maxDamage: 90,
     accuracy: 95,
     mpCost: 0,
     critChance: 0.05,        // +5% crit chance bonus (speed-based)

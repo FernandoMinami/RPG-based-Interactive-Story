@@ -1,17 +1,17 @@
-import { equipableItems } from "../../../src/items.js";
-
-export const item = {
+export default {
   id: "metal-helmet",
   name: "Metal Helmet",
+  displayName: "Metal Helmet",
+  type: "armor",
+  category: "head",
+  price: 40,
   description: "A sturdy helmet that boosts your defense.",
-  type: "equipable",
-  slot: "head",
-  equipped: false,
-  sellValue: 40,
-  modifiers: {
+  onUse: null,
+  effectType: "permanent",
+  stats: {
     physicDefense: 2
   },
-  use(player) {
-    return equipableItems(player, this);
-  }
+  weight: 3,
+  stackable: false,
+  consumable: false
 };

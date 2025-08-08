@@ -1,0 +1,66 @@
+{
+  "id": "light",
+  "name": "Light",
+  "description": "Divine energy and purification - strong healing and anti-dark",
+  "color": "#FFD700",
+  "icon": "✨",
+  "lore": "Light represents purity, healing, and divine power. Light masters can purify corruption and heal extensively, but are vulnerable to overwhelming darkness.",
+  
+  "combatProperties": {
+    "resistances": ["light"],
+    "weaknesses": ["dark"],
+    "immunities": [],
+    "bonusDamageTypes": ["dark"],
+    "baseModifier": 1.0,
+    "healingBonus": 1.6,
+    "purificationPower": true
+  },
+  
+  "environmentalEffects": {
+    "daylight": {
+      "environmentalDamageMultiplier": 0.7,
+      "description": "Sunlight empowers light types",
+      "bonusRegeneration": 6,
+      "bonusHealing": 1.4
+    },
+    "temple": {
+      "environmentalDamageMultiplier": 0.6,
+      "description": "Sacred places strengthen light energy",
+      "bonusRegeneration": 8
+    },
+    "darkness": {
+      "environmentalDamageMultiplier": 1.3,
+      "description": "Complete darkness weakens light",
+      "penaltyEffect": "reduced_healing"
+    },
+    "shadow_realm": {
+      "environmentalDamageMultiplier": 1.8,
+      "description": "Realms of shadow greatly weaken light"
+    }
+  },
+  
+  "abilities": {
+    "canLearn": ["divine-heal", "purify", "light-beam", "blessing", "banish"],
+    "bonusEffectiveness": ["healing-abilities", "purification", "anti-dark-attacks"]
+  },
+  
+  "statusEffectInteractions": {
+    "corruption": {
+      "immunity": true,
+      "description": "Light purifies all corruption"
+    },
+    "curse": {
+      "resistance": true,
+      "durationMultiplier": 0.5,
+      "description": "Divine light resists curses"
+    },
+    "blindness": {
+      "immunity": true,
+      "description": "Light types generate their own illumination"
+    },
+    "shadow_bind": {
+      "vulnerability": true,
+      "description": "Shadow bindings are particularly effective against light"
+    }
+  }
+}
