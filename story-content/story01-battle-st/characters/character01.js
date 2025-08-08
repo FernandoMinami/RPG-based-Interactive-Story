@@ -8,11 +8,17 @@ const baseAttributes = {
 };
 
 const baseSecondary = {
+  maxLife: 0, // Will be calculated based on constitution
+  maxMp: 0, // Will be calculated based on intelligence
+  manaRegen: 0, // Will be calculated based on intelligence
+  mpRegen: 0, // Will be calculated based on intelligence
   defence: 0, // Total defence stat (don't change this value)
   natDefense: 0, // initial natural defense
   speed: 0,
   physicDamage: 0,
-  magicDamage: 0
+  magicDamage: 0,
+  physicDefense: 0, // Will be calculated based on constitution
+  magicDefense: 0 // Will be calculated based on intelligence
 };
 
 export const player = {

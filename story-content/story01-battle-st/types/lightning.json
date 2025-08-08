@@ -1,0 +1,69 @@
+{
+  "id": "lightning",
+  "name": "Lightning", 
+  "description": "Pure electrical energy - fastest attacks, bypasses armor",
+  "color": "#FFD700",
+  "icon": "⚡",
+  "lore": "Lightning represents pure energy, speed, and electrical power. Lightning masters attack with incredible speed and can paralyze enemies.",
+  
+  "combatProperties": {
+    "resistances": ["lightning", "air"],
+    "weaknesses": ["earth"],
+    "immunities": [],
+    "bonusDamageTypes": ["water", "air"],
+    "baseModifier": 1.2,
+    "speedBonus": 1.6,
+    "armorPierce": 0.5,
+    "paralysisChance": 0.25
+  },
+  
+  "environmentalEffects": {
+    "storm": {
+      "damageMultiplier": 0.4,
+      "description": "Storms supercharge lightning types",
+      "bonusRegeneration": 10,
+      "bonusSpeed": 1.5
+    },
+    "metal": {
+      "damageMultiplier": 0.6,
+      "description": "Metal environments conduct and amplify lightning",
+      "bonusDamage": 1.4
+    },
+    "underwater": {
+      "damageMultiplier": 0.7,
+      "description": "Water conducts lightning effectively",
+      "bonusAreaDamage": true
+    },
+    "underground": {
+      "damageMultiplier": 1.3,
+      "description": "Earth grounds electrical energy",
+      "penaltyEffect": "reduced_power"
+    }
+  },
+  
+  "abilityTypeBonus": {
+    "lightning": 1.2,
+    "description": "Lightning type users gain 20% bonus damage with lightning abilities"
+  },
+  
+  "statusEffectInteractions": {
+    "paralysis": {
+      "immunity": true,
+      "description": "Lightning types cannot be paralyzed"
+    },
+    "shock": {
+      "immunity": true,
+      "description": "Pure electrical energy cannot be shocked"
+    },
+    "slow": {
+      "resistance": true,
+      "durationMultiplier": 0.4,
+      "description": "Lightning speed resists slowing"
+    },
+    "ground": {
+      "vulnerability": true,
+      "damageMultiplier": 1.8,
+      "description": "Grounding effects neutralize lightning"
+    }
+  }
+}

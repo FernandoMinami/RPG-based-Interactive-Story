@@ -1,0 +1,20 @@
+{
+  "id": "variant-human",
+  "name": "Variant Human",
+  "description": "Specialized human with unique talents and focus",
+  "lore": "Some humans develop specialized skills and talents that set them apart from their common kin. These variant humans often excel in specific areas through training or natural gifts.",
+  "availableTypes": ["neutral", "fire", "water", "earth", "air", "light", "dark"],
+  "racialTraits": {
+    "specialization": "Can access all combat types including dark",
+    "focused_training": "Enhanced ability learning"
+  },
+  "baseModifiers": {
+    "strength": 0,
+    "dexterity": 0, 
+    "constitution": 0,
+    "intelligence": 0,
+    "wisdom": 0,
+    "charisma": 2
+  },
+  "typeCount": 7
+}

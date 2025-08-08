@@ -409,7 +409,6 @@ export function startBattle(player, enemy, onBattleEnd) {
                             // Backward compatibility: handle old removesPin property
                             if (ability.removesPin && isStatusActive(player, 'pinned')) {
                                 applyStatus(player, 'pinned', 0);
-                                addLog(`${player.name} is no longer pinned!`);
                             }
                         } else {
                             addLog(ability.onMiss || `${player.name}'s attack misses!`);

@@ -12,5 +12,6 @@ export default {
     description: "Throws entire body weight at the enemy with crushing force!",
     onHit: "A massive body slam crushes the target!",
     onMiss: "The heavy attack misses as the target dodges!",
-    onCrit: "The full weight crashes down with devastating impact!"
+    onCrit: "The full weight crashes down with devastating impact!",
+    onOverkill: "The crushing weight completely overwhelms the target!"
 };

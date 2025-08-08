@@ -3,7 +3,7 @@
 import { addExp } from './leveling.js';
 import { addItem } from './inventory.js';
 import { updateCharacterUI, updateStoryUI } from './ui.js';
-import { historyLog } from './history.js';
+import { historyLog, updateHistoryPanel } from './history.js';
 
 /**
  * Execute a dice roll choice with attribute bonuses and outcomes
@@ -32,6 +32,9 @@ export function executeDiceRoll(choice, player, applyAttributes, onComplete) {
     const pendingDiceResult = `You rolled ${baseRoll}${bonusText}: total <b>${totalRoll}</b>. `;
     
     historyLog.push({ action: pendingDiceResult });
+    if (typeof updateHistoryPanel === 'function') {
+      updateHistoryPanel();
+    }
     updateStoryUI && updateStoryUI();
     
     let resultText = pendingDiceResult;
@@ -141,6 +144,9 @@ export function processChoice(choice, player, applyAttributes) {
     updateStoryUI && updateStoryUI();
     updateCharacterUI && updateCharacterUI();
     historyLog.push({ action: `Chose: ${choice.text}` });
+    if (typeof updateHistoryPanel === 'function') {
+      updateHistoryPanel();
+    }
     updateStoryUI && updateStoryUI();
     
     return pendingNodeEffect;

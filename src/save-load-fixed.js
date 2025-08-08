@@ -309,9 +309,14 @@ export async function loadGameFromSave(saveData) {
         syncManaProperties(window.player);
         updateSecondaryStats(window.player);
 
-        // Update UI
-        document.getElementById("current-character-name").textContent = window.player.name;
-        document.getElementById("current-character").style.display = "";
+        updateSecondaryStats(window.player);
+
+        // Update UI - Story layout character name only (old elements removed)
+        const characterNameStory = document.getElementById("current-character-name-story");
+        if (characterNameStory) {
+            characterNameStory.textContent = window.player.name;
+        }
+        
         document.getElementById("status-abilities").style.display = "block";
         document.getElementById("history-toggle-btn").style.display = "";
         
@@ -326,9 +331,6 @@ export async function loadGameFromSave(saveData) {
         document.querySelector(".story-container").style.display = "";
 
         // Show current node
-        console.log("About to show node:", window.currentNode);
-        console.log("Story data available:", !!window.storyData);
-        console.log("Player available:", !!window.player, window.player?.id);
         storyModule.showNode(window.currentNode);
 
         return true;
@@ -390,11 +392,12 @@ export function addSaveButton() {
     saveBtn.id = 'save-game-btn';
     saveBtn.textContent = 'Save Game';
     saveBtn.style.cssText = 'margin-left: 10px; background: #007bff; color: white; border: none; padding: 8px 16px; border-radius: 3px; cursor: pointer;';
+    saveBtn.style.cssText = 'background: #007bff; color: white; border: none; padding: 8px 14px; border-radius: 5px; cursor: pointer; font-size: 13px; box-shadow: 0 2px 4px rgba(0,0,0,0.2); transition: background-color 0.2s ease;';
     saveBtn.onclick = downloadSave;
 
-    // Add next to inventory button
-    const inventoryBtn = document.getElementById('show-inventory-btn');
-    if (inventoryBtn) {
-        inventoryBtn.parentNode.insertBefore(saveBtn, inventoryBtn.nextSibling);
+    // Add to save button area in character info section
+    const saveButtonArea = document.getElementById('save-button-area');
+    if (saveButtonArea) {
+        saveButtonArea.appendChild(saveBtn);
     }
 }

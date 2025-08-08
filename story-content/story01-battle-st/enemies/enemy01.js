@@ -9,8 +9,10 @@ const baseSecondary = {
 export const enemy = {
   name: "Enemy01",
   id: "enemy01",
-  height: 140, // Height in cm (small category: 120-150cm)
-  weight: 60, // Weight in kg (used to do calculations like pin or fall damage)
+  type: "fire",
+  imagePath: "../story-content/story01-battle-st/img/enemies/enemy01.jpg", // Optional: path to enemy image
+  height: 230, // Height in cm (small category: 120-150cm)
+  weight: 200, // Weight in kg (used to do calculations like pin or fall damage)
   life: 70,
   maxLife: 70,
   secondary: { ...baseSecondary },
@@ -33,7 +35,5 @@ export const enemy = {
   // Format: { id: "abilityId", rate: "ratingLevel" }
   abilityIds: [
     { id: "stomp", rate: "preferred" },
-    { id: "tailWhip", rate: "frequent" }, 
-    { id: "fly", rate: "rare" }
-  ]
+    ]
 };

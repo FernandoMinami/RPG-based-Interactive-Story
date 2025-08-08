@@ -1,0 +1,94 @@
+{
+  "id": "volcanic",
+  "name": "Volcanic Environment",
+  "description": "Intense heat, lava flows, and sulfurous gases",
+  "icon": "🌋",
+  "temperature": "extreme_hot",
+  "immuneType": "fire",
+  "defaultIntensity": 3,
+  
+  "intensityLevels": {
+    "1-3": {
+      "name": "Mild Heat",
+      "description": "Warm volcanic activity with minor effects",
+      "effects": {
+        "message": "The warm air carries volcanic heat and sulfur scents."
+      }
+    },
+    "4-6": {
+      "name": "Moderate Heat", 
+      "description": "Active volcanic vents and heated ground",
+      "effects": {
+        "damage": 8,
+        "damageType": "fire",
+        "message": "Volcanic heat and gases create uncomfortable conditions."
+      }
+    },
+    "7-9": {
+      "name": "Intense Heat",
+      "description": "Dangerous lava flows and extreme temperatures",
+      "effects": {
+        "damage": 15,
+        "damageType": "fire", 
+        "message": "The intense heat from flowing lava is overwhelming!"
+      }
+    },
+    "10-12": {
+      "name": "Extreme Heat",
+      "description": "Near the volcano's core with deadly conditions",
+      "effects": {
+        "damage": 25,
+        "damageType": "fire",
+        "message": "You're dangerously close to the volcano's molten core!"
+      }
+    }
+  },
+  
+  "effects": {
+    "baseDamage": 15,
+    "damageType": "fire",
+    "interval": 3,
+    "description": "The intense heat sears exposed flesh"
+  },
+  
+  "typeInteractions": {
+    "fire": {
+      "environmentalDamageMultiplier": 0.0,
+      "bonusRegeneration": 8,
+      "description": "Fire types thrive in volcanic heat, regenerating instead of taking damage"
+    },
+    "water": {
+      "environmentalDamageMultiplier": 2.0,
+      "penaltyEffect": "mana_drain",
+      "description": "Water types suffer greatly in volcanic environments"
+    },
+    "earth": {
+      "environmentalDamageMultiplier": 0.7,
+      "description": "Earth types have some resistance to volcanic environments"
+    },
+    "ice": {
+      "environmentalDamageMultiplier": 2.5,
+      "penaltyEffect": "melting_vulnerability",
+      "description": "Ice types are extremely vulnerable to volcanic heat"
+    }
+  },
+  
+  "combatModifiers": {
+    "fireAbilities": {
+      "damageBonus": 1.5,
+      "accuracyBonus": 0.1
+    },
+    "iceAbilities": {
+      "damageReduction": 0.6,
+      "accuracyPenalty": 0.2
+    }
+  },
+  
+  "statusEffects": {
+    "environmental_burn": {
+      "chance": 0.3,
+      "duration": 2,
+      "description": "Volcanic heat causes burning"
+    }
+  }
+}

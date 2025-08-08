@@ -1,0 +1,70 @@
+{
+  "id": "neutral",
+  "name": "Neutral Environment",
+  "description": "A balanced environment with no special effects - the default state for most scenarios",
+  "icon": "🌍",
+  
+  "globalEffects": {
+    "description": "No environmental hazards or benefits",
+    "damagePerTurn": 0,
+    "healingPerTurn": 0,
+    "statusEffects": []
+  },
+  
+  "typeInteractions": {
+    "neutral": {
+      "environmentalDamageMultiplier": 1.0,
+      "description": "Normal conditions",
+      "bonusRegeneration": 0
+    },
+    "fire": {
+      "environmentalDamageMultiplier": 1.0,
+      "description": "Normal conditions",
+      "bonusRegeneration": 0
+    },
+    "water": {
+      "environmentalDamageMultiplier": 1.0,
+      "description": "Normal conditions",
+      "bonusRegeneration": 0
+    },
+    "earth": {
+      "environmentalDamageMultiplier": 1.0,
+      "description": "Normal conditions",
+      "bonusRegeneration": 0
+    },
+    "air": {
+      "environmentalDamageMultiplier": 1.0,
+      "description": "Normal conditions",
+      "bonusRegeneration": 0
+    },
+    "ice": {
+      "environmentalDamageMultiplier": 1.0,
+      "description": "Normal conditions",
+      "bonusRegeneration": 0
+    },
+    "lightning": {
+      "environmentalDamageMultiplier": 1.0,
+      "description": "Normal conditions",
+      "bonusRegeneration": 0
+    },
+    "light": {
+      "environmentalDamageMultiplier": 1.0,
+      "description": "Normal conditions",
+      "bonusRegeneration": 0
+    },
+    "dark": {
+      "environmentalDamageMultiplier": 1.0,
+      "description": "Normal conditions",
+      "bonusRegeneration": 0
+    }
+  },
+  
+  "visualEffects": {
+    "background": "normal",
+    "particles": [],
+    "lighting": "normal",
+    "ambientSound": "peaceful"
+  },
+  
+  "lore": "The natural state of the world - neither helping nor hindering any particular elemental type. Most civilized areas and peaceful locations maintain this balanced environment."
+}

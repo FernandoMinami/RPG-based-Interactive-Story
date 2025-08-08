@@ -1,0 +1,84 @@
+{
+    "id": "volcanic-cavern",
+    "title": "Volcanic Cavern",
+    "noBattle": false,
+    "environment": "volcanic",
+    "enemies": [
+        "enemy02"
+    ],
+    "respawn": [
+        "cavern-entrance"
+    ],
+    "nodes": {
+        "cavern-entrance": {
+            "title": "Entrance to Volcanic Cavern",
+            "text": "You stand before a cavern entrance. Heat waves distort the air and you can hear bubbling lava inside. The environment will affect different elemental types differently.",
+            "environmentalCheck": {
+                "type": "volcanic",
+                "intensity": 3
+            },
+            "choices": [
+                {
+                    "text": "Enter the cavern",
+                    "next": "lava-chamber",
+                    "environmentalDamage": {
+                        "type": "fire",
+                        "damage": 10,
+                        "description": "The intense heat sears you as you enter!"
+                    }
+                },
+                {
+                    "text": "Return to forest",
+                    "scenario": "forest01",
+                    "next": "forest-clearing"
+                }
+            ]
+        },
+        "lava-chamber": {
+            "title": "Lava Chamber",
+            "text": "You are in a massive chamber filled with flowing lava. The heat is overwhelming! Fire types would thrive here, but others will suffer constant damage.",
+            "environment": {
+                "type": "volcanic",
+                "intensity": 5,
+                "effects": [
+                    {
+                        "condition": "always",
+                        "damage": 15,
+                        "damageType": "fire",
+                        "description": "The volcanic heat damages all who are not resistant to fire!"
+                    }
+                ]
+            },
+            "choices": [
+                {
+                    "text": "Fight the lava guardian",
+                    "battle": "enemy02",
+                    "next": "victory-chamber",
+                    "battleEnvironment": {
+                        "type": "volcanic",
+                        "intensity": 8
+                    }
+                },
+                {
+                    "text": "Retreat to entrance",
+                    "next": "cavern-entrance"
+                }
+            ]
+        },
+        "victory-chamber": {
+            "title": "Chamber of Treasures",
+            "text": "You defeated the lava guardian! The chamber contains treasures forged in volcanic heat.",
+            "choices": [
+                {
+                    "text": "Take treasure and leave",
+                    "scenario": "forest01",
+                    "next": "forest-clearing",
+                    "rewards": {
+                        "exp": 500,
+                        "items": ["fire-crystal"]
+                    }
+                }
+            ]
+        }
+    }
+}

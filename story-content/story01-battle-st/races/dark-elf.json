@@ -1,0 +1,20 @@
+{
+  "id": "dark-elf",
+  "name": "Dark Elf",
+  "description": "Shadow-dwelling elves with affinity for dark magic",
+  "lore": "Dark elves have turned away from the light, embracing shadow magic and underground realms. They are skilled in stealth and dark arts, often misunderstood by surface dwellers.",
+  "availableTypes": ["dark", "neutral", "air", "light"],
+  "racialTraits": {
+    "shadow_affinity": "Natural resistance to dark environments",
+    "stealth_mastery": "Enhanced stealth and dark magic capabilities"
+  },
+  "baseModifiers": {
+    "strength": 0,
+    "dexterity": 2, 
+    "constitution": -1,
+    "intelligence": 2,
+    "wisdom": 1,
+    "charisma": 0
+  },
+  "typeCount": 4
+}

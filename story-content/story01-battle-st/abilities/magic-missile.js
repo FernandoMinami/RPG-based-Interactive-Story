@@ -1,6 +1,7 @@
 export default {
     name: "Magic Missile",
     type: "magic",
+    elementalType: "neutral",
     range: "ranged",
     minDamage: 15,
     maxDamage: 25,

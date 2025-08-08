@@ -27,9 +27,8 @@ export async function loadLoot(storyId) {
             }
         }
         
-        //console.log("Loaded loot items:", Object.keys(lootRegistry));
     } catch (error) {
-        //console.error("Failed to load loot manifest:", error);
+        console.error("Failed to load loot manifest:", error);
         lootRegistry = {};
     }
 }

@@ -1,0 +1,84 @@
+{
+    "id": "underwater-caves",
+    "title": "Underwater Caves",
+    "noBattle": false,
+    "environment": "underwater",
+    "enemies": [
+        "enemy01"
+    ],
+    "respawn": [
+        "shallow-water"
+    ],
+    "nodes": {
+        "shallow-water": {
+            "title": "Shallow Water",
+            "text": "You wade into the shallow water. The current is gentle here, but you can see deeper, darker waters ahead. Water types would feel at home here.",
+            "environmentalCheck": {
+                "type": "underwater",
+                "intensity": 3
+            },
+            "choices": [
+                {
+                    "text": "Dive deeper",
+                    "next": "deep-cavern",
+                    "environmentalDamage": {
+                        "type": "water",
+                        "damage": 0,
+                        "description": "You hold your breath and dive down!"
+                    }
+                },
+                {
+                    "text": "Return to surface",
+                    "scenario": "forest01",
+                    "next": "forest-clearing"
+                }
+            ]
+        },
+        "deep-cavern": {
+            "title": "Deep Underwater Cavern",
+            "text": "You are deep underwater in a flooded cavern. The pressure is intense and breathing is becoming difficult. Water types thrive here, but others struggle with movement and breath.",
+            "environment": {
+                "type": "underwater",
+                "intensity": 7,
+                "effects": [
+                    {
+                        "condition": "always",
+                        "damage": 0,
+                        "damageType": "pressure",
+                        "description": "The water pressure affects all who are not aquatic!"
+                    }
+                ]
+            },
+            "choices": [
+                {
+                    "text": "Fight the sea guardian",
+                    "battle": "enemy01",
+                    "next": "treasure-chamber",
+                    "battleEnvironment": {
+                        "type": "underwater",
+                        "intensity": 7
+                    }
+                },
+                {
+                    "text": "Swim back to shallow water",
+                    "next": "shallow-water"
+                }
+            ]
+        },
+        "treasure-chamber": {
+            "title": "Underwater Treasure Chamber",
+            "text": "You defeated the sea guardian! An air pocket in the cave allows you to breathe while you collect the aquatic treasures.",
+            "choices": [
+                {
+                    "text": "Take treasure and surface",
+                    "scenario": "forest01",
+                    "next": "forest-clearing",
+                    "rewards": {
+                        "exp": 400,
+                        "items": ["water-breathing-potion", "aquatic-gear"]
+                    }
+                }
+            ]
+        }
+    }
+}

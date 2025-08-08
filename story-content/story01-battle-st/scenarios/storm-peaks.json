@@ -1,0 +1,84 @@
+{
+    "id": "storm-peaks",
+    "title": "Storm-Lashed Peaks",
+    "noBattle": false,
+    "environment": "storm",
+    "enemies": [
+        "enemy02"
+    ],
+    "respawn": [
+        "windy-plateau"
+    ],
+    "nodes": {
+        "windy-plateau": {
+            "title": "Windy Plateau",
+            "text": "You climb onto a high plateau where strong winds whip around you. Dark clouds gather overhead, and you can feel the electricity in the air. Air types would feel empowered here.",
+            "environmentalCheck": {
+                "type": "storm",
+                "intensity": 3
+            },
+            "choices": [
+                {
+                    "text": "Ascend to the storm peak",
+                    "next": "lightning-peak",
+                    "environmentalDamage": {
+                        "type": "lightning",
+                        "damage": 5,
+                        "description": "Wind and debris buffet you as you climb!"
+                    }
+                },
+                {
+                    "text": "Descend to safer ground",
+                    "scenario": "forest01",
+                    "next": "forest-clearing"
+                }
+            ]
+        },
+        "lightning-peak": {
+            "title": "Lightning Peak",
+            "text": "You stand atop a mountain peak in the heart of a violent thunderstorm. Lightning crashes all around you and debris flies through the air. Air types thrive in this chaos, but others struggle with the violent conditions.",
+            "environment": {
+                "type": "storm",
+                "intensity": 9,
+                "effects": [
+                    {
+                        "condition": "always",
+                        "damage": 8,
+                        "damageType": "lightning",
+                        "description": "Lightning and debris constantly threaten all who are not attuned to air!"
+                    }
+                ]
+            },
+            "choices": [
+                {
+                    "text": "Fight the storm elemental",
+                    "battle": "enemy02",
+                    "next": "eye-of-storm",
+                    "battleEnvironment": {
+                        "type": "storm",
+                        "intensity": 9
+                    }
+                },
+                {
+                    "text": "Retreat to the plateau",
+                    "next": "windy-plateau"
+                }
+            ]
+        },
+        "eye-of-storm": {
+            "title": "Eye of the Storm",
+            "text": "You defeated the storm elemental! Suddenly, the winds calm and you find yourself in the peaceful eye of the storm, surrounded by swirling walls of wind and lightning.",
+            "choices": [
+                {
+                    "text": "Collect storm treasures and descend",
+                    "scenario": "forest01",
+                    "next": "forest-clearing",
+                    "rewards": {
+                        "exp": 600,
+                        "items": ["storm-cloak", "lightning-rod"]
+                    }
+                }
+            ]
+        }
+    }
+}

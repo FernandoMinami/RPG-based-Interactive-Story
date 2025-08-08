@@ -1,26 +1,27 @@
-// Burned status effect
-// Character takes fire damage each turn
+// Burn DoT Status Definition
+// Pure data configuration for the DoT system
+
 export default {
-    name: "Burned",
-    description: "On fire, taking damage each turn",
+    name: 'Burn',
+    statusTag: 'burn',
+    statusDesc: 'Burning',
+    type: 'dot',
+    damage: 5,
+    damageType: 'fire',
+    turns: 3,
+    durationType: 'turns',
+    description: 'Target is on fire, taking fire damage each turn.',
     
-    apply(target) {
-        // No immediate effect on application
-    },
+    // Visual/UI properties
+    color: '#FF4500',
+    icon: '🔥',
     
-    tick(target, turns, addLog = () => {}) {
-        // Deal fire damage each turn
-        const damage = Math.max(1, Math.floor(target.maxLife * 0.08)); // 8% of max life
-        target.life = Math.max(0, target.life - damage);
-        addLog(`${target.name} takes ${damage} fire damage from being burned!`);
-        return turns - 1;
-    },
+    // Balance properties
+    stackable: false, // Whether multiple instances can stack
+    refreshable: true, // Whether applying again refreshes duration
     
-    remove(target) {
-        // No effect on removal
-    },
-    
-    summary(target) {
-        return "burned";
-    }
-};
+    // Resistance/immunity tags (optional)
+    immuneTypes: ['fire'], // Fire types are immune to burn
+    resistantTypes: ['water'], // Water types take reduced burn damage
+    vulnerableTypes: ['earth'] // Earth types take increased burn damage
+}

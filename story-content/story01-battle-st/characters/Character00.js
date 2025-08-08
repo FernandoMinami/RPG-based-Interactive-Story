@@ -25,6 +25,11 @@ export let player = {
   id: "character00",
   race: "human", // Player race (affects story choices)
   type: "neutral", // Combat type (affects damage/resistance)
+  imagePath: "../story-content/story01-battle-st/img/players/character00.jpg", // Optional: path to character image
+  
+  // Character-specific available races (subspecies/variants)
+  availableRaces: ["human", "half-elf", "variant-human"], // This character can only choose these races
+  
   height: 140, // Height in cm (small category: 120-150cm)
   weight: 60, // Weight in kg (used to do calculations like pin or fall damage)
   life: 0,
@@ -37,6 +42,7 @@ export let player = {
 
   // List of ability IDs that this character can use
   abilityIds: [
+    "waterBurst",
     "quickAttack",
     "forcePalm",
     "heal",

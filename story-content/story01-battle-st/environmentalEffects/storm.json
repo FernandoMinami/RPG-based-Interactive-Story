@@ -1,0 +1,85 @@
+{
+  "id": "storm",
+  "name": "Storm Environment", 
+  "description": "Lightning, thunder, and powerful winds",
+  "icon": "⛈️",
+  "temperature": "cool",
+  
+  "effects": {
+    "baseDamage": 12,
+    "damageType": "lightning",
+    "interval": 2,
+    "description": "Lightning strikes and winds buffet all combatants"
+  },
+  
+  "typeInteractions": {
+    "lightning": {
+      "environmentalDamageMultiplier": 0.2,
+      "bonusRegeneration": 10,
+      "speedBonus": 1.5,
+      "description": "Lightning types are supercharged by storms"
+    },
+    "air": {
+      "environmentalDamageMultiplier": 0.6,
+      "speedBonus": 1.3,
+      "description": "Air types ride the wind currents"
+    },
+    "water": {
+      "environmentalDamageMultiplier": 1.3,
+      "description": "Water conducts lightning more effectively"
+    },
+    "earth": {
+      "environmentalDamageMultiplier": 1.4,
+      "description": "Earth types are vulnerable to lightning strikes"
+    }
+  },
+  
+  "intensityLevels": {
+    "1": {
+      "name": "Light Storm",
+      "description": "Light winds and occasional lightning",
+      "effects": {
+        "lightningChance": 15,
+        "lightningDamage": 8,
+        "accuracyPenalty": 0.1
+      }
+    },
+    "3": {
+      "name": "Moderate Storm", 
+      "description": "Strong winds and frequent lightning",
+      "effects": {
+        "lightningChance": 25,
+        "lightningDamage": 12,
+        "accuracyPenalty": 0.2
+      }
+    },
+    "5": {
+      "name": "Severe Storm",
+      "description": "Violent winds and constant lightning",
+      "effects": {
+        "lightningChance": 35,
+        "lightningDamage": 18,
+        "accuracyPenalty": 0.3
+      }
+    }
+  },
+  
+  "combatModifiers": {
+    "lightningAbilities": {
+      "damageBonus": 1.6,
+      "accuracyBonus": 0.2
+    },
+    "airAbilities": {
+      "damageBonus": 1.3,
+      "accuracyBonus": 0.1
+    }
+  },
+  
+  "statusEffects": {
+    "paralysis": {
+      "chance": 0.25,
+      "duration": 2,
+      "description": "Lightning strikes cause temporary paralysis"
+    }
+  }
+}

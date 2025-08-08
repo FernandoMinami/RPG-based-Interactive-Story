@@ -1,0 +1,47 @@
+[
+  {
+    "id": "neutral",
+    "name": "Neutral",
+    "file": "neutral.json"
+  },
+  {
+    "id": "fire",
+    "name": "Fire", 
+    "file": "fire.json"
+  },
+  {
+    "id": "water",
+    "name": "Water",
+    "file": "water.json"
+  },
+  {
+    "id": "earth",
+    "name": "Earth",
+    "file": "earth.json"
+  },
+  {
+    "id": "air",
+    "name": "Air",
+    "file": "air.json"
+  },
+  {
+    "id": "light",
+    "name": "Light",
+    "file": "light.json"
+  },
+  {
+    "id": "dark",
+    "name": "Dark", 
+    "file": "dark.json"
+  },
+  {
+    "id": "ice",
+    "name": "Ice",
+    "file": "ice.json"
+  },
+  {
+    "id": "lightning",
+    "name": "Lightning",
+    "file": "lightning.json"
+  }
+]

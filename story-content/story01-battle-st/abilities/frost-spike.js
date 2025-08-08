@@ -1,6 +1,7 @@
 export default {
     name: "Frost Spike",
     type: "magic",
+    elementalType: "ice",
     range: "ranged",
     minDamage: 100,
     maxDamage: 120,

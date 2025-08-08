@@ -5,6 +5,7 @@ import { updateSecondaryStats } from './character.js';
 import { updateHistoryPanel, historyLog } from './history.js';
 import { loadItems, items } from './items.js';
 import { getAbilities, getAbility } from './abilities.js';
+import { statusSummary } from './status.js';
 
 // --- Grouped UI update functions ---
 function updateCharacterUI() {
@@ -18,21 +19,37 @@ function updateCharacterUI() {
   updateManaBar();
   updateAttributesBar();
   createAbilityButtons();
+  updateStatusDisplay();
   // updateInventoryBar(); // Commented out - using modal inventory system instead
-
-  // Level/EXP/Points UI
-  document.getElementById("player-level").textContent = `Level: ${window.player.level}`;
-  document.getElementById("player-exp").textContent = `EXP: ${window.player.exp} / ${getExpForLevel(window.player.level + 1)}`;
-  document.getElementById("player-attribute-points").textContent = `Attribute Points: ${window.player.attributePoints}`;
   
-  // Update race and type display
-  const raceElement = document.getElementById("character-race");
-  const typeElement = document.getElementById("character-type");
-  if (raceElement && window.player.race) {
-    raceElement.textContent = `Race: ${window.player.race.charAt(0).toUpperCase() + window.player.race.slice(1)}`;
+  // Also update story layout buttons if they exist
+  if (typeof window.syncBuffsToNewLayout === 'function') {
+    window.syncBuffsToNewLayout();
   }
-  if (typeElement && window.player.type) {
-    typeElement.textContent = `Type: ${window.player.type.charAt(0).toUpperCase() + window.player.type.slice(1)}`;
+
+  // Level/EXP/Points UI - Story layout only (old elements removed)
+  const playerLevelStory = document.getElementById("player-level-story");
+  const playerExpStory = document.getElementById("player-exp-story");
+  const playerAttributePointsStory = document.getElementById("player-attribute-points-story");
+  
+  if (playerLevelStory) {
+    playerLevelStory.textContent = `Level: ${window.player.level}`;
+  }
+  if (playerExpStory) {
+    playerExpStory.textContent = `EXP: ${window.player.exp} / ${getExpForLevel(window.player.level + 1)}`;
+  }
+  if (playerAttributePointsStory) {
+    playerAttributePointsStory.textContent = `Attribute Points: ${window.player.attributePoints}`;
+  }
+  
+  // Update race and type display - Story layout only (old elements removed)
+  const raceElementStory = document.getElementById("character-race-story");
+  const typeElementStory = document.getElementById("character-type-story");
+  if (raceElementStory && window.player.race) {
+    raceElementStory.textContent = `Race: ${window.player.race.charAt(0).toUpperCase() + window.player.race.slice(1)}`;
+  }
+  if (typeElementStory && window.player.type) {
+    typeElementStory.textContent = `Type: ${window.player.type.charAt(0).toUpperCase() + window.player.type.slice(1)}`;
   }
 }
 
@@ -48,15 +65,24 @@ function updateManaBar() {
     return;
   }
   
-  const manaBar = document.getElementById("mana-bar");
   const mp = Number(player.mp) || Number(player.mana) || 0;  // Check mp first, then mana fallback
   const maxMp = Number(player.maxMp) || Number(player.maxMana) || Number(player.secondary?.maxMp) || 1;
 
-  manaBar.value = Math.max(0, Math.min(mp, maxMp));
-  manaBar.max = maxMp;
-
-  document.getElementById("mp-value").textContent = mp;
-  document.getElementById("max-mp-value").textContent = maxMp;
+  // Update story layout mana bar only (old elements removed)
+  const manaBarStory = document.getElementById("mana-bar-story");
+  const mpValueStory = document.getElementById("mp-value-story");
+  const maxMpValueStory = document.getElementById("max-mp-value-story");
+  
+  if (manaBarStory) {
+    manaBarStory.value = Math.max(0, Math.min(mp, maxMp));
+    manaBarStory.max = maxMp;
+  }
+  if (mpValueStory) {
+    mpValueStory.textContent = mp;
+  }
+  if (maxMpValueStory) {
+    maxMpValueStory.textContent = maxMp;
+  }
 }
 
 function updateLifeBar() {
@@ -66,15 +92,24 @@ function updateLifeBar() {
     return;
   }
   
-  const lifeBar = document.getElementById("life-bar");
   const life = Number(player.life) || 0;
   const maxLife = Number(player.maxLife) || Number(player.secondary?.maxLife) || 1;  // Check direct property first
 
-  lifeBar.value = Math.max(0, Math.min(life, maxLife));
-  lifeBar.max = maxLife;
-
-  document.getElementById("life-value").textContent = life;
-  document.getElementById("max-life-value").textContent = maxLife;
+  // Update story layout life bar only (old elements removed)
+  const lifeBarStory = document.getElementById("life-bar-story");
+  const lifeValueStory = document.getElementById("life-value-story");
+  const maxLifeValueStory = document.getElementById("max-life-value-story");
+  
+  if (lifeBarStory) {
+    lifeBarStory.value = Math.max(0, Math.min(life, maxLife));
+    lifeBarStory.max = maxLife;
+  }
+  if (lifeValueStory) {
+    lifeValueStory.textContent = life;
+  }
+  if (maxLifeValueStory) {
+    maxLifeValueStory.textContent = maxLife;
+  }
 }
 
 
@@ -132,6 +167,9 @@ function updateInventoryBar() {
             item.equipped = true;
             player.equipment[item.slot] = item;
             historyLog.push({ action: `Equipped: ${item.name}` });
+            if (typeof updateHistoryPanel === 'function') {
+              updateHistoryPanel();
+            }
           } else {
             for (const [attr, mod] of Object.entries(item.modifiers)) {
               if (player.attributes[attr] !== undefined) {
@@ -141,6 +179,9 @@ function updateInventoryBar() {
             item.equipped = false;
             player.equipment[item.slot] = null;
             historyLog.push({ action: `Unequipped: ${item.name}` });
+            if (typeof updateHistoryPanel === 'function') {
+              updateHistoryPanel();
+            }
           }
           updateSecondaryStats(player);
           updateCharacterUI();
@@ -153,6 +194,9 @@ function updateInventoryBar() {
             updateCharacterUI();
             updateStoryUI();
             historyLog.push({ action: `Used item: ${item.name}` });
+            if (typeof updateHistoryPanel === 'function') {
+              updateHistoryPanel();
+            }
             updateStoryUI();
           }
         }
@@ -165,21 +209,26 @@ function updateInventoryBar() {
 function updateAttributesBar() {
   const attrDiv = document.getElementById("attributes-bar-container");
   if (!attrDiv) return;
-  let buffs = [];
-  for (const [attr, boost] of Object.entries(player.activeBoosts)) {
-    if (boost && boost.turns > 0) {
-      buffs.push(`<span style="color:blue; font-weight:bold; margin-right:10px;">
-        +${boost.amount} ${attr} (${boost.turns} turn${boost.turns > 1 ? "s" : ""} left)
-      </span>`);
+  
+  // Use new BuffRegistry system instead of legacy activeBoosts
+  import('./status.js').then(({ BuffRegistry }) => {
+    const buffSummary = BuffRegistry.getBuffSummary(window.player);
+    
+    if (buffSummary.length === 0) {
+      attrDiv.style.display = "none";
+      attrDiv.innerHTML = "";
+    } else {
+      attrDiv.style.display = "";
+      const buffElements = buffSummary.map(buff => 
+        `<span style="color:blue; font-weight:bold; margin-right:10px;">${buff}</span>`
+      );
+      attrDiv.innerHTML = buffElements.join("");
     }
-  }
-  if (buffs.length === 0) {
+  }).catch(() => {
+    // Fallback if import fails
     attrDiv.style.display = "none";
     attrDiv.innerHTML = "";
-  } else {
-    attrDiv.style.display = "";
-    attrDiv.innerHTML = buffs.join("");
-  }
+  });
 }
 
 function createAbilityButtons() {
@@ -196,15 +245,12 @@ function createAbilityButtons() {
     const btn = document.createElement("button");
     btn.textContent = (ability.name || key) + (ability.mpCost ? ` (MP: ${ability.mpCost})` : "");
 
+    // Check if buff is already active - simplified check using statusEffects array
     let buffActive = false;
-    if (
-      ability.type === "buff" &&
-      ability.attribute &&
-      player.activeBoosts[ability.attribute] &&
-      player.activeBoosts[ability.attribute].turns > 0
-    ) {
-      buffActive = true;
+    if (ability.type === "buff" && ability.statusTag) {
+      buffActive = player.statusEffects && player.statusEffects.some(effect => effect.statusTag === ability.statusTag);
     }
+    
     btn.disabled = player.mp < (ability.mpCost || 0) || buffActive;
     if (btn.disabled) {
       btn.style.opacity = "0.5";
@@ -216,37 +262,66 @@ function createAbilityButtons() {
 
     btn.onclick = function () {
       if (btn.disabled) return;
+      
+      
+      // Deduct MP cost
       player.mp -= ability.mpCost || 0;
       player.mana = player.mp; // Keep in sync
-      updateCharacterUI();
-      if (ability.type === "buff" && ability.attribute) {
-        player.attributes[ability.attribute] += ability.amount;
-        player.activeBoosts[ability.attribute] = {
-          amount: ability.amount,
-          turns: ability.turns
-        };
-        updateSecondaryStats(player);
-        historyLog.push({
-          action: `${ability.name} activated! +${ability.amount} ${ability.attribute} for ${ability.turns} turns.`
-        });
+      
+      try {
+        if (ability.type === "buff" && ability.apply) {
+          // Use ability's apply function for buffs
+          ability.apply(player, player, (message) => {
+          });
+        } else if (ability.type === "heal") {
+          // Handle heal abilities
+          if (player.life > 0 && player.life < player.maxLife) {
+            player.life += ability.amount;
+            if (player.life > player.maxLife) player.life = player.maxLife;
+          }
+        } else {
+          console.warn(`Story UI: Ability ${ability.name} type ${ability.type} not handled`);
+        }
+        
+        // Update UI after ability use
         updateCharacterUI();
         updateStoryUI();
+        
+        // Temporarily disable button and refresh after delay
         btn.disabled = true;
         setTimeout(() => {
-          btn.disabled = false;
+          createAbilityButtons(); // Refresh all buttons
         }, 1000);
-      } else if (ability.type === "heal") {
-        if (player.life > 0 && player.life < player.maxLife) {
-          player.life += ability.amount;
-          if (player.life > player.maxLife) player.life = player.maxLife;
-          historyLog.push({ action: `Used ${ability.name}: +${ability.amount} HP` });
-          updateCharacterUI();
-          updateStoryUI();
-        }
+        
+      } catch (error) {
+        console.error(`Error using ability ${ability.name}:`, error);
+        // Refund MP on error
+        player.mp += ability.mpCost || 0;
+        player.mana = player.mp;
+        updateCharacterUI();
       }
-      createAbilityButtons();
     };
+    
     container.appendChild(btn);
+  }
+}
+
+// Update status display in story layout
+function updateStatusDisplay() {
+  const statusElement = document.getElementById("character-status-story");
+  
+  if (statusElement && window.player) {
+    const statusText = statusSummary(window.player);
+    statusElement.textContent = statusText;
+    
+    // Add visual styling based on status
+    if (statusText === 'No status effects') {
+      statusElement.style.color = '#888';
+      statusElement.style.fontStyle = 'italic';
+    } else {
+      statusElement.style.color = '#b0b0b0';
+      statusElement.style.fontStyle = 'normal';
+    }
   }
 }
 

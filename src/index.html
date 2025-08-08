@@ -8,6 +8,7 @@
 </head>
 
 <body>
+    <script type="module" src="character.js"></script>
     <script type="module" src="story.js"></script>
 
     <div id="story-selection">
@@ -18,15 +19,15 @@
     <div id="game-mode-selection" style="display:none;">
         <h2 id="game-mode-title">Choose Game Mode</h2>
         <div style="text-align: center; margin: 20px 0;">
-            <button id="new-game-btn" style="background: #28a745; color: white; border: none; padding: 15px 30px; border-radius: 5px; margin: 10px; font-size: 16px; cursor: pointer;">
+            <button id="new-game-btn">
                 🎮 New Game
             </button>
-            <button id="load-game-btn" style="background: #17a2b8; color: white; border: none; padding: 15px 30px; border-radius: 5px; margin: 10px; font-size: 16px; cursor: pointer;">
+            <button id="load-game-btn">
                 📁 Load Game
             </button>
         </div>
         <div style="text-align: center;">
-            <button id="back-to-stories-btn" style="background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 3px; cursor: pointer;">
+            <button id="back-to-stories-btn">
                 ← Back to Stories
             </button>
         </div>
@@ -37,34 +38,12 @@
 
     <div id="character-selection" style="display:none; margin-bottom:20px;"></div>
 
-    <div id="current-character" style="margin-bottom: 20px; display:none;">
-        <strong>Character:</strong> <span id="current-character-name"></span>
-        <div style="font-size: 14px; color: #666; margin: 5px 0;">
-            <span id="character-race" style="margin-right: 10px;"></span>
-            <span id="character-type"></span>
-        </div>
-        <button id="show-character-stats-btn">Show Stats</button>
-        <div id="player-attribute-points"></div>
-
-        <div style="margin-top:10px; box-shadow: unset;">
-            <label for="life-bar">Life:</label>
-            <progress id="life-bar" value="100" max="100" style="width:120px;vertical-align:middle;"></progress>
-            <span id="life-value">0</span>/<span id="max-life-value">0</span>
-            &nbsp;&nbsp;
-            <label for="mana-bar">MP:</label>
-            <progress id="mana-bar" value="0" max="0" style="width:120px;vertical-align:middle;"></progress>
-            <span id="mp-value">0</span>/<span id="max-mp-value">0</span>
-        </div>
-        <!-- Add inside your character/status panel -->
-        <div id="player-level"></div>
-        <div id="player-exp"></div>
-        <button id="show-inventory-btn" style="margin-bottom:10px;">Show Inventory</button>
-    </div>
-
     <div id="inventory-modal" class="modal" style="display:none;">
-        <div class="modal-content" style="min-width:320px;max-width:500px;margin:auto;">
-            <span id="close-inventory-modal" style="float:right;cursor:pointer;font-size:1.5em;">&times;</span>
-            <h2>Inventory</h2>
+        <div class="modal-content">
+            <span id="close-inventory-modal" class="close">&times;</span>
+            <div class="modal-header">
+                <h2>Inventory</h2>
+            </div>
             <div></div>
         </div>
     </div>
@@ -77,7 +56,55 @@
     <div id="attributes-bar-container"
         style="margin-bottom: 20px; border:1px solid #ccc; padding:10px; background:#f0f6ff;display: none;"></div>
 
-    <div id="status-abilities">
+    <!-- New Full-Width Story Layout -->
+    <div class="story-page-layout" style="display:none;">
+        <!-- Save Button Area - Top Right -->
+        <div id="save-button-area" class="save-button-area">
+            <!-- Save button will be added here -->
+        </div>
+        
+        <!-- Character Info Section - Full Width -->
+        <div class="character-info-section">
+            <div id="current-character-story">
+                <!-- Character info will be moved here -->
+            </div>
+            <div id="current-character-status">
+                <!-- Character status will be moved here -->
+            </div>
+        </div>
+        
+        <!-- Story Log Button Section - Full Width -->
+        <div class="story-log-section">
+            <button id="history-toggle-btn-story" class="story-log-btn">Story Log</button>
+            <div id="history-panel-story" class="story-history-panel" style="display:none;">
+                <!-- History content will be populated here -->
+            </div>
+        </div>
+        
+        <!-- Main Content Section - Two Columns -->
+        <div class="main-content-section">
+            <!-- Left Column: Buffs/Status -->
+            <div class="buffs-column">
+                <div id="status-abilities-story">
+                    <h3>Buffs & Effects</h3>
+                    <div id="ability-btns-story"></div>
+                </div>
+            </div>
+            
+            <!-- Right Column: Story Content -->
+            <div class="story-column">
+                <div class="story-content-area">
+                    <h1 id="story-title-main"></h1>
+                    <div id="node-effect-main"></div>
+                    <div id="story-text-main"></div>
+                    <div id="choices-container-main"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Legacy containers (hidden when new layout is active) -->
+    <div id="status-abilities" style="display: none;">
         <h2>Buffs</h2>
         <div id="ability-btns"></div>
     </div>
@@ -98,9 +125,11 @@
     </div>
 
     <div id="character-stats-modal" class="modal" style="display:none;">
-        <div class="modal-content" style="min-width:320px;max-width:500px;margin:auto;">
-            <span id="close-character-stats-modal" style="float:right;cursor:pointer;font-size:1.5em;">&times;</span>
-            <h2 id="character-stats-title"></h2>
+        <div class="modal-content">
+            <span id="close-character-stats-modal" class="close">&times;</span>
+            <div class="modal-header">
+                <h2 id="character-stats-title"></h2>
+            </div>
             <div id="character-stats-content"></div>
         </div>
     </div>

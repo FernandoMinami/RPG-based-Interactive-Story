@@ -1,5 +1,5 @@
 import { updateManaBar, updateCharacterUI } from './ui.js';
-import { historyLog } from './history.js';
+import { historyLog, updateHistoryPanel } from './history.js';
 
 // player is set globally in story.js, so you can use it directly
 
@@ -104,16 +104,24 @@ function updateSecondaryStats(player) {
     // Add physical defense from all equipped items
   for (const slot of Object.keys(player.equipment)) {
     const eq = player.equipment[slot];
-    if (eq && eq.modifiers && typeof eq.modifiers.physicDefense === "number") {
-      player.secondary.physicDefense += eq.modifiers.physicDefense;
+    if (eq) {
+      // Support both old (modifiers) and new (stats) structure
+      const equipStats = eq.modifiers || eq.stats;
+      if (equipStats && typeof equipStats.physicDefense === "number") {
+        player.secondary.physicDefense += equipStats.physicDefense;
+      }
     }
   }
 
   // Add magic defense from all equipped items
   for (const slot of Object.keys(player.equipment)) {
     const eq = player.equipment[slot];
-    if (eq && eq.modifiers && typeof eq.modifiers.magicDefense === "number") {
-      player.secondary.magicDefense += eq.modifiers.magicDefense;
+    if (eq) {
+      // Support both old (modifiers) and new (stats) structure
+      const equipStats = eq.modifiers || eq.stats;
+      if (equipStats && typeof equipStats.magicDefense === "number") {
+        player.secondary.magicDefense += equipStats.magicDefense;
+      }
     }
   }
 }
@@ -128,18 +136,8 @@ function regenMp() {
   updateManaBar();
 }
 
-function handleBoosts() {
-  for (const attr in player.activeBoosts) {
-    if (player.activeBoosts[attr]) {
-      player.activeBoosts[attr].turns--;
-      if (player.activeBoosts[attr].turns <= 0) {
-        player.attributes[attr] -= player.activeBoosts[attr].amount;
-        historyLog.push({ action: `Boost for ${attr} expired.` });
-        player.activeBoosts[attr] = null;
-      }
-    }
-  }
-}
+// Legacy handleBoosts function removed - now using BuffRegistry system in status.js
+// Buff expiration is handled by the turn management system
 
 // Add this function globally so "+" buttons can call it
 window.assignAttributeUI = function (attr) {
@@ -155,14 +153,16 @@ window.assignAttributeUI = function (attr) {
       player.mp = player.mp + 10;
       player.mana = player.mp; // Keep in sync
     }
-    document.getElementById("show-character-stats-btn").onclick();
+    // Refresh the modal content without rebuilding
+    if (window.refreshCharacterStatsModal) {
+      window.refreshCharacterStatsModal();
+    }
     updateCharacterUI && updateCharacterUI();
   }
-};
+}
 
 export {
   updateSecondaryStats,
   regenMp,
-  handleBoosts,
   syncManaProperties
 };

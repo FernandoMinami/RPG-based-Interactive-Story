@@ -1,0 +1,55 @@
+{
+  "id": "fire",
+  "name": "Fire",
+  "description": "Destructive flames and intense heat - strong offense, weak to water",
+  "color": "#FF4500",
+  "icon": "🔥",
+  "lore": "Fire represents passion, destruction, and raw power. Masters of fire can incinerate enemies but struggle against water and ice.",
+  
+  "combatProperties": {
+    "resistances": ["fire", "earth"],
+    "weaknesses": ["water", "ice"],
+    "immunities": [],
+    "bonusDamageTypes": ["ice", "earth"],
+    "baseModifier": 1.2
+  },
+  
+  "environmentalEffects": {
+    "volcanic": {
+      "environmentalDamageMultiplier": 0.5,
+      "description": "Fire types thrive in volcanic heat, taking reduced damage",
+      "bonusRegeneration": 5
+    },
+    "underwater": {
+      "environmentalDamageMultiplier": 1.5,
+      "description": "Fire is weakened underwater",
+      "penaltyEffect": "mana_drain"
+    },
+    "frozen": {
+      "environmentalDamageMultiplier": 1.3,
+      "description": "Ice environments weaken fire significantly"
+    },
+    "desert": {
+      "environmentalDamageMultiplier": 0.8,
+      "description": "Fire types are strengthened in hot, dry environments",
+      "bonusRegeneration": 3
+    }
+  },
+  
+  "abilityTypeBonus": {
+    "fire": 1.2,
+    "description": "Fire type users gain 20% bonus damage with fire abilities"
+  },
+  
+  "statusEffectInteractions": {
+    "burn": {
+      "immunity": true,
+      "description": "Fire types cannot be burned"
+    },
+    "freeze": {
+      "vulnerability": true,
+      "durationMultiplier": 1.5,
+      "description": "Fire types are more susceptible to freezing"
+    }
+  }
+}

@@ -2,6 +2,7 @@
     "id": "forest01",
     "title": "Forest01",
     "noBattle": false,
+    "environment": "volcanic",
     "enemies": [
         "enemy02",
         "enemy01"
@@ -17,6 +18,10 @@
                 {
                     "text": "Go deeper",
                     "battle": "enemy01",
+                    "battleEnvironment": {
+                        "type": "volcanic",
+                        "intensity": 3
+                    },
                     "next": "deep-forest"
                 },
                 {
@@ -28,7 +33,7 @@
         },
         "deep-forest": {
             "title": "Deep Forest",
-            "text": "It's dark and you hear something moving...",
+            "text": "It's dark and you hear something moving... You also notice a warm glow coming from a cavern to the south.",
             "choices": [
                 {
                     "text": "Visit the merchant",
@@ -36,8 +41,13 @@
                     "next": "merchant"
                 },
                 {
-                    "text": "Investigate",
+                    "text": "Investigate sounds",
                     "next": "forest-monster"
+                },
+                {
+                    "text": "Enter the volcanic cavern",
+                    "scenario": "volcanic-cavern",
+                    "next": "cavern-entrance"
                 }
             ]
         },

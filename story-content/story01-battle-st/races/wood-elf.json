@@ -1,0 +1,20 @@
+{
+  "id": "wood-elf",
+  "name": "Wood Elf",
+  "description": "Forest-dwelling elves with nature magic and archery skills",
+  "lore": "Wood elves live in harmony with nature, protecting ancient forests and communing with woodland creatures. They are master archers and druids.",
+  "availableTypes": ["earth", "neutral", "air", "light"],
+  "racialTraits": {
+    "nature_bond": "Deep connection with natural environments",
+    "forest_guardian": "Enhanced earth and nature magic"
+  },
+  "baseModifiers": {
+    "strength": 1,
+    "dexterity": 3, 
+    "constitution": 1,
+    "intelligence": 0,
+    "wisdom": 2,
+    "charisma": -1
+  },
+  "typeCount": 4
+}

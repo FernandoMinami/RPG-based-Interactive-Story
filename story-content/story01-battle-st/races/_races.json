@@ -23,5 +23,30 @@
     "id": "orc",
     "name": "Orc",
     "file": "orc.json"
+  },
+  {
+    "id": "half-elf",
+    "name": "Half-Elf",
+    "file": "half-elf.json"
+  },
+  {
+    "id": "variant-human",
+    "name": "Variant Human", 
+    "file": "variant-human.json"
+  },
+  {
+    "id": "dark-elf",
+    "name": "Dark Elf",
+    "file": "dark-elf.json"
+  },
+  {
+    "id": "wood-elf",
+    "name": "Wood Elf",
+    "file": "wood-elf.json"
+  },
+  {
+    "id": "high-elf",
+    "name": "High Elf",
+    "file": "high-elf.json"
   }
 ]

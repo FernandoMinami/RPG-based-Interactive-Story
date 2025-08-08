@@ -1,0 +1,166 @@
+{
+    "id": "crystal-caves",
+    "title": "Crystal Caves",
+    "noBattle": false,
+    "environment": "cave",
+    "enemies": [
+        "enemy01"
+    ],
+    "respawn": [
+        "cave-entrance"
+    ],
+    "nodes": {
+        "cave-entrance": {
+            "title": "Cave Entrance",
+            "text": "You stand at the mouth of a dark cave. The dim light makes it hard to see inside, and you can hear the echo of dripping water. Earth types would feel at home in these rocky depths.",
+            "environmentalCheck": {
+                "type": "cave",
+                "intensity": 2
+            },
+            "choices": [
+                {
+                    "text": "Enter the cave carefully",
+                    "next": "shallow-tunnels",
+                    "environmentalDamage": {
+                        "type": "tripping",
+                        "damage": 0,
+                        "description": "You step carefully into the darkness."
+                    }
+                },
+                {
+                    "text": "Rush into the cave",
+                    "next": "shallow-tunnels",
+                    "environmentalDamage": {
+                        "type": "tripping",
+                        "damage": 3,
+                        "chance": 25,
+                        "description": "You trip on loose rocks in your haste!"
+                    }
+                },
+                {
+                    "text": "Stay outside",
+                    "scenario": "forest01",
+                    "next": "forest-clearing"
+                }
+            ]
+        },
+        "shallow-tunnels": {
+            "title": "Shallow Tunnels",
+            "text": "You're in the shallow part of the cave system. The light from outside barely reaches here, making it difficult to see clearly. Loose rocks scatter the ground.",
+            "environment": {
+                "type": "cave",
+                "intensity": 4,
+                "effects": [
+                    {
+                        "condition": "always",
+                        "damage": 0,
+                        "damageType": "darkness",
+                        "description": "The darkness makes precise movement difficult!"
+                    }
+                ]
+            },
+            "choices": [
+                {
+                    "text": "Descend deeper into the cave",
+                    "next": "deep-chambers",
+                    "environmentalDamage": {
+                        "type": "tripping",
+                        "damage": 4,
+                        "chance": 20,
+                        "description": "You slip on the steep rocky descent!"
+                    }
+                },
+                {
+                    "text": "Fight the cave guardian",
+                    "battle": "enemy01",
+                    "next": "treasure-alcove",
+                    "battleEnvironment": {
+                        "type": "cave",
+                        "intensity": 4
+                    }
+                },
+                {
+                    "text": "Return to entrance",
+                    "next": "cave-entrance"
+                }
+            ]
+        },
+        "deep-chambers": {
+            "title": "Deep Crystal Chambers",
+            "text": "You've descended into the deep chambers where complete darkness surrounds you. Crystal formations glint occasionally in what little light penetrates here, but the uneven ground is treacherous.",
+            "environment": {
+                "type": "cave",
+                "intensity": 8,
+                "effects": [
+                    {
+                        "condition": "always",
+                        "damage": 3,
+                        "damageType": "rockfall",
+                        "description": "Falling rocks constantly threaten those not adapted to caves!"
+                    }
+                ]
+            },
+            "choices": [
+                {
+                    "text": "Fight the crystal guardian",
+                    "battle": "enemy01",
+                    "next": "crystal-heart",
+                    "battleEnvironment": {
+                        "type": "cave",
+                        "intensity": 8
+                    }
+                },
+                {
+                    "text": "Navigate carefully to the treasure",
+                    "next": "crystal-heart",
+                    "environmentalDamage": {
+                        "type": "tripping",
+                        "damage": 6,
+                        "chance": 30,
+                        "description": "You stumble in the pitch darkness!"
+                    }
+                },
+                {
+                    "text": "Retreat to shallow tunnels",
+                    "next": "shallow-tunnels",
+                    "environmentalDamage": {
+                        "type": "tripping",
+                        "damage": 5,
+                        "chance": 15,
+                        "description": "You trip while retreating in the darkness!"
+                    }
+                }
+            ]
+        },
+        "crystal-heart": {
+            "title": "Heart of the Crystal Cave",
+            "text": "You've reached the deepest chamber where magnificent crystals provide their own ethereal light. The danger was worth it for these valuable cave treasures.",
+            "choices": [
+                {
+                    "text": "Collect crystals and carefully exit",
+                    "scenario": "forest01",
+                    "next": "forest-clearing",
+                    "rewards": {
+                        "exp": 500,
+                        "items": ["spelunkers-helmet", "climbing-boots", "torch"]
+                    }
+                }
+            ]
+        },
+        "treasure-alcove": {
+            "title": "Hidden Treasure Alcove",
+            "text": "You discovered a hidden alcove with cave exploration gear left by previous adventurers. These tools will help in future underground expeditions.",
+            "choices": [
+                {
+                    "text": "Take the gear and exit",
+                    "scenario": "forest01",
+                    "next": "forest-clearing",
+                    "rewards": {
+                        "exp": 300,
+                        "items": ["torch", "climbing-boots"]
+                    }
+                }
+            ]
+        }
+    }
+}

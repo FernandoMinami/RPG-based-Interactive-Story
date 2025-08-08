@@ -27,7 +27,7 @@ function showMerchantMessage(message, type = 'info') {
   
   // Find the inventory modal content and prepend the message
   const modal = document.getElementById("inventory-modal");
-  const content = modal.querySelector(".modal-content > div");
+  const content = modal.querySelector(".modal-content > div:last-child");
   content.insertBefore(messageDiv, content.firstChild);
   
   // Auto-remove after 3 seconds
@@ -95,8 +95,8 @@ function showLootSellModal() {
   import('./loot.js').then(({ getLootById }) => {
     import('./inventory.js').then(({ getLootInventory, removeLoot, addMoney, getMoney }) => {
       const modal = document.getElementById("inventory-modal");
-      const title = modal.querySelector("h2");
-      const content = modal.querySelector(".modal-content > div");
+      const title = modal.querySelector(".modal-header h2");
+      const content = modal.querySelector(".modal-content > div:last-child");
       
       title.textContent = "Sell Monster Parts";
       
@@ -184,8 +184,8 @@ function showItemSellModal(npcName = null) {
   import('./items.js').then(({ items }) => {
     import('./inventory.js').then(({ getInventory, removeItem, addMoney, getMoney }) => {
       const modal = document.getElementById("inventory-modal");
-      const title = modal.querySelector("h2");
-      const content = modal.querySelector(".modal-content > div");
+      const title = modal.querySelector(".modal-header h2");
+      const content = modal.querySelector(".modal-content > div:last-child");
       
       title.textContent = npcName ? `Sell to ${npcName}` : "Sell Items";
       
@@ -450,7 +450,7 @@ window.sellEquippedItem = function(slot, sellValue) {
  */
 window.updateSellItemsModal = function() {
   const modal = document.getElementById("inventory-modal");
-  const title = modal.querySelector("h2");
+  const title = modal.querySelector(".modal-header h2");
   
   // Only update if the modal is open and showing sell items
   if (modal.style.display === "block" && title.textContent === "Sell Items") {

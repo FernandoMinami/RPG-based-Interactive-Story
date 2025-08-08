@@ -1,0 +1,20 @@
+{
+  "id": "high-elf",
+  "name": "High Elf",
+  "description": "Noble elves with ancient magical knowledge and refined culture",
+  "lore": "High elves are the most magically gifted of all elves, masters of arcane arts and keepers of ancient knowledge. They value intellect and magical prowess above all.",
+  "availableTypes": ["light", "air", "neutral", "fire", "water"],
+  "racialTraits": {
+    "arcane_mastery": "Superior magical abilities and mana capacity",
+    "ancient_knowledge": "Access to powerful magical techniques"
+  },
+  "baseModifiers": {
+    "strength": -2,
+    "dexterity": 1, 
+    "constitution": -1,
+    "intelligence": 3,
+    "wisdom": 2,
+    "charisma": 2
+  },
+  "typeCount": 5
+}

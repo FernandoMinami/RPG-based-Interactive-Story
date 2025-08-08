@@ -1,0 +1,27 @@
+[
+  {
+    "id": "neutral",
+    "name": "Neutral Environment",
+    "file": "neutral.json"
+  },
+  {
+    "id": "volcanic",
+    "name": "Volcanic Environment",
+    "file": "volcanic.json"
+  },
+  {
+    "id": "underwater",
+    "name": "Underwater Environment", 
+    "file": "underwater.json"
+  },
+  {
+    "id": "storm",
+    "name": "Storm Environment",
+    "file": "storm.json"
+  },
+  {
+    "id": "cave",
+    "name": "Cave Environment",
+    "file": "cave.json"
+  }
+]

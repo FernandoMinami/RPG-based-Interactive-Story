@@ -135,13 +135,23 @@
         "file": "finishing-blow.js"
     },
     {
-        "id": "flameBurst",
-        "name": "Flame Burst",
-        "file": "flame-burst.js"
+        "id": "waterBurst",
+        "name": "Water Burst",
+        "file": "water-burst.js"
     },
     {
         "id": "frostSpike",
         "name": "Frost Spike",
         "file": "frost-spike.js"
+    },
+    {
+        "id": "poisonStrike",
+        "name": "Poison Strike",
+        "file": "poison-strike.js"
+    },
+    {
+        "id": "flameTouch",
+        "name": "Flame Touch",
+        "file": "flame-touch.js"
     }
 ]

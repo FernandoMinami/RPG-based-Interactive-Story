@@ -1,100 +1,41 @@
-// Pinned status effect
-// Character has reduced speed and accuracy, represents grappling/wrestling
+// Pinned Status Definition
+// Pure data configuration for the trapped system
+
 export default {
-    name: "Pinned",
-    description: "Held down, movement restricted",
-    permanent: true, // Lasts until specific conditions are met
+    name: 'Pinned',
+    statusTag: 'pinned',
+    statusDesc: 'Pinned down',
+    type: 'debuff',
+    turns: 2, // Always 2 turns by default
+    durationType: 'turns', // Turn-based duration
+    description: 'Held down, movement restricted. Can struggle to break free.',
     
-    apply(target) {
-        // Reduce speed and accuracy while pinned
-        target.attributes = target.attributes || {};
-        target.pinnedOriginalDex = target.attributes.dexterity || 10;
-        target.attributes.dexterity = Math.max(1, Math.floor(target.attributes.dexterity * 0.8)); // 20% speed reduction
+    // Visual/UI properties
+    color: '#cc6600',
+    icon: '📌',
+    
+    // Trapped system properties
+    isTrapped: true,        // This status traps the character
+    usesEnemyStats: false,  // Use status difficulty instead of enemy stats
+    canStruggle: true,      // Character can attempt to break free
+    struggleDC: 15,         // Difficulty to break free (strength + d20 vs 15)
+    
+    // Effect configuration for special-effects system
+    effects: {
+        baseAttributeDebuffs: [
+            { attribute: 'dexterity', amount: 2 } // Reduce dexterity by 2
+        ],
+        secondaryAttributeDebuffs: [
+            { attribute: 'speed', amount: 999 } // Set speed to 0 (effectively remove all speed)
+        ]
     },
     
-    tick(target, turns) {
-        // Pinned status continues indefinitely (permanent)
-        return turns;
-    },
+    // Balance properties
+    stackable: false, // Pinned doesn't stack
+    refreshable: true, // New pins refresh duration
     
-    remove(target, addLog = () => {}) {
-        // Restore original speed when unpinned
-        if (target.pinnedOriginalDex !== undefined) {
-            target.attributes = target.attributes || {};
-            target.attributes.dexterity = target.pinnedOriginalDex;
-            delete target.pinnedOriginalDex;
-        }
-        addLog(`${target.name} breaks free from being pinned!`);
-    },
-    
-    summary(target) {
-        return "pinned";
-    },
-    
-    // Special properties
-    canStruggle: true,
-    speedReduction: 0.8,    // 80% speed reduction
-    accuracyReduction: 0.3, // 30% accuracy reduction
-    
-    /**
-     * Check if pinned should end when opponent attacks without pin effect
-     * @param {Object} ability - The ability being used by the opponent
-     * @param {Object} target - The pinned character
-     * @param {Function} addLog - Logging function
-     * @returns {boolean} - True if pinned should end
-     */
-    shouldEndFromOpponentAttack(ability, target, addLog = () => {}) {
-        // If opponent's attack doesn't have pinned effect, release the pin
-        if (!ability.effect || ability.effect.type !== 'pinned') {
-            addLog(`${target.name} is released from the pin!`);
-            return true;
-        }
-        return false;
-    },
-    
-    /**
-     * Handle when pinned character successfully hits an attack
-     * @param {Object} attacker - The pinned character who hit
-     * @param {Object} target - The target that was hit
-     * @param {Function} addLog - Logging function
-     * @param {Function} applyStatus - Function to apply status effects
-     * @returns {boolean} - True if pinned should end
-     */
-    onSuccessfulHit(attacker, target, addLog = () => {}, applyStatus = () => {}) {
-        addLog(`${attacker.name} breaks free and stuns ${target.name}!`);
-        // Apply stun to the opponent for 1 turn
-        applyStatus(target, 'stunned', 1, addLog);
-        return true; // Remove pinned status
-    },
-    
-    /**
-     * Calculate struggle success based on strength vs strength+weight
-     * @param {Object} pinnedChar - The pinned character struggling
-     * @param {Object} opponent - The opponent maintaining the pin
-     * @param {Function} addLog - Logging function
-     * @returns {boolean} - True if struggle succeeds
-     */
-    calculateStruggleSuccess(pinnedChar, opponent, addLog = () => {}) {
-        const pinnedStrength = pinnedChar.attributes?.strength || 10;
-        const opponentStrength = opponent.attributes?.strength || 10;
-        const opponentWeight = opponent.weight || 65; // Default weight: 65kg
-        
-        // Opponent's resistance = strength + (weight bonus: 1 point per 20kg)
-        const weightBonus = Math.floor(opponentWeight / 20);
-        const opponentResistance = opponentStrength + weightBonus;
-        
-        // Roll for struggle (d20 + strength vs d20 + resistance)
-        const pinnedRoll = Math.floor(Math.random() * 20) + 1 + pinnedStrength;
-        const opponentRoll = Math.floor(Math.random() * 20) + 1 + opponentResistance;
-        
-        const success = pinnedRoll > opponentRoll;
-        
-        if (success) {
-            addLog(`${pinnedChar.name} struggles free! (${pinnedRoll} vs ${opponentRoll})`);
-        } else {
-            addLog(`${pinnedChar.name} fails to break free! (${pinnedRoll} vs ${opponentRoll})`);
-        }
-        
-        return success;
-    }
+    // Resistance/immunity tags (optional)
+    immuneTypes: ['ghost', 'incorporeal'], // Incorporeal beings can't be pinned
+    resistantTypes: ['air'], // Air types are harder to pin
+    vulnerableTypes: ['earth'] // Earth types are easier to pin
 };

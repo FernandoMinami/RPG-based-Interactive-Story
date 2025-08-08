@@ -2,5 +2,8 @@
   { "id": "story-start", "file": "story01-start.json" },
   { "id": "forest01", "file": "forest01.json" },
   { "id": "city01", "file": "city01.json" },
-  { "id": "mountain01", "file": "mountain01.json" }
+  { "id": "volcanic-cavern", "file": "volcanic-cavern.json" },
+  { "id": "underwater-caves", "file": "underwater-caves.json" },
+  { "id": "storm-peaks", "file": "storm-peaks.json" },
+  { "id": "crystal-caves", "file": "crystal-caves.json" }
 ]
