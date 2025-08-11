@@ -5,5 +5,7 @@
   { "id": "volcanic-cavern", "file": "volcanic-cavern.json" },
   { "id": "underwater-caves", "file": "underwater-caves.json" },
   { "id": "storm-peaks", "file": "storm-peaks.json" },
-  { "id": "crystal-caves", "file": "crystal-caves.json" }
+  { "id": "crystal-caves", "file": "crystal-caves.json" },
+  { "id": "demo-town", "file": "demo-town.json" },
+  { "id": "advanced-town", "file": "advanced-town.json" }
 ]

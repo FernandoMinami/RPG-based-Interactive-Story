@@ -287,6 +287,11 @@ function createAbilityButtons() {
         updateCharacterUI();
         updateStoryUI();
         
+        // Update dice choice texts to reflect any attribute changes from buffs
+        if (typeof window.updateDiceChoiceTexts === 'function') {
+          window.updateDiceChoiceTexts();
+        }
+        
         // Temporarily disable button and refresh after delay
         btn.disabled = true;
         setTimeout(() => {

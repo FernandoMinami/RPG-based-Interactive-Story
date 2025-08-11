@@ -1,0 +1,549 @@
+{
+  "id": "town-demo",
+  "title": "Demo Town - New Features",
+  "noBattle": true,
+  "respawn": [
+    "town-entrance"
+  ],
+  "nodes": {
+    "town-entrance": {
+      "title": "Town Entrance - Demo",
+      "text": "You stand at the entrance to a demonstration town showcasing the new conditional systems.",
+      "randomEncounters": [
+        {
+          "chance": 25,
+          "title": "Helpful Villager",
+          "text": "A friendly villager approaches and gives you some useful advice and a small gift!",
+          "items": {
+            "advice-token": 1,
+            "gold": 5
+          },
+          "exp": 5,
+          "choices": [
+            {
+              "text": "Thank them kindly",
+              "next": "continue"
+            }
+          ]
+        },
+        {
+          "chance": 15,
+          "title": "Lost Scholar",
+          "text": "A scholar studying magic seeks someone knowledgeable to discuss theories.",
+          "requirements": {
+            "attributes": {
+              "intelligence": 12
+            }
+          },
+          "exp": 15,
+          "items": {
+            "scroll-fragment": 1
+          },
+          "choices": [
+            {
+              "text": "Discuss magical theory",
+              "next": "continue"
+            }
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "text": "Enter the town center",
+          "next": "town-center"
+        },
+        {
+          "text": "Test your intelligence (15+ required)",
+          "requirements": {
+            "attributes": {
+              "intelligence": 15
+            }
+          },
+          "next": "smart-path"
+        },
+        {
+          "text": "Examine the area carefully",
+          "dice": {
+            "attribute": "intelligence",
+            "outcomes": [
+              {
+                "min": 1,
+                "max": 12,
+                "text": "You notice nothing special.",
+                "next": "town-center"
+              },
+              {
+                "min": 13,
+                "max": 20,
+                "text": "You spot a hidden passage!",
+                "next": "secret-passage"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "smart-path": {
+      "title": "Clever Observation",
+      "text": "Your keen intellect allows you to notice details others miss. You find a valuable item hidden nearby!",
+      "items": {
+        "hidden-gem": 1
+      },
+      "exp": 10,
+      "choices": [
+        {
+          "text": "Continue to town center",
+          "next": "town-center"
+        }
+      ]
+    },
+    "secret-passage": {
+      "title": "Hidden Passage",
+      "text": "You discovered a secret passage that leads to a small chamber with ancient writings.",
+      "questStart": "ancient-mystery",
+      "items": {
+        "ancient-clue": 1
+      },
+      "exp": 20,
+      "choices": [
+        {
+          "text": "Study the writings",
+          "next": "ancient-chamber"
+        },
+        {
+          "text": "Return to the entrance",
+          "next": "town-entrance"
+        }
+      ]
+    },
+    "ancient-chamber": {
+      "title": "Ancient Chamber",
+      "text": "The writings speak of a lost artifact. This could be the beginning of an important quest!",
+      "exp": 15,
+      "choices": [
+        {
+          "text": "Take detailed notes",
+          "items": {
+            "research-notes": 1
+          },
+          "next": "town-center"
+        }
+      ]
+    },
+    "town-center": {
+      "title": "Town Center",
+      "text": "The heart of the demonstration town. Various paths are available depending on your character.",
+      "choices": [
+        {
+          "text": "Visit the library (High Intelligence)",
+          "requirements": {
+            "attributes": {
+              "intelligence": 16
+            }
+          },
+          "next": "library-access"
+        },
+        {
+          "text": "Talk to noble (Humans/Elves welcome)",
+          "requirements": {
+            "raceType": {
+              "acceptedRaces": ["human", "elf"]
+            }
+          },
+          "next": "noble-conversation"
+        },
+        {
+          "text": "Sneak around back (Orcs/outcasts)",
+          "requirements": {
+            "raceType": {
+              "rejectedRaces": ["human", "elf", "dwarf"]
+            }
+          },
+          "next": "back-alley"
+        },
+        {
+          "text": "Check the bulletin board",
+          "next": "quest-board"
+        },
+        {
+          "text": "Use fire magic on brambles (Fire ability required)",
+          "requirements": {
+            "abilities": {
+              "elementalType": "fire"
+            }
+          },
+          "next": "cleared-path"
+        },
+        {
+          "text": "Cast ranged spell (Any ranged ability)",
+          "requirements": {
+            "abilities": {
+              "range": "range"
+            }
+          },
+          "next": "ranged-demonstration"
+        },
+        {
+          "text": "Use healing magic (Specific heal ability)",
+          "requirements": {
+            "abilities": {
+              "id": "heal"
+            }
+          },
+          "next": "healing-demonstration"
+        },
+        {
+          "text": "Report quest progress (Ancient Mystery active)",
+          "requirements": {
+            "quests": {
+              "activeQuests": ["ancient-mystery"]
+            }
+          },
+          "next": "quest-report"
+        }
+      ]
+    },
+    "library-access": {
+      "title": "Grand Library",
+      "text": "The librarian recognizes your intelligence and grants you access to rare books!",
+      "items": {
+        "rare-book": 1,
+        "library-pass": 1
+      },
+      "exp": 25,
+      "choices": [
+        {
+          "text": "Study advanced magic",
+          "next": "magic-study"
+        },
+        {
+          "text": "Research local history",
+          "next": "history-study"
+        },
+        {
+          "text": "Return to town center",
+          "next": "town-center"
+        }
+      ]
+    },
+    "magic-study": {
+      "title": "Magical Research",
+      "text": "Your studies reveal powerful magical techniques!",
+      "exp": 30,
+      "items": {
+        "spell-research": 1
+      },
+      "choices": [
+        {
+          "text": "Continue your research",
+          "next": "town-center"
+        }
+      ]
+    },
+    "history-study": {
+      "title": "Historical Discovery",
+      "text": "You uncover important historical information that could prove valuable!",
+      "exp": 20,
+      "items": {
+        "historical-document": 1
+      },
+      "choices": [
+        {
+          "text": "Document your findings",
+          "next": "town-center"
+        }
+      ]
+    },
+    "noble-conversation": {
+      "title": "Noble's Welcome",
+      "text": "The noble greets you warmly, appreciating your civilized appearance and manner.",
+      "items": {
+        "gold": 20,
+        "recommendation-letter": 1
+      },
+      "exp": 15,
+      "choices": [
+        {
+          "text": "Discuss politics",
+          "next": "political-discussion"
+        },
+        {
+          "text": "Ask about opportunities",
+          "next": "noble-opportunities"
+        },
+        {
+          "text": "Take your leave politely",
+          "next": "town-center"
+        }
+      ]
+    },
+    "political-discussion": {
+      "title": "Political Intrigue",
+      "text": "The noble shares valuable political information and offers to introduce you to influential people.",
+      "questStart": "political-favor",
+      "exp": 20,
+      "choices": [
+        {
+          "text": "Accept the introduction",
+          "next": "town-center"
+        }
+      ]
+    },
+    "noble-opportunities": {
+      "title": "Lucrative Opportunities",
+      "text": "The noble offers you a well-paying job opportunity!",
+      "items": {
+        "job-offer": 1,
+        "gold": 50
+      },
+      "exp": 25,
+      "choices": [
+        {
+          "text": "Accept gratefully",
+          "next": "town-center"
+        }
+      ]
+    },
+    "back-alley": {
+      "title": "Back Alley",
+      "text": "You find yourself in the shadows where outcasts and rogues gather. They eye you with cautious respect.",
+      "choices": [
+        {
+          "text": "Prove your worth (Strength test)",
+          "dice": {
+            "attribute": "strength",
+            "outcomes": [
+              {
+                "min": 1,
+                "max": 12,
+                "text": "They're not impressed.",
+                "next": "alley-rejection"
+              },
+              {
+                "min": 13,
+                "max": 20,
+                "text": "They accept you as one of their own!",
+                "next": "alley-acceptance"
+              }
+            ]
+          }
+        },
+        {
+          "text": "Offer to share information",
+          "next": "information-trade"
+        },
+        {
+          "text": "Leave quietly",
+          "next": "town-center"
+        }
+      ]
+    },
+    "alley-acceptance": {
+      "title": "Accepted by Outcasts",
+      "text": "The rogues welcome you into their circle and share some valuable black market information.",
+      "items": {
+        "black-market-info": 1,
+        "stolen-goods": 1
+      },
+      "exp": 20,
+      "questStart": "underworld-connections",
+      "choices": [
+        {
+          "text": "Learn their ways",
+          "next": "town-center"
+        }
+      ]
+    },
+    "alley-rejection": {
+      "title": "Not Impressed",
+      "text": "The outcasts dismiss you as weak. You'll need to prove yourself elsewhere.",
+      "choices": [
+        {
+          "text": "Leave with dignity",
+          "next": "town-center"
+        }
+      ]
+    },
+    "information-trade": {
+      "title": "Information Exchange",
+      "text": "You share what you know and learn some useful street knowledge in return.",
+      "items": {
+        "street-knowledge": 1
+      },
+      "exp": 10,
+      "choices": [
+        {
+          "text": "Continue networking",
+          "next": "town-center"
+        }
+      ]
+    },
+    "quest-board": {
+      "title": "Town Quest Board",
+      "text": "A wooden board covered with various notices and requests for help from the townspeople.",
+      "choices": [
+        {
+          "text": "Accept 'Find Lost Cat' quest",
+          "questStart": "lost-cat",
+          "next": "cat-quest-start"
+        },
+        {
+          "text": "Accept 'Herb Gathering' quest",
+          "questStart": "herb-gathering",
+          "next": "herb-quest-start"
+        },
+        {
+          "text": "Complete Lost Cat quest (if active)",
+          "requirements": {
+            "quests": {
+              "activeQuests": ["lost-cat"]
+            },
+            "inventory": {
+              "items": ["cat-collar"]
+            }
+          },
+          "questComplete": "lost-cat",
+          "exp": 30,
+          "items": {
+            "gold": 25,
+            "cat-collar": -1
+          },
+          "next": "cat-quest-complete"
+        },
+        {
+          "text": "Return to town center",
+          "next": "town-center"
+        }
+      ]
+    },
+    "cat-quest-start": {
+      "title": "Lost Cat Quest",
+      "text": "Mrs. Henderson's cat Whiskers has gone missing. She last saw him near the old oak tree.",
+      "items": {
+        "cat-treats": 3
+      },
+      "choices": [
+        {
+          "text": "Start searching",
+          "next": "town-center"
+        }
+      ]
+    },
+    "cat-quest-complete": {
+      "title": "Cat Found!",
+      "text": "Mrs. Henderson is overjoyed to have Whiskers back! She rewards you generously.",
+      "choices": [
+        {
+          "text": "You're welcome!",
+          "next": "quest-board"
+        }
+      ]
+    },
+    "herb-quest-start": {
+      "title": "Herb Gathering Quest",
+      "text": "The local healer needs rare herbs for medicine. She marks locations on your map.",
+      "items": {
+        "herb-map": 1,
+        "gathering-bag": 1
+      },
+      "choices": [
+        {
+          "text": "Begin gathering",
+          "next": "town-center"
+        }
+      ]
+    },
+    "cleared-path": {
+      "title": "Path Cleared by Fire",
+      "text": "Your fire magic easily burns away the thorny brambles, revealing a hidden path with treasure!",
+      "items": {
+        "fire-crystal": 1,
+        "gold": 30
+      },
+      "exp": 25,
+      "choices": [
+        {
+          "text": "Explore further",
+          "next": "fire-chamber"
+        },
+        {
+          "text": "Return to town center",
+          "next": "town-center"
+        }
+      ]
+    },
+    "fire-chamber": {
+      "title": "Chamber of Flames",
+      "text": "A chamber dedicated to fire magic. Ancient runes glow with warm light, and you feel your fire abilities strengthening.",
+      "exp": 40,
+      "items": {
+        "flame-enhancement": 1
+      },
+      "choices": [
+        {
+          "text": "Study the fire runes",
+          "next": "town-center"
+        }
+      ]
+    },
+    "quest-report": {
+      "title": "Quest Progress Report",
+      "text": "You report your findings about the ancient mystery to the town scholar. He's very interested in your discoveries!",
+      "questComplete": "ancient-mystery",
+      "exp": 50,
+      "items": {
+        "scholar-reward": 1,
+        "gold": 75
+      },
+      "choices": [
+        {
+          "text": "Accept the reward",
+          "next": "quest-complete-celebration"
+        }
+      ]
+    },
+    "quest-complete-celebration": {
+      "title": "Mystery Solved!",
+      "text": "The town celebrates your contribution to solving the ancient mystery. Your reputation grows!",
+      "exp": 25,
+      "items": {
+        "reputation-boost": 1
+      },
+      "choices": [
+        {
+          "text": "Enjoy the celebration",
+          "next": "town-center"
+        }
+      ]
+    },
+    "ranged-demonstration": {
+      "title": "Ranged Magic Display",
+      "text": "You demonstrate your ranged magical abilities, impressing the gathered crowd with your precision and power.",
+      "exp": 15,
+      "items": {
+        "magic-demonstration-token": 1
+      },
+      "choices": [
+        {
+          "text": "Take a bow",
+          "next": "town-center"
+        }
+      ]
+    },
+    "healing-demonstration": {
+      "title": "Healing Arts",
+      "text": "You use your healing magic to help some injured townspeople. They're grateful for your assistance.",
+      "exp": 20,
+      "items": {
+        "healer-reputation": 1,
+        "gold": 15
+      },
+      "choices": [
+        {
+          "text": "Help more people",
+          "next": "town-center"
+        }
+      ]
+    }
+  }
+}

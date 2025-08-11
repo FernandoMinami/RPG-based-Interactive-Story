@@ -13,6 +13,7 @@ const baseSecondary = {
   maxLife: 0,
   maxMana: 0,
   manaRegen: 0,
+  lifeRegen: 0,
   physicDamage: 0,
   magicDamage: 0,
   physicDefense: 0, // Physical defense stat that will be calculated
@@ -53,8 +54,17 @@ export let player = {
     "constitutionBoost",
     "charismaBoost",
     "poison",
-    "stun"
+    "stun",
+    "flameBurst"
   ],
+  
+  // Quest tracking
+  activeQuests: [], // Currently active quests
+  completedQuests: [], // Completed quests
+  
+  // Profession tracking (for future expansion)
+  professions: [], // Character professions/classes
+  
   // equipment slots
   equipment: {
     body: null,
@@ -77,6 +87,10 @@ export let player = {
     this.life = this.maxLife;
     this.mana = this.maxMana;
     this.activeBoosts = {};
+    // Reset quest tracking
+    this.activeQuests = [];
+    this.completedQuests = [];
+    this.professions = [];
     // Unequip all equipment
     for (const slot in this.equipment) {
       this.equipment[slot] = null;

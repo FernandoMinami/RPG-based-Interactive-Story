@@ -12,7 +12,7 @@ window.abilities = {
  * Dynamically loads all abilities from a manifest.
  */
 export async function loadAbilities(abilityManifest, abilityBasePath = "../story-content/story01-battle-st/abilities/") {
-    if (!Array.isArray(abilityManifest)) {
+        if (!Array.isArray(abilityManifest)) {
         throw new TypeError('abilityManifest must be an array');
     }    
     // Clear registry to prevent conflicts
@@ -39,6 +39,7 @@ export async function loadAbilities(abilityManifest, abilityBasePath = "../story
         }
     }
     
+    
 }
 
 /**
@@ -60,7 +61,6 @@ export function getAbilities(abilityIds) {
         if (AbilityRegistry[id]) {
             abilities[id] = AbilityRegistry[id];
         } else {
-            console.warn(`Ability ${id} not found in registry`);
         }
     }
     return abilities;

@@ -25,19 +25,22 @@ export function executeDiceRoll(choice, player, applyAttributes, onComplete) {
     if (choice.dice.attribute && player.attributes[choice.dice.attribute] !== undefined) {
         attrValue = player.attributes[choice.dice.attribute];
         bonus = Math.floor((attrValue - 10) / 2);
-        bonusText = ` (+${bonus} ${choice.dice.attribute})`;
+        bonusText = ` + (${bonus} ${choice.dice.attribute})`;
     }
     
     const totalRoll = baseRoll + bonus;
-    const pendingDiceResult = `You rolled ${baseRoll}${bonusText}: total <b>${totalRoll}</b>. `;
+    const attributeName = choice.dice.attribute ? choice.dice.attribute.charAt(0).toUpperCase() + choice.dice.attribute.slice(1) : "";
+    const pendingDiceResult = attributeName ? 
+        `${attributeName} roll: ${totalRoll} (${baseRoll}${bonusText})` : 
+        `Roll: ${totalRoll}`;
     
-    historyLog.push({ action: pendingDiceResult });
+    historyLog.push({ action: `You rolled ${baseRoll}${bonusText}: total <b>${totalRoll}</b>. ` });
     if (typeof updateHistoryPanel === 'function') {
       updateHistoryPanel();
     }
     updateStoryUI && updateStoryUI();
     
-    let resultText = pendingDiceResult;
+    let resultText = `You rolled ${baseRoll}${bonusText}: total <b>${totalRoll}</b>. `;
     let outcome = null;
     let pendingNodeEffect = null;
     

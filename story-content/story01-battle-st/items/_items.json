@@ -113,5 +113,54 @@
         "id": "climbing-boots",
         "name": "Climbing Boots",
         "file": "items/climbing-boots.js"
+    },
+    "gold": {
+        "id": "gold",
+        "name": "Gold Coins",
+        "description": "Standard currency of the realm.",
+        "type": "currency",
+        "canUse": false
+    },
+    "advice-token": {
+        "id": "advice-token",
+        "name": "Advice Token",
+        "description": "A token representing wise advice received.",
+        "type": "misc",
+        "canUse": false
+    },
+    "hidden-gem": {
+        "id": "hidden-gem",
+        "name": "Hidden Gem",
+        "description": "A valuable gem discovered through careful observation.",
+        "type": "treasure",
+        "canUse": false
+    },
+    "ancient-clue": {
+        "id": "ancient-clue",
+        "name": "Ancient Clue",
+        "description": "A mysterious clue about ancient mysteries.",
+        "type": "quest",
+        "canUse": false
+    },
+    "cat-collar": {
+        "id": "cat-collar",
+        "name": "Cat Collar",
+        "description": "A small collar that belongs to a missing cat.",
+        "type": "quest",
+        "canUse": false
+    },
+    "horse": {
+        "id": "horse",
+        "name": "Horse",
+        "description": "A sturdy riding horse.",
+        "type": "mount",
+        "canUse": false
+    },
+    "draft-horse": {
+        "id": "draft-horse",
+        "name": "Draft Horse",
+        "description": "A strong horse capable of carrying heavy loads.",
+        "type": "mount",
+        "canUse": false
     }
 }

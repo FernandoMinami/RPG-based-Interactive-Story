@@ -2,7 +2,7 @@ import { inventory, addItem, removeItem, hasItem, getInventory, addLoot, addMone
 import { startBattle } from "./battle.js";
 import { addExp, getExpForLevel } from './leveling.js';
 import { updateCharacterUI, updateStoryUI, updateInventoryBar } from './ui.js';
-import { updateSecondaryStats, regenMp, syncManaProperties } from './character.js';
+import { updateSecondaryStats, regenMp, regenLife, syncManaProperties } from './character.js';
 import { historyLog, updateHistoryPanel } from './history.js';
 import { loadItems, items } from './items.js';
 import { loadLoot } from './loot.js';
@@ -15,6 +15,13 @@ import { loadNpcs, showNpcInterface } from './npcs.js';
 import { downloadSave, handleSaveFileUpload, addSaveButton } from './save-load.js';
 import { loadRaces, getAllRaces, getAvailableRacesForCharacter, getAvailableTypesForRace, getTypeDescriptions, canRaceUseType } from './race.js';
 import { loadTypes } from './types.js';
+import { 
+  isChoiceVisible, 
+  getChoiceRejectionMessage, 
+  processRandomEncounterNodes,
+  startQuest,
+  completeQuest 
+} from './conditional-system.js';
 
 
 let stories = [];
@@ -117,7 +124,7 @@ async function loadStory(file) {
   await loadStatuses(statusManifest, '../story-content/story01-battle-st/statuses/');
 
   // Load abilities for this story
-  const abilityManifest = await fetch('../story-content/story01-battle-st/abilities/_abilities.json').then(res => res.json());
+  const abilityManifest = await fetch(`../story-content/story01-battle-st/abilities/_abilities.json?v=${Date.now()}`).then(res => res.json());
   await loadAbilities(abilityManifest, '../story-content/story01-battle-st/abilities/');
 
   // Load NPCs for this story
@@ -206,7 +213,8 @@ async function showCharacterSelection(story) {
   await loadTypes(story.folder.replace('./', ''));
 
   // Load abilities for this story
-  const abilityManifest = await fetch(`../story-content/${story.folder.replace('./', '')}/abilities/_abilities.json?v=${Date.now()}`).then(res => res.json());
+  const abilityManifestUrl = `../story-content/${story.folder.replace('./', '')}/abilities/_abilities.json?v=${Date.now()}`;
+  const abilityManifest = await fetch(abilityManifestUrl).then(res => res.json());
   await loadAbilities(abilityManifest, `../story-content/${story.folder.replace('./', '')}/abilities/`);
 
 
@@ -401,6 +409,7 @@ export async function showNode(nodeKey) {
 
   // Legacy handleBoosts removed - buff expiration now handled by turn management system
   regenMp && regenMp();
+  regenLife && regenLife();
   updateSecondaryStats(player);
   updateCharacterUI && updateCharacterUI();
 
@@ -411,6 +420,11 @@ export async function showNode(nodeKey) {
 
   let node = storyData[nodeKey];
 
+  // Check in nodes object if not found directly
+  if (!node && storyData.nodes) {
+    node = storyData.nodes[nodeKey];
+  }
+  
   if (!node && storyData.nextScenes && storyData.nextScenes[nodeKey]) {
     node = storyData.nextScenes[nodeKey];
   }
@@ -465,11 +479,14 @@ export async function showNode(nodeKey) {
 
   const environmentInfo = getEnvironmentalInfo();
   
-  // Show dice roll and effect from previous choice
-  let effectHtml = "";
+  // Show dice roll result from previous choice
+  let diceResultHtml = "";
   if (pendingDiceResult) {
-    effectHtml += `<div style="color:#333;">${pendingDiceResult}</div>`;
+    diceResultHtml = pendingDiceResult;
   }
+  
+  // Show effects from previous choice (damage/healing)
+  let effectHtml = "";
   if (pendingNodeEffect !== null && pendingNodeEffect !== 0) {
     if (pendingNodeEffect < 0) {
       effectHtml += `<div style="color:red;font-weight:bold;">Damage: ${-pendingNodeEffect}</div>`;
@@ -540,23 +557,31 @@ export async function showNode(nodeKey) {
           // Update the effect display with environmental info
           const currentEffectHtml = effectHtml + envMessage;
           updateElementContent("node-effect", currentEffectHtml);
+          updateElementContent("dice-result", diceResultHtml);
         } else {
           // Still update with base effects if environmental data incomplete
           updateElementContent("node-effect", effectHtml);
+          updateElementContent("dice-result", diceResultHtml);
         }
       } catch (error) {
         console.error('Failed to load environmental effects:', error);
         // Still update with base effects if environmental loading fails
         updateElementContent("node-effect", effectHtml);
+        updateElementContent("dice-result", diceResultHtml);
       }
     }).catch(error => {
       console.error('Failed to import environmental.js:', error);
       updateElementContent("node-effect", effectHtml);
+      updateElementContent("dice-result", diceResultHtml);
     });
   } else {
     // No environmental effects, just update with base effects
     updateElementContent("node-effect", effectHtml);
   }
+  
+  // Update dice result display
+  updateElementContent("dice-result", diceResultHtml);
+  
   pendingNodeEffect = null;
   pendingDiceResult = "";
 
@@ -621,8 +646,45 @@ export async function showNode(nodeKey) {
     return;
   }
 
-  // --- Random encounter check ---
-  if (checkForRandomEncounter({
+  // --- Process random encounter nodes ---
+  // Skip random encounters if battles are disabled in this scenario
+  let encounterNode = null;
+  let randomEncounterTriggered = false;
+  
+  if (!storyData.noBattle) {
+    encounterNode = processRandomEncounterNodes(node, player);
+    if (encounterNode) {
+      randomEncounterTriggered = true;
+    }
+  }
+  
+  if (encounterNode) {
+    // Temporarily replace the current node with the encounter
+    const originalNode = node;
+    node = encounterNode;
+    
+    // Add a choice to continue to the original destination after encounter
+    if (!node.choices) node.choices = [];
+    node.choices.push({
+      text: "Continue on your way...",
+      next: nodeKey, // Return to original node
+      continueFromEncounter: true
+    });
+    
+    // Add encounter message to history
+    historyLog.push({
+      title: "⚡ Random Encounter!",
+      effect: "",
+      text: "Something unexpected happens..."
+    });
+    
+    // Set flag to prevent immediate battle encounters
+    battleJustHappened = true;
+  }
+
+  // --- Random encounter check (traditional battle encounters) ---
+  // Skip if a random encounter node already triggered
+  if (!randomEncounterTriggered && checkForRandomEncounter({
     battleJustHappened,
     node,
     storyData,
@@ -637,65 +699,149 @@ export async function showNode(nodeKey) {
     return; // Don't reset flag here, battle will handle it
   }
 
-  // Only reset flag if no battle occurred
+  // Only reset battleJustHappened flag after all encounter checks are complete
   battleJustHappened = false;
 
   // --- Choices ---
   (node.choices || [])
-    .filter(choice => {
-      // Check character filter
-      if (choice.character && choice.character !== player.id) return false;
-      // Check race filter
-      if (choice.requiredRace && choice.requiredRace !== player.race) return false;
-      return true;
-    })
+    .filter(choice => isChoiceVisible(choice, player))
     .forEach(choice => {
       const choiceDiv = document.createElement("div");
       const btn = document.createElement("button");
-      btn.textContent = choice.text + (choice.dice ? " 🎲" : "");
-      btn.onclick = async () => {
-        battleJustHappened = false; // Reset when player makes a choice
-        pendingNodeEffect = null;
-        pendingDiceResult = "";
+      
+      // Create choice text with dice roll info if applicable
+      let choiceText = choice.text;
+      if (choice.dice && choice.dice.attribute) {
+        const attributeName = choice.dice.attribute;
+        const attributeValue = player.attributes[attributeName] || 0;
+        const attributeDisplayName = attributeName.charAt(0).toUpperCase() + attributeName.slice(1);
+        choiceText += ` 🎲 (${attributeDisplayName}: ${attributeValue})`;
+      } else if (choice.dice) {
+        choiceText += " 🎲";
+      }
+      
+      btn.textContent = choiceText;
+      
+      // Add data attributes to track dice choices for later updates
+      if (choice.dice && choice.dice.attribute) {
+        btn.setAttribute('data-dice-choice', 'true');
+        btn.setAttribute('data-dice-attribute', choice.dice.attribute);
+        btn.setAttribute('data-choice-base-text', choice.text);
+      }
+      
+      // Check for rejection conditions (choices that would be denied)
+      const rejectionMessage = getChoiceRejectionMessage(choice, player);
+      if (rejectionMessage) {
+        btn.style.opacity = "0.6";
+        btn.style.cursor = "not-allowed";
+        btn.onclick = () => {
+          // Show rejection message
+          const rejectionDiv = document.createElement("div");
+          rejectionDiv.style.cssText = "color: red; font-style: italic; margin: 10px 0; padding: 10px; background: rgba(255,0,0,0.1); border-radius: 4px;";
+          rejectionDiv.textContent = rejectionMessage;
+          
+          // Insert after the choice button temporarily
+          choiceDiv.appendChild(rejectionDiv);
+          setTimeout(() => {
+            if (rejectionDiv.parentNode) {
+              rejectionDiv.parentNode.removeChild(rejectionDiv);
+            }
+          }, 3000);
+        };
+      } else {
+        btn.onclick = async () => {
+          battleJustHappened = false; // Reset when player makes a choice
+          pendingNodeEffect = null;
+          pendingDiceResult = "";
 
-        // --- Forced battle support (works for any choice) ---
-        if (choice.battle) {
-          await triggerForcedBattle(choice, selectedStory, player, (targetNode) => {
-            battleJustHappened = true; // Keep flag set to prevent immediate re-encounter
-            showNode(targetNode);
-          });
-          return;
-        }
-
-        // --- Scenario transition support ---
-        if (choice.scenario) {
-          const scenarioData = await loadScenario(selectedStory.folder.replace('./', ''), choice.scenario);
-          storyData = scenarioData.nodes || scenarioData;
-          if (scenarioData.respawn) storyData.respawn = scenarioData.respawn;
-
-          // --- Determine next node based on race ---
-          let nextNode = choice.next;
-          if (choice.raceNext && choice.raceNext[player.race]) {
-            nextNode = choice.raceNext[player.race];
+          // --- Handle quest progression ---
+          if (choice.questStart) {
+            startQuest(player, choice.questStart);
+            historyLog.push({ action: `Started quest: ${choice.questStart}` });
+          }
+          
+          if (choice.questComplete) {
+            completeQuest(player, choice.questComplete);
+            historyLog.push({ action: `Completed quest: ${choice.questComplete}` });
           }
 
-          showNode(nextNode);
-          return;
-        }
-
-        // --- EXP from choices ---
-        if (choice.exp) {
-          const leveledUp = addExp(player, choice.exp);
-          updateCharacterUI();
-          if (leveledUp) {
-            // Show level up message if you want
+          // --- Forced battle support (works for any choice) ---
+          if (choice.battle) {
+            // Check if battles are disabled in this scenario
+            if (storyData.noBattle) {
+              console.warn(`Battle attempted in no-battle scenario: ${choice.battle}`);
+              // Skip the battle and go directly to the next node
+              if (choice.next) {
+                showNode(choice.next);
+              }
+              return;
+            }
+            
+            await triggerForcedBattle(choice, selectedStory, player, (targetNode) => {
+              battleJustHappened = true; // Keep flag set to prevent immediate re-encounter
+              showNode(targetNode);
+            });
+            return;
           }
-        }
 
-        if (choice.dice) {
-          executeDiceRoll(choice, player, applyAttributes, (nextNode, nodeEffect, diceResult) => {
-            if (nodeEffect !== null) pendingNodeEffect = nodeEffect;
-            if (diceResult) pendingDiceResult = diceResult;
+          // --- Scenario transition support ---
+          if (choice.scenario) {
+            const scenarioData = await loadScenario(selectedStory.folder.replace('./', ''), choice.scenario);
+            
+            // Preserve scenario metadata (noBattle, id, title, etc.) while setting nodes
+            storyData = {
+              ...scenarioData, // Include all scenario metadata (noBattle, id, title, etc.)
+              nodes: scenarioData.nodes || scenarioData // Set the nodes
+            };
+            
+            // Legacy: ensure respawn is preserved (though it should already be in scenarioData)
+            if (scenarioData.respawn && !storyData.respawn) {
+              storyData.respawn = scenarioData.respawn;
+            }
+
+            // --- Determine next node based on race ---
+            let nextNode = choice.next;
+            if (choice.raceNext && choice.raceNext[player.race]) {
+              nextNode = choice.raceNext[player.race];
+            }
+
+            showNode(nextNode);
+            return;
+          }
+
+          // --- EXP from choices ---
+          if (choice.exp) {
+            const leveledUp = addExp(player, choice.exp);
+            updateCharacterUI();
+            if (leveledUp) {
+              // Show level up message if you want
+            }
+          }
+
+          if (choice.dice) {
+            executeDiceRoll(choice, player, applyAttributes, (nextNode, nodeEffect, diceResult) => {
+              if (nodeEffect !== null) pendingNodeEffect = nodeEffect;
+              if (diceResult) pendingDiceResult = diceResult;
+
+              // Only tick buffs on significant story progression (not every choice)
+              // Track story turns to prevent buffs from expiring too quickly
+              if (!window.storyTurnCounter) window.storyTurnCounter = 0;
+              window.storyTurnCounter++;
+
+              // Tick buffs every 1 choices (representing a "story turn")
+              if (window.storyTurnCounter % 1 === 0) {
+                updateStatuses(player, (message) => {
+                });
+              }
+
+              if (nextNode) {
+                showNode(nextNode);
+              } else {
+                showNode(nodeKey);
+              }
+            });
+          } else {
+            pendingNodeEffect = processChoice(choice, player, applyAttributes);
 
             // Only tick buffs on significant story progression (not every choice)
             // Track story turns to prevent buffs from expiring too quickly
@@ -708,40 +854,21 @@ export async function showNode(nodeKey) {
               });
             }
 
-            if (nextNode) {
-              showNode(nextNode);
-            } else {
-              showNode(nodeKey);
+            // --- If player died from this choice, handle respawn ---
+            if (handlePlayerDeath(player, storyData, showNode, updateSecondaryStats)) {
+              return;
             }
-          });
-        } else {
-          pendingNodeEffect = processChoice(choice, player, applyAttributes);
 
-          // Only tick buffs on significant story progression (not every choice)
-          // Track story turns to prevent buffs from expiring too quickly
-          if (!window.storyTurnCounter) window.storyTurnCounter = 0;
-          window.storyTurnCounter++;
+            // --- Determine next node based on race ---
+            let nextNode = choice.next;
+            if (choice.raceNext && choice.raceNext[player.race]) {
+              nextNode = choice.raceNext[player.race];
+            }
 
-          // Tick buffs every 1 choices (representing a "story turn")
-          if (window.storyTurnCounter % 1 === 0) {
-            updateStatuses(player, (message) => {
-            });
+            showNode(nextNode);
           }
-
-          // --- If player died from this choice, handle respawn ---
-          if (handlePlayerDeath(player, storyData, showNode, updateSecondaryStats)) {
-            return;
-          }
-
-          // --- Determine next node based on race ---
-          let nextNode = choice.next;
-          if (choice.raceNext && choice.raceNext[player.race]) {
-            nextNode = choice.raceNext[player.race];
-          }
-
-          showNode(nextNode);
-        }
-      };
+        };
+      }
 
       choiceDiv.appendChild(btn);
       if (activeChoicesContainer) activeChoicesContainer.appendChild(choiceDiv);
@@ -1669,6 +1796,29 @@ window.updateInventoryModal = function () {
     });
   }
 };
+
+/**
+ * Update dice choice button texts to reflect current attribute values
+ * This should be called whenever the player's attributes change due to buffs/debuffs
+ */
+function updateDiceChoiceTexts() {
+  if (!player) return;
+  
+  const diceButtons = document.querySelectorAll('button[data-dice-choice="true"]');
+  diceButtons.forEach(btn => {
+    const attributeName = btn.getAttribute('data-dice-attribute');
+    const baseText = btn.getAttribute('data-choice-base-text');
+    
+    if (attributeName && baseText && player.attributes[attributeName] !== undefined) {
+      const attributeValue = player.attributes[attributeName];
+      const attributeDisplayName = attributeName.charAt(0).toUpperCase() + attributeName.slice(1);
+      btn.textContent = `${baseText} 🎲 (${attributeDisplayName}: ${attributeValue})`;
+    }
+  });
+}
+
+// Make the function available globally so it can be called from other modules
+window.updateDiceChoiceTexts = updateDiceChoiceTexts;
 
 window.onload = showStorySelection;
 window.updateCharacterUI = updateCharacterUI;

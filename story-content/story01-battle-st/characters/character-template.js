@@ -14,6 +14,7 @@ const baseSecondary = {
   maxMp: 0, // Will be calculated based on intelligence
   manaRegen: 0, // Will be calculated based on intelligence
   mpRegen: 0, // Will be calculated based on intelligence
+  lifeRegen: 0, // Will be calculated based on constitution
   physicDamage: 0,
   magicDamage: 0,
   physicDefense: 0, // Will be calculated based on constitution

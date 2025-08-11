@@ -1,8 +1,9 @@
 // turn-management.js - Battle turn order and state management
 
-import { regenMp } from './character.js';
+import { regenMp, regenLife } from './character.js';
 import { updateStatuses, isStatusActive, applyStatus, canCharacterAct } from './status.js';
 import { getAbilities } from './abilities.js';
+import { getEnvironmentalEffect } from './types.js';
 import { 
     calculateEnvironmentalHealing, 
     calculateEnvironmentalDamage,
@@ -96,8 +97,28 @@ export function createTurnManager(player, enemy) {
         currentTurn++;
         updateCooldowns(battleState.abilityCooldowns);
         
-        // Regenerate mana
+        // Regenerate mana and life with environmental bonuses
         if (regenMp) regenMp();
+        
+        // Calculate environmental life regeneration bonus
+        let lifeRegenBonus = 0;
+        if (environment && environment !== "neutral") {
+            const envEffect = getEnvironmentalEffect(player.type, environment);
+            if (envEffect.hasEffect) {
+                lifeRegenBonus = envEffect.bonusRegeneration;
+            }
+        }
+        
+        if (regenLife) {
+            const regenAmount = regenLife(lifeRegenBonus);
+            if (regenAmount > 0 && addLog) {
+                let message = `${player.name} regenerates ${regenAmount} life`;
+                if (lifeRegenBonus > 0) {
+                    message += ` (${player.secondary.lifeRegen || 0} base + ${lifeRegenBonus} environmental)`;
+                }
+                addLog(message);
+            }
+        }
 
         // Only apply environmental effects and status updates if both characters are alive
         if (player.life > 0 && enemy.life > 0) {

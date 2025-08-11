@@ -44,7 +44,11 @@ export function createSaveData() {
             secondary: { ...window.player.secondary },
             equipment: { ...window.player.equipment },
             statuses: [...(window.player.statuses || [])],
-            abilityIds: [...(window.player.abilityIds || [])]
+            abilityIds: [...(window.player.abilityIds || [])],
+            // New quest and profession tracking
+            activeQuests: [...(window.player.activeQuests || [])],
+            completedQuests: [...(window.player.completedQuests || [])],
+            professions: [...(window.player.professions || [])]
         },
         inventory: {
             items: {},
@@ -220,6 +224,17 @@ export async function loadGameFromSave(saveData) {
         // Ensure equipment object exists
         if (!window.player.equipment) {
             window.player.equipment = {};
+        }
+        
+        // Ensure quest tracking properties exist
+        if (!window.player.activeQuests) {
+            window.player.activeQuests = [];
+        }
+        if (!window.player.completedQuests) {
+            window.player.completedQuests = [];
+        }
+        if (!window.player.professions) {
+            window.player.professions = [];
         }
 
         // Load game assets

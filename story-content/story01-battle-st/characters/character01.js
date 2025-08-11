@@ -12,6 +12,7 @@ const baseSecondary = {
   maxMp: 0, // Will be calculated based on intelligence
   manaRegen: 0, // Will be calculated based on intelligence
   mpRegen: 0, // Will be calculated based on intelligence
+  lifeRegen: 0, // Will be calculated based on constitution
   defence: 0, // Total defence stat (don't change this value)
   natDefense: 0, // initial natural defense
   speed: 0,

@@ -222,6 +222,23 @@ body {
     text-align: center;
 }
 
+/* Dice Result Display */
+#dice-result-main, #dice-result {
+    background: linear-gradient(135deg, #2a3a4a 0%, #1a2a3a 100%);
+    border: 1px solid #3a5a7a;
+    border-radius: 6px;
+    padding: 12px;
+    margin: 15px 0;
+    text-align: center;
+    color: #a8c8e8;
+    font-weight: bold;
+    box-shadow: 0 2px 8px rgba(0, 100, 200, 0.3);
+}
+
+#dice-result-main:empty, #dice-result:empty {
+    display: none;
+}
+
 /* Responsive Design for New Layout */
 @media (max-width: 1200px) {
     .main-content-section {

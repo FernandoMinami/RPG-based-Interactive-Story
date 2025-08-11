@@ -1,0 +1,433 @@
+{
+  "id": "advanced-town",
+  "title": "The Advanced Town",
+  "noBattle": false,
+  "respawn": [
+    "town-gates"
+  ],
+  "nodes": {
+    "town-gates": {
+      "title": "Town Gates",
+      "text": "You approach the gates of a bustling town. Guards check travelers before allowing entry.",
+      "randomEncounters": [
+        {
+          "chance": 15,
+          "title": "Traveling Merchant",
+          "text": "A cheerful traveling merchant approaches you with a cart full of exotic goods!",
+          "items": {
+            "exotic-spice": 1,
+            "gold": 10
+          },
+          "choices": [
+            {
+              "text": "Thank the merchant",
+              "exp": 5,
+              "next": "continue"
+            }
+          ]
+        },
+        {
+          "chance": 8,
+          "title": "Pickpocket Attempt",
+          "text": "A shady figure tries to pickpocket you!",
+          "requirements": {
+            "attributes": {
+              "dexterity": 15
+            }
+          },
+          "choices": [
+            {
+              "text": "Catch the thief (High Dexterity)",
+              "requirements": {
+                "attributes": {
+                  "dexterity": 15
+                }
+              },
+              "exp": 10,
+              "items": {
+                "stolen-purse": 1
+              },
+              "next": "continue"
+            },
+            {
+              "text": "Shout for help",
+              "next": "continue"
+            }
+          ]
+        }
+      ],
+      "choices": [
+        {
+          "text": "Enter the town",
+          "next": "town-square"
+        },
+        {
+          "text": "Approach the guards (Human)",
+          "requirements": {
+            "raceType": {
+              "acceptedRaces": ["human", "half-elf"]
+            }
+          },
+          "next": "guard-conversation-friendly"
+        },
+        {
+          "text": "Try to sneak past (Orc/Dark Elf)",
+          "requirements": {
+            "raceType": {
+              "rejectedRaces": ["human", "elf", "dwarf"]
+            }
+          },
+          "dice": {
+            "attribute": "dexterity",
+            "outcomes": [
+              {
+                "min": 1,
+                "max": 10,
+                "text": "The guards spot you immediately!",
+                "next": "caught-sneaking"
+              },
+              {
+                "min": 11,
+                "max": 20,
+                "text": "You successfully sneak past the guards.",
+                "next": "town-square"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    "guard-conversation-friendly": {
+      "title": "Friendly Guards",
+      "text": "The guards recognize you as a trustworthy traveler and share some local information.",
+      "exp": 5,
+      "choices": [
+        {
+          "text": "Ask about the town",
+          "next": "town-info"
+        },
+        {
+          "text": "Enter the town",
+          "next": "town-square"
+        }
+      ]
+    },
+    "caught-sneaking": {
+      "title": "Caught!",
+      "text": "The guards caught you trying to sneak in. They're suspicious but let you pass with a warning.",
+      "life": -5,
+      "choices": [
+        {
+          "text": "Enter reluctantly",
+          "next": "town-square"
+        }
+      ]
+    },
+    "town-info": {
+      "title": "Local Information",
+      "text": "The guards tell you about recent monster activity and warn you about the dangerous caves to the north.",
+      "questStart": "monster-investigation",
+      "choices": [
+        {
+          "text": "Accept the investigation quest",
+          "next": "town-square"
+        }
+      ]
+    },
+    "town-square": {
+      "title": "Town Square",
+      "text": "The heart of the town bustles with activity. Merchants hawk their wares, and townspeople go about their daily business.",
+      "choices": [
+        {
+          "text": "Visit the tavern",
+          "next": "tavern"
+        },
+        {
+          "text": "Go to the marketplace",
+          "next": "marketplace"
+        },
+        {
+          "text": "Investigate the well (High Intelligence)",
+          "requirements": {
+            "attributes": {
+              "intelligence": 18
+            }
+          },
+          "next": "well-investigation"
+        },
+        {
+          "text": "Talk to the mayor (Quest Required)",
+          "requirements": {
+            "quests": {
+              "activeQuests": ["monster-investigation"]
+            }
+          },
+          "next": "mayor-office"
+        }
+      ]
+    },
+    "well-investigation": {
+      "title": "Strange Discovery",
+      "text": "Your keen intellect notices something odd about the town well. The water has an unusual shimmer, and there are strange markings around the rim.",
+      "items": {
+        "mysterious-clue": 1
+      },
+      "exp": 15,
+      "choices": [
+        {
+          "text": "Continue investigating",
+          "next": "well-deep-investigation"
+        },
+        {
+          "text": "Report to authorities",
+          "next": "town-square"
+        }
+      ]
+    },
+    "well-deep-investigation": {
+      "title": "Ancient Magic",
+      "text": "Further investigation reveals that the well is connected to an ancient magical network. This discovery could be valuable to the right person.",
+      "questStart": "ancient-magic-research",
+      "exp": 25,
+      "choices": [
+        {
+          "text": "Document your findings",
+          "items": {
+            "research-notes": 1
+          },
+          "next": "town-square"
+        }
+      ]
+    },
+    "tavern": {
+      "title": "The Drunken Dragon Tavern",
+      "text": "A cozy tavern filled with travelers and locals. The barkeeper serves ale and hot meals.",
+      "choices": [
+        {
+          "text": "Order a drink",
+          "life": 10,
+          "next": "tavern-relaxed"
+        },
+        {
+          "text": "Challenge someone to arm wrestling (High Strength)",
+          "requirements": {
+            "attributes": {
+              "strength": 16
+            }
+          },
+          "exp": 10,
+          "items": {
+            "gold": 15
+          },
+          "next": "tavern"
+        },
+        {
+          "text": "Charm the crowd with stories (High Charisma)",
+          "requirements": {
+            "attributes": {
+              "charisma": 17
+            }
+          },
+          "exp": 20,
+          "items": {
+            "gold": 25,
+            "reputation-token": 1
+          },
+          "next": "tavern"
+        },
+        {
+          "text": "Leave the tavern",
+          "next": "town-square"
+        }
+      ]
+    },
+    "tavern-relaxed": {
+      "title": "Relaxing at the Tavern",
+      "text": "You enjoy a refreshing drink and feel reinvigorated.",
+      "mana": 15,
+      "choices": [
+        {
+          "text": "Continue drinking",
+          "next": "tavern"
+        },
+        {
+          "text": "Return to town square",
+          "next": "town-square"
+        }
+      ]
+    },
+    "marketplace": {
+      "title": "Town Marketplace",
+      "text": "The marketplace is filled with various stalls and merchants selling goods.",
+      "choices": [
+        {
+          "text": "Browse the general goods",
+          "next": "general-merchant"
+        },
+        {
+          "text": "Visit the horse trader",
+          "next": "horse-trader"
+        },
+        {
+          "text": "Look for magical items (Fire Magic Required)",
+          "requirements": {
+            "abilities": {
+              "elementalType": "fire"
+            }
+          },
+          "next": "magic-shop"
+        },
+        {
+          "text": "Return to town square",
+          "next": "town-square"
+        }
+      ]
+    },
+    "horse-trader": {
+      "title": "Sturdy Steeds Stable",
+      "text": "A horse trader looks you up and down, evaluating whether his horses can carry you.",
+      "choices": [
+        {
+          "text": "Buy a horse (Normal Size)",
+          "requirements": {
+            "physical": {
+              "weight": {
+                "max": 120
+              }
+            }
+          },
+          "items": {
+            "horse": 1
+          },
+          "next": "horse-purchased"
+        },
+        {
+          "text": "Ask about stronger horses (Large Character)",
+          "requirements": {
+            "physical": {
+              "weight": {
+                "min": 121
+              }
+            }
+          },
+          "next": "heavy-horse-option"
+        },
+        {
+          "text": "Leave disappointed",
+          "next": "marketplace"
+        }
+      ]
+    },
+    "horse-purchased": {
+      "title": "New Mount",
+      "text": "You successfully purchase a fine horse! It will serve you well on your travels.",
+      "exp": 10,
+      "choices": [
+        {
+          "text": "Return to marketplace",
+          "next": "marketplace"
+        }
+      ]
+    },
+    "heavy-horse-option": {
+      "title": "Special Arrangements",
+      "text": "The trader explains that for larger customers, he has draft horses available, but they cost more.",
+      "choices": [
+        {
+          "text": "Buy a draft horse (200 gold)",
+          "requirements": {
+            "inventory": {
+              "items": ["gold"]
+            }
+          },
+          "items": {
+            "draft-horse": 1,
+            "gold": -200
+          },
+          "next": "horse-purchased"
+        },
+        {
+          "text": "Decline the offer",
+          "next": "marketplace"
+        }
+      ]
+    },
+    "magic-shop": {
+      "title": "Arcane Emporium",
+      "text": "The shop keeper's eyes light up when he sees your magical abilities. 'Ah, a fellow practitioner of the arts!'",
+      "choices": [
+        {
+          "text": "Browse magical items",
+          "items": {
+            "magic-crystal": 1,
+            "spell-scroll": 1
+          },
+          "next": "marketplace"
+        },
+        {
+          "text": "Learn new spell (Fire Magic)",
+          "requirements": {
+            "abilities": {
+              "elementalType": "fire"
+            }
+          },
+          "next": "spell-learning"
+        }
+      ]
+    },
+    "spell-learning": {
+      "title": "Advanced Magic Training",
+      "text": "The shop keeper teaches you an advanced fire spell that can clear obstacles!",
+      "exp": 30,
+      "items": {
+        "scroll-of-flame-clearing": 1
+      },
+      "choices": [
+        {
+          "text": "Thank the teacher",
+          "next": "marketplace"
+        }
+      ]
+    },
+    "mayor-office": {
+      "title": "Mayor's Office",
+      "text": "The mayor is relieved to see someone taking the monster investigation seriously.",
+      "choices": [
+        {
+          "text": "Report your progress",
+          "questComplete": "monster-investigation",
+          "exp": 50,
+          "items": {
+            "gold": 100,
+            "mayor-recommendation": 1
+          },
+          "next": "quest-completed"
+        }
+      ]
+    },
+    "quest-completed": {
+      "title": "Quest Complete!",
+      "text": "The mayor thanks you for your service and provides a recommendation letter that will open doors in other towns.",
+      "choices": [
+        {
+          "text": "Accept the reward graciously",
+          "next": "town-square"
+        }
+      ]
+    },
+    "general-merchant": {
+      "title": "General Goods Store",
+      "text": "A well-stocked store with basic adventuring supplies.",
+      "npc": {
+        "id": "general-merchant",
+        "name": "Store Keeper"
+      },
+      "choices": [
+        {
+          "text": "Browse items",
+          "next": "marketplace"
+        }
+      ]
+    }
+  }
+}

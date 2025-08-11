@@ -1,4 +1,4 @@
-import { updateManaBar, updateCharacterUI } from './ui.js';
+import { updateManaBar, updateCharacterUI, updateLifeBar } from './ui.js';
 import { historyLog, updateHistoryPanel } from './history.js';
 
 // player is set globally in story.js, so you can use it directly
@@ -81,6 +81,10 @@ function updateSecondaryStats(player) {
   // Keep manaRegen for compatibility
   player.secondary.manaRegen = player.secondary.mpRegen;
 
+  // Life Regen is based on constitution, but can be adjusted as needed
+  player.secondary.lifeRegen = Math.floor(player.attributes.constitution / 3) - 1;
+  if (player.secondary.lifeRegen < 0) player.secondary.lifeRegen = 0; // Ensure no negative regen
+
   // Speed is based on dexterity, but can be adjusted as needed
   player.secondary.speed = Math.floor(player.attributes.dexterity / 1.5) - 5;
   if (player.secondary.speed < 0) player.secondary.speed = 0; // Ensure no negative speed
@@ -136,6 +140,16 @@ function regenMp() {
   updateManaBar();
 }
 
+function regenLife(bonusRegeneration = 0) {
+  const totalRegen = Math.floor(player.secondary.lifeRegen || 0) + bonusRegeneration;
+  player.life += totalRegen;
+  if (player.life > player.maxLife) player.life = player.maxLife;
+  
+  updateLifeBar();
+  
+  return totalRegen; // Return the amount regenerated for logging
+}
+
 // Legacy handleBoosts function removed - now using BuffRegistry system in status.js
 // Buff expiration is handled by the turn management system
 
@@ -158,11 +172,17 @@ window.assignAttributeUI = function (attr) {
       window.refreshCharacterStatsModal();
     }
     updateCharacterUI && updateCharacterUI();
+    
+    // Update dice choice texts to reflect the new attribute values
+    if (typeof window.updateDiceChoiceTexts === 'function') {
+      window.updateDiceChoiceTexts();
+    }
   }
 }
 
 export {
   updateSecondaryStats,
   regenMp,
+  regenLife,
   syncManaProperties
 };

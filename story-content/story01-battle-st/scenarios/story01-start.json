@@ -100,6 +100,16 @@
         "text": "Forest",
         "scenario": "forest01",
         "next": "forest-clearing"
+      },
+      {
+        "text": "Demo Town (Test New Features)",
+        "scenario": "demo-town",
+        "next": "town-entrance"
+      },
+      {
+        "text": "Advanced Town (Full Feature Demo)",
+        "scenario": "advanced-town",
+        "next": "town-gates"
       }
     ]
   }

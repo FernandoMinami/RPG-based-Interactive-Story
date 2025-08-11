@@ -13,6 +13,7 @@ const baseSecondary = {
   maxLife: 0,
   maxMana: 0,
   manaRegen: 0,
+  lifeRegen: 0,
   physicDamage: 0,
   magicDamage: 0,
   physicDefense: 0, // Physical defense stat that will be calculated
