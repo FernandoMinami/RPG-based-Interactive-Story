@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Story Creator Studio</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+
+        .main-tabs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+
+        .tab-button {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            cursor: pointer;
+            border-radius: 10px 10px 0 0;
+            margin: 0 5px;
+            transition: all 0.3s ease;
+        }
+
+        .tab-button.active {
+            background: white;
+            color: #333;
+        }
+
+        .tab-content {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            min-height: 600px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        .card {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 4px solid #667eea;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            margin: 5px;
+            transition: transform 0.2s ease;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .button.secondary {
+            background: #6c757d;
+        }
+
+        .button.success {
+            background: #28a745;
+        }
+
+        .button.danger {
+            background: #dc3545;
+        }
+
+        .input-group {
+            margin: 15px 0;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+
+        .input-group input,
+        .input-group textarea,
+        .input-group select {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1rem;
+        }
+
+        .input-group textarea {
+            height: 100px;
+            resize: vertical;
+        }
+
+        .story-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+
+        .story-card {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .story-card:hover {
+            border-color: #667eea;
+            transform: translateY(-5px);
+        }
+
+        .story-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background: #e9ecef;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            transition: width 0.3s ease;
+        }
+
+        .log-container {
+            background: #1e1e1e;
+            color: #00ff00;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            height: 300px;
+            overflow-y: auto;
+            margin: 20px 0;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 20px;
+            align-items: flex-start;
+        }
+
+        .flex-col {
+            flex: 1;
+        }
+
+        .icon {
+            margin-right: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 Interactive Story Creator Studio</h1>
+            <p>Create, Edit, and Build Your Own Interactive Stories</p>
+        </div>
+
+        <div class="main-tabs">
+            <button class="tab-button active" onclick="showTab('create')">
+                📝 Create Story
+            </button>
+            <button class="tab-button" onclick="showTab('manage')">
+                📚 Manage Stories
+            </button>
+            <button class="tab-button" onclick="showTab('build')">
+                🔧 Build Game
+            </button>
+            <button class="tab-button" onclick="showTab('play')">
+                🎯 Play & Test
+            </button>
+        </div>
+
+        <!-- CREATE STORY TAB -->
+        <div id="create-tab" class="tab-content">
+            <h2>📝 Create New Interactive Story</h2>
+            
+            <div class="flex-row">
+                <div class="flex-col">
+                    <div class="card">
+                        <h3>🎪 Story Information</h3>
+                        <div class="input-group">
+                            <label for="story-name">Story Name:</label>
+                            <input type="text" id="story-name" placeholder="e.g., The Dragon's Quest">
+                        </div>
+                        <div class="input-group">
+                            <label for="story-description">Description:</label>
+                            <textarea id="story-description" placeholder="A brief description of your story..."></textarea>
+                        </div>
+                        <div class="input-group">
+                            <label for="story-author">Author:</label>
+                            <input type="text" id="story-author" placeholder="Your name">
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>⚙️ Story Features</h3>
+                        <div class="input-group">
+                            <label>
+                                <input type="checkbox" id="enable-combat"> Enable Combat System
+                            </label>
+                        </div>
+                        <div class="input-group">
+                            <label>
+                                <input type="checkbox" id="enable-inventory"> Enable Inventory & Items
+                            </label>
+                        </div>
+                        <div class="input-group">
+                            <label>
+                                <input type="checkbox" id="enable-characters"> Enable Character Creation
+                            </label>
+                        </div>
+                        <div class="input-group">
+                            <label>
+                                <input type="checkbox" id="enable-save"> Enable Save/Load System
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-col">
+                    <div class="card">
+                        <h3>🎨 Story Template</h3>
+                        <div class="input-group">
+                            <label for="story-template">Choose a template:</label>
+                            <select id="story-template">
+                                <option value="blank">Blank Story (Start from scratch)</option>
+                                <option value="adventure">Adventure Story Template</option>
+                                <option value="rpg">RPG Story Template</option>
+                                <option value="mystery">Mystery Story Template</option>
+                                <option value="copy-existing">Copy from Existing Story</option>
+                            </select>
+                        </div>
+                        
+                        <div id="copy-story-options" class="hidden">
+                            <div class="input-group">
+                                <label for="copy-from">Copy from story:</label>
+                                <select id="copy-from">
+                                    <!-- Will be populated dynamically -->
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>🚀 Quick Actions</h3>
+                        <button class="button success" onclick="createStory()">
+                            <span class="icon">✨</span>Create Story
+                        </button>
+                        <button class="button secondary" onclick="previewTemplate()">
+                            <span class="icon">👁️</span>Preview Template
+                        </button>
+                        <button class="button secondary" onclick="importStory()">
+                            <span class="icon">📁</span>Import Existing Story
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MANAGE STORIES TAB -->
+        <div id="manage-tab" class="tab-content hidden">
+            <h2>📚 Manage Your Stories</h2>
+            
+            <div class="card">
+                <h3>Available Stories</h3>
+                <div id="story-list" class="story-list">
+                    <!-- Stories will be loaded here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- BUILD GAME TAB -->
+        <div id="build-tab" class="tab-content hidden">
+            <h2>🔧 Build Your Game</h2>
+            
+            <div class="flex-row">
+                <div class="flex-col">
+                    <div class="card">
+                        <h3>🎯 Select Stories to Include</h3>
+                        <div id="story-selection">
+                            <!-- Story checkboxes will be loaded here -->
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>⚙️ Build Options</h3>
+                        <div class="input-group">
+                            <label for="game-title">Game Title:</label>
+                            <input type="text" id="game-title" placeholder="My Interactive Story Game">
+                        </div>
+                        <div class="input-group">
+                            <label for="game-version">Version:</label>
+                            <input type="text" id="game-version" placeholder="1.0.0">
+                        </div>
+                        <div class="input-group">
+                            <label>Platform:</label>
+                            <select id="build-platform">
+                                <option value="windows">Windows (.exe)</option>
+                                <option value="mac">macOS (.dmg)</option>
+                                <option value="linux">Linux (.AppImage)</option>
+                                <option value="all">All Platforms</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-col">
+                    <div class="card">
+                        <h3>🚀 Build Actions</h3>
+                        <button class="button success" onclick="buildGame()">
+                            <span class="icon">🔨</span>Build Game
+                        </button>
+                        <button class="button secondary" onclick="testBuild()">
+                            <span class="icon">🧪</span>Test Build
+                        </button>
+                        <button class="button secondary" onclick="openBuildFolder()">
+                            <span class="icon">📁</span>Open Build Folder
+                        </button>
+                        
+                        <div id="build-progress" class="hidden">
+                            <h4>Build Progress:</h4>
+                            <div class="progress-bar">
+                                <div id="progress-fill" class="progress-fill" style="width: 0%"></div>
+                            </div>
+                            <p id="build-status">Ready to build...</p>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <h3>📋 Build Log</h3>
+                        <div id="build-log" class="log-container">
+                            Ready to build your interactive story game...<br>
+                            Select your stories and click "Build Game" to get started.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- PLAY & TEST TAB -->
+        <div id="play-tab" class="tab-content hidden">
+            <h2>🎯 Play & Test Stories</h2>
+            
+            <div class="card">
+                <h3>🎮 Quick Play</h3>
+                <p>Test your stories directly in the browser before building:</p>
+                <div class="story-actions">
+                    <button class="button" onclick="playInBrowser()">
+                        <span class="icon">🌐</span>Play in Browser
+                    </button>
+                    <button class="button secondary" onclick="openGameFolder()">
+                        <span class="icon">📁</span>Open Game Folder
+                    </button>
+                    <button class="button secondary" onclick="reloadStories()">
+                        <span class="icon">🔄</span>Reload Stories
+                    </button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🔍 Story Validation</h3>
+                <p>Check your stories for errors and inconsistencies:</p>
+                <div class="story-actions">
+                    <button class="button" onclick="validateStories()">
+                        <span class="icon">✅</span>Validate All Stories
+                    </button>
+                    <button class="button secondary" onclick="showValidationReport()">
+                        <span class="icon">📊</span>View Last Report
+                    </button>
+                </div>
+                <div id="validation-results" class="log-container hidden">
+                    <!-- Validation results will appear here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="story-creator.js"></script>
+</body>
+</html>

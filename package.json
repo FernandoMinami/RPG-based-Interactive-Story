@@ -9,7 +9,11 @@
     "build-win": "electron-builder --windows",
     "build-mac": "electron-builder --mac",
     "build-linux": "electron-builder --linux",
-    "dist": "npm run build"
+    "dist": "npm run build",
+    "creator": "node story-creator-cli.js",
+    "creator-gui": "electron story-creator.html",
+    "new-story": "node -e \"require('./story-creator-backend.js')\"",
+    "test-story": "npm start"
   },
   "build": {
     "appId": "com.yourname.interactive-story",
