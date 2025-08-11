@@ -1,0 +1,54 @@
+{
+  "name": "interactive-story-app",
+  "version": "1.0.0",
+  "description": "An interactive story game",
+  "main": "electron-main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build-win": "electron-builder --windows",
+    "build-mac": "electron-builder --mac",
+    "build-linux": "electron-builder --linux",
+    "dist": "npm run build"
+  },
+  "build": {
+    "appId": "com.yourname.interactive-story",
+    "productName": "Interactive Story Game",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "story-content/**/*",
+      "electron-main.js",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "favicon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "favicon.ico"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "favicon.ico"
+    }
+  },
+  "devDependencies": {
+    "electron": "^27.0.0",
+    "electron-builder": "^24.6.4"
+  },
+  "author": "Your Name",
+  "license": "MIT"
+}
