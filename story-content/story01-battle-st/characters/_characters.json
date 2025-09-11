@@ -1,5 +1,0 @@
-[
-  { "id": "character00", "name": "Character00", "file": "./Character00.js" },
-  { "id": "character01", "name": "Character01", "file": "./character01.js" },
-  { "id": "elf-mage", "name": "Elf Mage", "file": "./elf-mage.js" }
-]

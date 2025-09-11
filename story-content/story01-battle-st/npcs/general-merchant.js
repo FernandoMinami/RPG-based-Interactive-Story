@@ -13,9 +13,9 @@ export const npc = {
   
   inventory: {
     "potion": { price: 12, stock: -1 }, // Unlimited healing potions
-    "mana-potion": { price: 18, stock: -1 }, // Unlimited mana potions
+    "mp-potion": { price: 18, stock: -1 }, // Unlimited mp potions
     "super-potion": { price: 35, stock: 3 }, // Limited super potions
-    "super-mana-potion": { price: 40, stock: 2 }, // Limited super mana potions
+    "super-mp-potion": { price: 40, stock: 2 }, // Limited super mp potions
     "leather-helmet": { price: 25, stock: 2 }, // Basic equipment
     "scroll-of-healing": { price: 22, stock: 5 } // Magic scrolls
   }

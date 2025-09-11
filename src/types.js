@@ -5,17 +5,17 @@
 let types = {};
 
 /**
- * Load type data from manifest
+ * Load elemental type data from manifest
  * @param {string} storyFolder - The story folder path
  */
 export async function loadTypes(storyFolder) {
   try {
-    const manifestUrl = `../story-content/${storyFolder}/types/_types.json?v=${Date.now()}`;
+    const manifestUrl = `../story-content/${storyFolder}/elements.json?v=${Date.now()}`;
     const typeManifest = await fetch(manifestUrl).then(res => res.json());
     
     // Load each type file
     for (const typeInfo of typeManifest) {
-      const typeUrl = `../story-content/${storyFolder}/types/${typeInfo.file}?v=${Date.now()}`;
+      const typeUrl = `../story-content/${storyFolder}/elements/${typeInfo.file}?v=${Date.now()}`;
       const typeData = await fetch(typeUrl).then(res => res.json());
       types[typeData.id] = typeData;
     }

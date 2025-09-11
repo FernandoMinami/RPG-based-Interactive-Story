@@ -1,0 +1,40 @@
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#2a2a2a"/>
+  <rect x="20" y="20" width="360" height="260" fill="#3a3a3a" stroke="#4a4a4a" stroke-width="2"/>
+  
+  <!-- Character body slamming -->
+  <ellipse cx="200" cy="150" rx="60" ry="40" fill="#654321" stroke="#4a3018" stroke-width="2"/>
+  <circle cx="200" cy="120" r="25" fill="#8b6914" stroke="#5d4609" stroke-width="2"/>
+  
+  <!-- Arms spread wide -->
+  <ellipse cx="140" cy="140" rx="15" ry="35" fill="#654321" stroke="#4a3018" stroke-width="2" transform="rotate(-30 140 140)"/>
+  <ellipse cx="260" cy="140" rx="15" ry="35" fill="#654321" stroke="#4a3018" stroke-width="2" transform="rotate(30 260 140)"/>
+  
+  <!-- Motion lines -->
+  <g stroke="#ff6b6b" stroke-width="3" opacity="0.7">
+    <line x1="180" y1="100" x2="160" y2="80"/>
+    <line x1="200" y1="95" x2="180" y2="75"/>
+    <line x1="220" y1="100" x2="240" y2="80"/>
+    <line x1="120" y1="120" x2="100" y2="100"/>
+    <line x1="280" y1="120" x2="300" y2="100"/>
+  </g>
+  
+  <!-- Impact area -->
+  <ellipse cx="200" cy="220" rx="70" ry="20" fill="#ff4444" opacity="0.3"/>
+  <ellipse cx="200" cy="225" rx="50" ry="15" fill="#ff6666" opacity="0.5"/>
+  
+  <!-- Ground impact -->
+  <rect x="0" y="240" width="400" height="60" fill="#4a3429"/>
+  
+  <!-- Impact effect -->
+  <g stroke="#ffff00" stroke-width="2" opacity="0.8">
+    <line x1="160" y1="240" x2="140" y2="260"/>
+    <line x1="180" y1="245" x2="160" y2="265"/>
+    <line x1="220" y1="245" x2="240" y2="265"/>
+    <line x1="240" y1="240" x2="260" y2="260"/>
+  </g>
+  
+  <!-- Title -->
+  <text x="200" y="40" font-family="Arial, sans-serif" font-size="20" fill="#e0e0e0" text-anchor="middle" font-weight="bold">BODY SLAM</text>
+  <text x="200" y="60" font-family="Arial, sans-serif" font-size="14" fill="#c0c0c0" text-anchor="middle">Full Weight Impact</text>
+</svg>

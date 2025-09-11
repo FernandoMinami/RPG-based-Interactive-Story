@@ -6,8 +6,9 @@
   "availableTypes": ["neutral", "air", "light", "fire", "water"],
   "racialTraits": {
     "dual_heritage": "Balanced between human versatility and elven magic",
-    "magical_affinity": "Enhanced mana regeneration"
+    "magical_affinity": "Enhanced mp regeneration"
   },
+  "specialAbilities": ["wisdomBoost"],
   "baseModifiers": {
     "strength": -1,
     "dexterity": 1, 

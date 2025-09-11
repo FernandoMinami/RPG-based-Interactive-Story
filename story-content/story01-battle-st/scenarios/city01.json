@@ -78,14 +78,14 @@
                     "text": "Pray to your ancestors (Dwarf only)",
                     "requiredRace": "dwarf",
                     "life": 70,
-                    "mana": 20,
+                    "mp": 20,
                     "next": "temple-dwarf-prayer"
                 },
                 {
                     "text": "Commune with nature spirits (Elf only)",
                     "requiredRace": "elf",
                     "life": 40,
-                    "mana": 40,
+                    "mp": 40,
                     "next": "temple-elf-commune"
                 },
                 {
@@ -236,7 +236,7 @@
         "mysterious-woman-elf": {
             "title": "The Mysterious Woman - Elven Recognition",
             "text": "'Your elven grace does not go unnoticed,' she whispers, her eyes glowing briefly. 'The ancient magic recognizes its own.' She touches your forehead, and you feel your magical essence expand.",
-            "mana": 30,
+            "mp": 30,
             "wis": 1,
             "choices": [
                 {

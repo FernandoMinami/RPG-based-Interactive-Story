@@ -9,7 +9,8 @@ export default {
   onUse: null,
   effectType: "permanent",
   stats: {
-    physicDefense: 20,
+    physicalDefense: 20,
+    physicalDamage: 5,
     dexterity: 5
   },
   weight: 2,

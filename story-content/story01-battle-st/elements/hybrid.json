@@ -1,0 +1,39 @@
+{
+  "id": "hybrid",
+  "name": "Hybrid",
+  "description": "A versatile combatant that can adapt to multiple combat styles and elemental affinities",
+  "specialAbilities": ["magicMissile", "heal"],
+  "damageModifiers": {
+    "fire": 0.9,
+    "water": 0.9,
+    "earth": 0.9,
+    "air": 0.9,
+    "light": 0.9,
+    "dark": 0.9,
+    "ice": 0.9,
+    "electric": 0.9,
+    "plant": 0.9,
+    "neutral": 1.0,
+    "hybrid": 1.2
+  },
+  "resistances": {
+    "fire": 0.95,
+    "water": 0.95,
+    "earth": 0.95,
+    "air": 0.95,
+    "light": 0.95,
+    "dark": 0.95,
+    "ice": 0.95,
+    "electric": 0.95,
+    "plant": 0.95,
+    "neutral": 1.0,
+    "hybrid": 0.8
+  },
+  "specialTraits": [
+    "Adaptive Combat: Can use abilities from any elemental type with reduced penalty",
+    "Elemental Resistance: Takes slightly less damage from all elemental types",
+    "Versatile: Can learn abilities from multiple elemental schools"
+  ],
+  "primaryAttribute": "adaptability",
+  "combatStyle": "versatile"
+}

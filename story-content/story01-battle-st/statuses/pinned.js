@@ -1,41 +1,35 @@
-// Pinned Status Definition
-// Pure data configuration for the trapped system
+// Pinned Status - Character is pinned down and cannot move effectively
 
 export default {
-    name: 'Pinned',
-    statusTag: 'pinned',
-    statusDesc: 'Pinned down',
-    type: 'debuff',
-    turns: 2, // Always 2 turns by default
-    durationType: 'turns', // Turn-based duration
-    description: 'Held down, movement restricted. Can struggle to break free.',
+    id: "pinned",
+    name: "Pinned",
+    turns: 0, // Permanent until broken free
+    immuneTypes: ["flying"], // Flying types are immune to pinning
+    endsWithBattle: true, // Pinned status ends when battle is over
     
-    // Visual/UI properties
-    color: '#cc6600',
-    icon: '📌',
+    type: "physical",
     
-    // Trapped system properties
-    isTrapped: true,        // This status traps the character
-    usesEnemyStats: false,  // Use status difficulty instead of enemy stats
-    canStruggle: true,      // Character can attempt to break free
-    struggleDC: 15,         // Difficulty to break free (strength + d20 vs 15)
-    
-    // Effect configuration for special-effects system
-    effects: {
-        baseAttributeDebuffs: [
-            { attribute: 'dexterity', amount: 2 } // Reduce dexterity by 2
-        ],
-        secondaryAttributeDebuffs: [
-            { attribute: 'speed', amount: 999 } // Set speed to 0 (effectively remove all speed)
-        ]
+    // Reduce speed to almost nothing
+    reduceSecondary: {
+        amount: 99,
+        secondary: "speed"
     },
     
-    // Balance properties
-    stackable: false, // Pinned doesn't stack
-    refreshable: true, // New pins refresh duration
+    // Reduce dexterity due to being held down
+    reduceAtributes: {
+        amount: 5,
+        attribute: "dexterity"
+    },
     
-    // Resistance/immunity tags (optional)
-    immuneTypes: ['ghost', 'incorporeal'], // Incorporeal beings can't be pinned
-    resistantTypes: ['air'], // Air types are harder to pin
-    vulnerableTypes: ['earth'] // Earth types are easier to pin
+    // Trapped configuration
+    trapped: {
+        isTrapped: true,
+        attributeToBreakFree: "strength",
+        statusName: "Pinned",
+        buttonText: "Struggle",
+        usesWeight: true,
+        canBreakByForce: true
+    },
+    
+    description: "Pinned down and unable to move effectively. Must break free to escape."
 };

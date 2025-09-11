@@ -1,4 +1,5 @@
 export default {
+    id: "quickAttack",
     name: "Quick Attack",
     type: "physical",
     elementalType: "neutral",

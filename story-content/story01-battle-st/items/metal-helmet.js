@@ -9,7 +9,7 @@ export default {
   onUse: null,
   effectType: "permanent",
   stats: {
-    physicDefense: 2
+    physicalDefense: 2
   },
   weight: 3,
   stackable: false,

@@ -8,6 +8,7 @@
     "natureMagic": "Strong affinity with air, light, and earth elements",
     "wisdom": "Enhanced magical abilities and perception"
   },
+  "specialAbilities": ["heal"],
   "baseModifiers": {
     "strength": -1,
     "dexterity": 1,

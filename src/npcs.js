@@ -49,7 +49,7 @@ function restoreAccordionStates(states) {
  */
 export async function loadNpcs(storyFolder) {
   try {
-    const manifestUrl = `../story-content/${storyFolder}/npcs/_npcs.json?v=${Date.now()}`;
+    const manifestUrl = `../story-content/${storyFolder}/npcs.json?v=${Date.now()}`;
     npcManifest = await fetch(manifestUrl).then(r => r.json());
   } catch (error) {
     console.warn("No NPC manifest found for story:", storyFolder);
@@ -154,7 +154,7 @@ function showMerchantNpcInterface(npc, player) {
         const itemCount = hasItems ? items.length : 0;
         
         html += `
-          <div class="accordion-header" onclick="toggleAccordion('buy-${categoryKey}')">
+          <div class="accordion-header" onclick="window.toggleAccordion('buy-${categoryKey}')">
             <span>${title} ${hasItems ? `(${itemCount})` : '(0)'}</span>
             <span class="accordion-arrow" id="arrow-buy-${categoryKey}">▶</span>
           </div>
@@ -385,7 +385,7 @@ window.showShopBuyTab = function(npcId, storyFolder) {
           const itemCount = hasItems ? items.length : 0;
           
           html += `
-            <div class="accordion-header" onclick="toggleAccordion('buy-${categoryKey}')">
+            <div class="accordion-header" onclick="window.toggleAccordion('buy-${categoryKey}')">
               <span>${title} ${hasItems ? `(${itemCount})` : '(0)'}</span>
               <span class="accordion-arrow" id="arrow-buy-${categoryKey}">▶</span>
             </div>
@@ -474,7 +474,7 @@ window.showShopSellTab = function(npcId, npcName) {
         const hasLoot = lootIds.length > 0;
         
         html += `
-          <div class="accordion-header" onclick="toggleAccordion('sell-loot')">
+          <div class="accordion-header" onclick="window.toggleAccordion('sell-loot')">
             <span>Monster Parts ${hasLoot ? `(${lootIds.length})` : '(0)'}</span>
             <span class="accordion-arrow" id="arrow-sell-loot">▶</span>
           </div>
@@ -565,7 +565,7 @@ window.showShopSellTab = function(npcId, npcName) {
           const itemCount = hasItems ? items.length : 0;
           
           html += `
-            <div class="accordion-header" onclick="toggleAccordion('sell-${categoryKey}')">
+            <div class="accordion-header" onclick="window.toggleAccordion('sell-${categoryKey}')">
               <span>${title} ${hasItems ? `(${itemCount})` : '(0)'}</span>
               <span class="accordion-arrow" id="arrow-sell-${categoryKey}">▶</span>
             </div>
@@ -632,7 +632,7 @@ window.showShopSellTab = function(npcId, npcName) {
         
         const hasEquippedItems = equippedItems.length > 0;
         html += `
-          <div class="accordion-header" onclick="toggleAccordion('sell-equipped')">
+          <div class="accordion-header" onclick="window.toggleAccordion('sell-equipped')">
             <span>Equipped Items ${hasEquippedItems ? `(${equippedItems.length})` : '(0)'}</span>
             <span class="accordion-arrow" id="arrow-sell-equipped">▶</span>
           </div>
@@ -837,7 +837,7 @@ window.sellLootItemInShop = function(lootId, quantity, totalValue, npcId) {
  */
 window.sellEquippedItemInShop = function(slot, sellValue, npcId) {
   import('./inventory.js').then(({ addMoney, getMoney, removeItem }) => {
-    import('./character.js').then(({ updateSecondaryStats }) => {
+    import('./characters.js').then(({ updateSecondaryStats }) => {
       const equippedItem = window.player.equipment[slot];
       if (equippedItem) {
         // Remove the equipped item from equipment slot
@@ -850,7 +850,7 @@ window.sellEquippedItemInShop = function(slot, sellValue, npcId) {
         
         // Ensure player.secondary exists before calling updateSecondaryStats
         if (window.player && window.player.secondary && typeof updateSecondaryStats === 'function') {
-          updateSecondaryStats(window.player);
+          updateSecondaryStats(window.player, true);
         }
         
         // Update character UI if available
@@ -862,7 +862,7 @@ window.sellEquippedItemInShop = function(slot, sellValue, npcId) {
         if (!window.player.secondary) {
           window.player.secondary = {};
         }
-        updateSecondaryStats(window.player);
+        updateSecondaryStats(window.player, true);
         
         // Add money
         addMoney(sellValue);

@@ -1,0 +1,8 @@
+[
+  { "id": "enemy02", "file": "enemy02.js" },
+  { "id": "enemy01", "file": "enemy01.js" },
+  { "id": "sky-crusher", "file": "sky-crusher.js" },
+  { "id": "iron-beast", "file": "iron-beast.js" },
+  { "id": "tiny-goblin", "file": "tiny-goblin.js" },
+  { "id": "massive-ogre", "file": "massive-ogre.js" }
+]

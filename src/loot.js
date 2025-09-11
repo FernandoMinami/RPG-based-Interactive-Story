@@ -9,7 +9,7 @@ let lootRegistry = {};
 export async function loadLoot(storyId) {
     try {
         // Load the manifest as a regular fetch request instead of module import
-        const manifestResponse = await fetch(`../story-content/${storyId}/loot/_loot.json`);
+        const manifestResponse = await fetch(`../story-content/${storyId}/loot.json`);
         if (!manifestResponse.ok) {
             throw new Error(`Failed to fetch loot manifest: ${manifestResponse.status}`);
         }
@@ -20,7 +20,9 @@ export async function loadLoot(storyId) {
         
         for (const lootDef of lootManifest) {
             try {
-                const lootModule = await import(`../story-content/${storyId}/loot/${lootDef.file}`);
+                // Clean the file path to remove leading "./" and handle relative paths
+                const cleanPath = lootDef.file.replace(/^\.\//, '');
+                const lootModule = await import(`../story-content/${storyId}/${cleanPath}`);
                 lootRegistry[lootDef.id] = lootModule.default;
             } catch (error) {
                 console.error(`Failed to load loot ${lootDef.id}:`, error);

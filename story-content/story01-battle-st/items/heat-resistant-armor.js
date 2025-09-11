@@ -8,7 +8,7 @@ export default {
     onUse: null,
     effectType: "permanent",
     stats: {
-        physicDefense: 15,
+        physicalDefense: 15,
         fireResistance: 100 // 100% fire resistance
     },
     environmentalProtection: {

@@ -22,8 +22,8 @@ export function executeDiceRoll(choice, player, applyAttributes, onComplete) {
     let bonusText = "";
     let attrValue = 0;
     
-    if (choice.dice.attribute && player.attributes[choice.dice.attribute] !== undefined) {
-        attrValue = player.attributes[choice.dice.attribute];
+    if (choice.dice.attribute && player.primary[choice.dice.attribute] !== undefined) {
+        attrValue = player.primary[choice.dice.attribute];
         bonus = Math.floor((attrValue - 10) / 2);
         bonusText = ` + (${bonus} ${choice.dice.attribute})`;
     }
@@ -58,9 +58,9 @@ export function executeDiceRoll(choice, player, applyAttributes, onComplete) {
                 const defenseValue = player.secondary.defense || 0;
                 damage = Math.min(0, damage + defenseValue);
             }
-            player.life += damage;
-            if (player.life > player.maxLife) player.life = player.maxLife;
-            if (player.life < 0) player.life = 0;
+            player.secondary.life += damage;
+            if (player.secondary.life > player.maxLife) player.secondary.life = player.maxLife;
+            if (player.secondary.life < 0) player.secondary.life = 0;
             pendingNodeEffect = damage;
         }
         
@@ -124,9 +124,9 @@ export function processChoice(choice, player, applyAttributes) {
             const defenseValue = player.secondary.defense || 0;
             damage = Math.min(0, damage + defenseValue);
         }
-        player.life += damage;
-        if (player.life > player.maxLife) player.life = player.maxLife;
-        if (player.life < 0) player.life = 0;
+        player.secondary.life += damage;
+        if (player.secondary.life > player.maxLife) player.secondary.life = player.maxLife;
+        if (player.secondary.life < 0) player.secondary.life = 0;
         pendingNodeEffect = damage;
     }
     
@@ -164,7 +164,7 @@ export function processChoice(choice, player, applyAttributes) {
  * @returns {boolean} - True if player died and respawn was handled
  */
 export function handlePlayerDeath(player, storyData, showNode, updateSecondaryStats) {
-    if (player.life <= 0) {
+    if (player.secondary.life <= 0) {
         const choicesContainer = document.getElementById("choices-container");
         choicesContainer.innerHTML = ""; // Hide all choices
         
@@ -175,8 +175,8 @@ export function handlePlayerDeath(player, storyData, showNode, updateSecondarySt
             respawnNode = respawnNodes[Math.floor(Math.random() * respawnNodes.length)];
         }
         
-        player.life = Math.floor(player.maxLife / 2);
-        updateSecondaryStats(player);
+        player.secondary.life = Math.floor(player.maxLife / 2);
+        updateSecondaryStats(player, true);
         showNode(respawnNode);
         return true;
     }

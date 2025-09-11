@@ -1,27 +1,13 @@
-import { applyEffects } from '../../../src/status.js';
-
 export default {
     name: "Inspire",
     type: "buff",
     range: "self",
-    turns: 3,
+    targetType: "self",
     mpCost: 12,
+    statusToApply: "charismaUp",
+    statusChance: 1.0, // 100% chance
+    statusDuration: 3, // 3 turns
     description: "Temporarily increases charisma.",
     onHit: "Charisma boosted!",
-    onMiss: "",
-    statusTag: "charismaBoost",
-    statusDesc: "Charisma Up",
-    durationType: "turns",
-    
-    // Special effects configuration
-    effects: {
-        baseAttributeBoosts: [
-            { attribute: 'charisma', amount: 4 }
-        ]
-    },
-    
-    // Simple apply function - all logic handled by src/status.js
-    apply(caster, target, addLog = () => {}) {
-        return applyEffects(caster, target, this, addLog);
-    }
+    onMiss: ""
 };

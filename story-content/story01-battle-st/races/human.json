@@ -8,6 +8,7 @@
     "versatility": "Can access the most combat types",
     "adaptability": "Balanced stats and growth"
   },
+  "specialAbilities": [],
   "baseModifiers": {
     "strength": 0,
     "dexterity": 0, 

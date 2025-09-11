@@ -13,14 +13,15 @@ import { TestRunner } from './test-framework.js';
 import { 
     testPlayer, 
     testEnemy, 
-    testWaterEnemy, 
+    testWaterEnemy,
+    testFireEnemy, 
     testAbilities, 
     testTypeData,
     createTestCharacter 
 } from './test-data.js';
 
-// Import type system
-import { calculateTypeEffectiveness } from '../types.js';
+// Import type system - now correctly from elements.js
+import { calculateTypeEffectiveness } from '../elements.js';
 
 class TypeEffectivenessTests {
     constructor() {
@@ -94,19 +95,19 @@ class TypeEffectivenessTests {
 
     testWaterVsFire() {
         const multiplier = calculateTypeEffectiveness("water", "fire");
-        TestRunner.assertEqual(multiplier, 1.0, `Water vs Fire should be 1.0x (normal), got ${multiplier}`);
+        TestRunner.assertEqual(multiplier, 1.5, `Water vs Fire should be 1.5x (fire weak to water), got ${multiplier}`);
         return true;
     }
 
     testWaterVsEarth() {
         const multiplier = calculateTypeEffectiveness("water", "earth");
-        TestRunner.assertEqual(multiplier, 1.0, `Water vs Earth should be 1.0x (normal), got ${multiplier}`);
+        TestRunner.assertEqual(multiplier, 1.5, `Water vs Earth should be 1.5x (earth weak to water), got ${multiplier}`);
         return true;
     }
 
     testWaterVsAir() {
         const multiplier = calculateTypeEffectiveness("water", "air");
-        TestRunner.assertEqual(multiplier, 1.5, `Water vs Air should be 1.5x (effective), got ${multiplier}`);
+        TestRunner.assertEqual(multiplier, 1.0, `Water vs Air should be 1.0x (normal), got ${multiplier}`);
         return true;
     }
 

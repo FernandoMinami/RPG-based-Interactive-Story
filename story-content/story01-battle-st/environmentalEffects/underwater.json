@@ -72,7 +72,7 @@
       "appliesTo": ["fire", "earth", "air", "neutral"],
       "exemptTypes": ["water"],
       "effects": {
-        "baseAttributeDebuffs": [
+        "primaryAttributeDebuffs": [
           { "attribute": "dexterity", "amount": 2 }
         ]
       },

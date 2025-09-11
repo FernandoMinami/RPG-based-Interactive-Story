@@ -1,0 +1,20 @@
+{
+  "id": "hybrid",
+  "name": "Hybrid",
+  "description": "A unique blend of multiple races, possessing diverse traits and adaptability",
+  "availableTypes": ["neutral", "fire", "water", "earth", "air", "light", "dark", "ice", "electric", "plant", "hybrid"],
+  "attributeModifiers": {
+    "strength": 0,
+    "dexterity": 1,
+    "constitution": 0,
+    "intelligence": 1,
+    "wisdom": 1,
+    "charisma": 0
+  },
+  "specialAbilities": ["adapt", "versatility"],
+  "storylines": {
+    "unique": ["Being a hybrid gives you access to unique dialogue options and story paths"],
+    "acceptance": ["Some NPCs may be curious about your mixed heritage"],
+    "advantages": ["Your adaptability allows you to handle various situations"]
+  }
+}

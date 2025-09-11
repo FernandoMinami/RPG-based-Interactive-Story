@@ -1,5 +1,7 @@
 // abilities.js - Dynamic ability loading system
 
+import { hasAnyElementalAlignment, hasAnyRace } from './element-helpers.js';
+
 export const AbilityRegistry = {};
 
 // Make abilities functions available globally for items
@@ -11,7 +13,7 @@ window.abilities = {
 /**
  * Dynamically loads all abilities from a manifest.
  */
-export async function loadAbilities(abilityManifest, abilityBasePath = "../story-content/story01-battle-st/abilities/") {
+export async function loadAbilities(abilityManifest, abilityBasePath = `../story-content/${storyFolder}/abilities/`) {
         if (!Array.isArray(abilityManifest)) {
         throw new TypeError('abilityManifest must be an array');
     }    
@@ -39,7 +41,6 @@ export async function loadAbilities(abilityManifest, abilityBasePath = "../story
         }
     }
     
-    
 }
 
 /**
@@ -61,10 +62,15 @@ export function getAbilities(abilityIds) {
         if (AbilityRegistry[id]) {
             abilities[id] = AbilityRegistry[id];
         } else {
+            console.warn(`Ability ${id} not found in registry`);
         }
     }
     return abilities;
 }
+
+// Make core functions available globally
+window.getAbilities = getAbilities;
+window.getAbility = getAbility;
 
 /**
  * Check if an ability can be used based on requirements, cooldowns, and combos
@@ -79,7 +85,12 @@ export function canUseAbility(user, target, abilityId, ability, battleState = {}
     if (!ability) return false;
 
     // Check MP cost
-    if (ability.mpCost && user.mana < ability.mpCost) return false;
+    if (ability.mpCost < ability.mpCost) return false;
+
+    // Prevent mount ability if already a rider (like buff abilities)
+    if (abilityId === 'mount' && user.mountPartner) {
+        return false;
+    }
 
     // Check self status requirements
     if (ability.requiresStatusSelf && !isStatusActive(user, ability.requiresStatusSelf)) return false;
@@ -99,8 +110,62 @@ export function canUseAbility(user, target, abilityId, ability, battleState = {}
     }
 
     // Check combo requirements (if battle state provided)
-    if (ability.combo && ability.combo.followsFrom && ability.combo.followsFrom.length > 0 && battleState.lastPlayerAbility !== undefined) {
-        if (!battleState.lastPlayerAbility || !ability.combo.followsFrom.includes(battleState.lastPlayerAbility)) {
+    if (ability.combo && ability.combo.followsFrom && ability.combo.followsFrom.length > 0) {
+        const comboType = ability.combo.type || 'self'; // Default to 'self' for backward compatibility
+        const requiredAbilities = ability.combo.followsFrom;
+        let comboMet = false;
+
+        switch (comboType) {
+            case 'self':
+                // User must have used one of the required abilities last turn
+                if (battleState.lastPlayerAbility !== undefined) {
+                    comboMet = battleState.lastPlayerAbility && requiredAbilities.includes(battleState.lastPlayerAbility);
+                }
+                break;
+
+            case 'ally':
+                // An ally must have used one of the required abilities recently
+                if (battleState.lastEnemyAbilities) {
+                    for (const enemyId in battleState.lastEnemyAbilities) {
+                        const lastAbility = battleState.lastEnemyAbilities[enemyId];
+                        if (lastAbility && requiredAbilities.includes(lastAbility)) {
+                            comboMet = true;
+                            break;
+                        }
+                    }
+                }
+                break;
+
+            case 'any':
+                // Any character (self or ally) must have used one of the required abilities
+                comboMet = false;
+                
+                // Check self
+                if (battleState.lastPlayerAbility && requiredAbilities.includes(battleState.lastPlayerAbility)) {
+                    comboMet = true;
+                }
+                
+                // Check allies if not already met
+                if (!comboMet && battleState.lastEnemyAbilities) {
+                    for (const enemyId in battleState.lastEnemyAbilities) {
+                        const lastAbility = battleState.lastEnemyAbilities[enemyId];
+                        if (lastAbility && requiredAbilities.includes(lastAbility)) {
+                            comboMet = true;
+                            break;
+                        }
+                    }
+                }
+                break;
+
+            default:
+                // Unknown combo type, treat as 'self' for safety
+                if (battleState.lastPlayerAbility !== undefined) {
+                    comboMet = battleState.lastPlayerAbility && requiredAbilities.includes(battleState.lastPlayerAbility);
+                }
+                break;
+        }
+
+        if (!comboMet) {
             return false;
         }
     }
@@ -116,9 +181,9 @@ export function canUseAbility(user, target, abilityId, ability, battleState = {}
  * @param {boolean} isPlayer - Whether this is a player ability (for combo tracking)
  */
 export function useAbility(abilityId, ability, battleState = {}, isPlayer = true) {
-    // Apply cooldown
+    // Apply cooldown (+1 because it decrements immediately on the turn it's used)
     if (ability.cooldown && ability.cooldown > 0 && battleState.abilityCooldowns) {
-        battleState.abilityCooldowns[abilityId] = ability.cooldown;
+        battleState.abilityCooldowns[abilityId] = ability.cooldown + 1;
     }
 
     // Reduce uses per battle
@@ -138,6 +203,49 @@ export function useAbility(abilityId, ability, battleState = {}, isPlayer = true
 
 // Import status checking function
 import { isStatusActive } from './status.js';
+
+/**
+ * Check if target is an ally of the user
+ * @param {Object} user - The ability user
+ * @param {Object} target - The target character
+ * @param {Object} battleState - Battle state for context
+ * @returns {boolean} - true if target is an ally
+ */
+export function isTargetAlly(user, target, battleState = {}) {
+    // In battle context, check if both are on the same side
+    if (battleState.player && battleState.enemies) {
+        const userIsPlayer = user === battleState.player;
+        const targetIsPlayer = target === battleState.player;
+        const targetIsEnemy = battleState.enemies.includes(target);
+        
+        // Player targeting player = ally (self)
+        if (userIsPlayer && targetIsPlayer) return true;
+        
+        // Player targeting enemy = not ally
+        if (userIsPlayer && targetIsEnemy) return false;
+        
+        // Enemy targeting player = not ally
+        if (!userIsPlayer && targetIsPlayer) return false;
+        
+        // Enemy targeting another enemy = ally
+        if (!userIsPlayer && targetIsEnemy) return true;
+    }
+    
+    // Default: same type or race = ally
+    const userTypes = user.misc?.elementalAlignments || [];
+    const targetTypes = target.misc?.elementalAlignments || [];
+    const userRaces = user.misc?.races || [];
+    const targetRaces = target.misc?.races || [];
+    
+    // Check if they share any elemental alignment or race
+    const shareType = userTypes.some(type => targetTypes.includes(type));
+    const shareRace = userRaces.some(race => targetRaces.includes(race));
+    
+    if (shareType || shareRace) return true;
+    
+    // Default: different characters = not ally
+    return false;
+}
 
 /**
  * Teach an ability to a player
@@ -200,6 +308,6 @@ export function learnMultipleAbilities(player, abilityIds) {
     return { learnedCount, alreadyKnown };
 }
 
-// Make functions available globally
+// Make learning functions available globally
 window.abilities.learnAbility = learnAbility;
 window.abilities.learnMultipleAbilities = learnMultipleAbilities;

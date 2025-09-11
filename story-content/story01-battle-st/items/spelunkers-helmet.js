@@ -8,7 +8,7 @@ export default {
     onUse: null,
     effectType: "permanent",
     stats: {
-        physicDefense: 15,
+        physicalDefense: 15,
         accuracy: 0.2, // 20% accuracy bonus from light
         stability: 20 // Prevents tripping
     },

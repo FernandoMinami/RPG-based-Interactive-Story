@@ -1,255 +1,28 @@
-// turn-management.js - Battle turn order and state management
+/*
+* Turn Management System - Brand New Pokemon-style Turn-Based Battle System
+* 
+* SYSTEM OVERVIEW:
+* - Each ROUND consists of multiple character TURNS
+* - Player chooses action at start of round, then turn order is calculated
+* - Turn order based on speed attribute (highest speed goes first)
+* - In case of tie, player goes first, then enemies in any order
+* - Status effects applied at start of each character's turn
+* - Environmental effects applied at start of each round
+* - Battle ends when player or all enemies are defeated
+*/
 
-import { regenMp, regenLife } from './character.js';
-import { updateStatuses, isStatusActive, applyStatus, canCharacterAct } from './status.js';
-import { getAbilities } from './abilities.js';
-import { getEnvironmentalEffect } from './types.js';
+// Import required systems
+import { handleEnemyTurn, selectEnemyAbility } from './battle-enemies-ai.js';
 import { 
-    calculateEnvironmentalHealing, 
-    calculateEnvironmentalDamage,
-    getEnvironmentalEffectsForBattle,
-    getEnvironmentalPenalties
-} from './environmental.js';
-
-/**
- * Create turn management system
- * @param {Object} player - The player object
- * @param {Object} enemy - The enemy object
- * @returns {Object} - Turn management functions
- */
-export function createTurnManager(player, enemy) {
-    let currentTurn = 0;
-    let playerTurn = true;
-    
-    // Underwater breath tracking
-    let breathTracking = {
-        player: { turnsUnderwater: 0, hasBreathDamage: false },
-        enemy: { turnsUnderwater: 0, hasBreathDamage: false }
-    };
-
-    /**
-     * Calculate effective speed and accuracy for a character
-     * @param {Object} character - The character to calculate for
-     * @returns {Object} - Speed and accuracy values
-     */
-    function calculateEffectiveStats(character) {
-        let effectiveSpeed = character.secondary?.speed || character.speed || 0;
-        let effectiveAccuracy = 1;
-
-        // Check for status effects that affect speed/accuracy
-        if (isStatusActive(character, 'pinned')) {
-            // Pinned reduces speed by 20% and accuracy by 30%
-            effectiveSpeed = Math.floor(effectiveSpeed * 0.8);
-            effectiveAccuracy = 0.7; // 30% accuracy reduction
-        }
-        
-        // Apply environmental speed penalties using new unified system
-        if (window.battleEnvironment) {
-            const { type: environmentType, intensity } = window.battleEnvironment;
-            const penalties = getEnvironmentalPenalties(character, environmentType, intensity);
-            
-            // Apply speed penalty
-            if (penalties.speedPenalty > 0) {
-                effectiveSpeed = Math.floor(effectiveSpeed * (1 - penalties.speedPenalty));
-            }
-            
-            // Note: Environmental accuracy penalties are now handled in calculateAccuracy()
-        }
-
-        return { effectiveSpeed, effectiveAccuracy };
-    }
-
-    /**
-     * Update cooldowns at the start of each turn
-     * @param {Object} abilityCooldowns - Cooldown tracking object
-     */
-    function updateCooldowns(abilityCooldowns) {
-        Object.keys(abilityCooldowns).forEach(abilityId => {
-            if (abilityCooldowns[abilityId] > 0) {
-                abilityCooldowns[abilityId]--;
-            }
-        });
-    }
-
-    /**
-     * Check if player can act (not stunned/frozen)
-     * @returns {boolean} - True if player can act
-     */
-    function canPlayerAct() {
-        return canCharacterAct(player);
-    }
-
-    /**
-     * Check if enemy can act (not stunned/frozen)
-     * @returns {boolean} - True if enemy can act
-     */
-    function canEnemyAct() {
-        return canCharacterAct(enemy);
-    }
-
-    /**
-     * Advance to next turn
-     * @param {Object} battleState - Battle state object
-     * @param {Function} addLog - Logging function
-     * @param {string} environment - Current battle environment (optional)
-     */
-    function nextTurn(battleState, addLog, environment = null, addSystemMessage = null) {
-        currentTurn++;
-        updateCooldowns(battleState.abilityCooldowns);
-        
-        // Regenerate mana and life with environmental bonuses
-        if (regenMp) regenMp();
-        
-        // Calculate environmental life regeneration bonus
-        let lifeRegenBonus = 0;
-        if (environment && environment !== "neutral") {
-            const envEffect = getEnvironmentalEffect(player.type, environment);
-            if (envEffect.hasEffect) {
-                lifeRegenBonus = envEffect.bonusRegeneration;
-            }
-        }
-        
-        if (regenLife) {
-            const regenAmount = regenLife(lifeRegenBonus);
-            if (regenAmount > 0 && addLog) {
-                let message = `${player.name} regenerates ${regenAmount} life`;
-                if (lifeRegenBonus > 0) {
-                    message += ` (${player.secondary.lifeRegen || 0} base + ${lifeRegenBonus} environmental)`;
-                }
-                addLog(message);
-            }
-        }
-
-        // Only apply environmental effects and status updates if both characters are alive
-        if (player.life > 0 && enemy.life > 0) {
-            // Apply environmental effects (default to neutral if not specified)
-            const currentEnvironment = environment || "neutral";
-            applyEnvironmentalEffects(player, currentEnvironment, addLog);
-            applyEnvironmentalEffects(enemy, currentEnvironment, addLog);
-
-            // Update status effects for both characters, but only on player's turn
-            // This ensures buffs/debuffs last for full rounds, not individual actions
-            if (playerTurn) {
-                // Use addSystemMessage for status updates to avoid interfering with recent actions
-                const statusLogger = addSystemMessage || addLog;
-                updateStatuses(player, statusLogger);
-                updateStatuses(enemy, statusLogger);
-                // Round end - no need to show "End of Round" message to players
-            }
-        }
-    }
-
-    /**
-     * Apply environmental effects to a character
-     * @param {Object} character - The character to affect
-     * @param {string|Object} environment - The environment type or environment object
-     * @param {Function} addLog - Logging function
-     */
-    function applyEnvironmentalEffects(character, environment, addLog) {
-        let environmentType = "neutral";
-        let intensity = 1;
-        
-        // Handle both string and object environment formats
-        if (typeof environment === "string") {
-            environmentType = environment;
-        } else if (environment && environment.type) {
-            environmentType = environment.type;
-            intensity = environment.intensity || 1;
-        }
-        
-        // Skip neutral environments
-        if (environmentType === "neutral") return;
-        
-        // Check for environmental healing/regeneration first
-        const healing = calculateEnvironmentalHealing(character, environmentType);
-        if (healing.healingAmount > 0) {
-            const oldLife = character.life;
-            character.life = Math.min(character.maxLife, character.life + healing.healingAmount);
-            const actualHealing = character.life - oldLife;
-            if (actualHealing > 0) {
-                addLog(`${character.name || "Character"} regenerates ${actualHealing} HP from the ${environmentType} environment! ${healing.description}`);
-            }
-        }
-
-        // Use the new unified environmental system
-        const envEffects = getEnvironmentalEffectsForBattle(character, environmentType, intensity, currentTurn);
-        
-        // Skip if character is immune or protected
-        if (envEffects.hasImmunity || envEffects.isProtected) {
-            if (envEffects.allMessages.length > 0) {
-                addLog(envEffects.allMessages[0]);
-            }
-            return;
-        }
-        
-        // Apply regular environmental damage
-        if (envEffects.environmentalDamage > 0) {
-            character.life = Math.max(0, character.life - envEffects.environmentalDamage);
-            addLog(`🌡️ ${character.name} takes ${envEffects.environmentalDamage} environmental damage!`);
-        }
-        
-        // Apply special environmental effects (lightning, tripping, breath loss, etc.)
-        if (envEffects.specialDamage > 0) {
-            character.life = Math.max(0, character.life - envEffects.specialDamage);
-            envEffects.specialMessages.forEach(message => addLog(message));
-        }
-        
-        // Apply status effects
-        if (envEffects.statusChance > 0 && envEffects.statusType) {
-            const roll = Math.floor(Math.random() * 100) + 1;
-            if (roll <= envEffects.statusChance) {
-                applyStatus(character, envEffects.statusType, 2, addLog);
-                addLog(`${character.name} is affected by ${envEffects.statusType} from the harsh environment!`);
-            }
-        }
-        
-        // Handle underwater breath tracking (special case for legacy system)
-        if (environmentType === 'underwater' && !envEffects.hasImmunity) {
-            const characterKey = character === player ? 'player' : 'enemy';
-            breathTracking[characterKey].turnsUnderwater++;
-            
-            // Check for breath damage after 6 turns (medium/deep water only)
-            if (intensity >= 5 && breathTracking[characterKey].turnsUnderwater >= 6) {
-                if (!breathTracking[characterKey].hasBreathDamage) {
-                    breathTracking[characterKey].hasBreathDamage = true;
-                    addLog(`${character.name} is running out of breath underwater!`);
-                }
-            }
-        }
-    }
-
-    /**
-     * Switch turns between player and enemy
-     */
-    function switchTurn() {
-        playerTurn = !playerTurn;
-    }
-
-    /**
-     * Get current turn information
-     * @returns {Object} - Current turn info
-     */
-    function getTurnInfo() {
-        return {
-            currentTurn,
-            playerTurn,
-            playerStats: calculateEffectiveStats(player),
-            enemyStats: calculateEffectiveStats(enemy),
-            canPlayerAct: canPlayerAct(),
-            canEnemyAct: canEnemyAct()
-        };
-    }
-
-    return {
-        nextTurn,
-        switchTurn,
-        getTurnInfo,
-        calculateEffectiveStats,
-        updateCooldowns,
-        canPlayerAct,
-        canEnemyAct
-    };
-}
+    canCharacterAct, 
+    reduceTurns, 
+    isStatusActive 
+} from './status.js';
+import { 
+    applyEnvironmentalEffects
+} from './environments.js';
+import { createBattleLogger } from './battle-logging.js';
+import { getAbilities } from './abilities.js';
 
 /**
  * Initialize ability tracking for battle
@@ -280,8 +53,8 @@ export function initializeAbilityTracking(player) {
  */
 export function handleEscapeAttempt(player, enemy, addLog) {
     const roll = Math.floor(Math.random() * 20) + 1;
-    const playerSpeed = player.secondary?.speed || 0;
-    const enemySpeed = enemy.secondary?.speed || enemy.speed || 0;
+    const playerSpeed = player.secondaryAttributes?.speed || player.secondary?.speed || 0;
+    const enemySpeed = enemy.secondaryAttributes?.speed || enemy.secondary?.speed || 0;
     const escapeScore = Math.floor(roll + playerSpeed - enemySpeed);
     
     const messages = [];
@@ -319,8 +92,8 @@ export function handleEscapeAttempt(player, enemy, addLog) {
  */
 export function handleStruggleAttempt(player, enemy, addLog) {
     const roll = Math.floor(Math.random() * 20) + 1;
-    const playerStrengthBonus = (player.attributes?.strength || 10) - 10;
-    const enemyWeight = enemy.weight || 0;
+    const playerStrengthBonus = (player.primaryAttributes?.strength || player.primary?.strength || 10) - 10;
+    const enemyWeight = enemy.misc?.weight || 0;
     const struggleScore = Math.floor(roll + playerStrengthBonus - (enemyWeight / 10));
     
     const messages = [];
@@ -347,4 +120,617 @@ export function handleStruggleAttempt(player, enemy, addLog) {
     }
     
     return { success, messages };
+}
+
+/**
+ * Create a new round management system for a battle
+ * @param {Object} player - Player character
+ * @param {Array} enemies - Array of enemy characters
+ * @param {Object} battleEnvironment - Battle environment data
+ * @param {Object} battleConfig - Battle configuration
+ * @param {Function} onBattleEnd - Callback when battle ends
+ * @param {Function} onPlayerAction - Callback to get player action
+ * @returns {Object} Round management system
+ */
+export function createRoundManager(player, enemies, battleEnvironment = null, battleConfig = {}, onBattleEnd = () => {}, onPlayerAction = () => {}) {
+    
+    // Battle state
+    const battleState = {
+        round: 0,
+        currentTurn: 0,
+        isPlayerTurn: false,
+        playerAction: null,
+        turnOrder: [],
+        aliveCharacters: [],
+        battleEnded: false,
+        winner: null,
+        battleEnvironment,
+        battleConfig,
+        roundActions: [], // Store all actions in current round
+        turnHistory: [] // Store all completed turns
+    };
+
+    // Initialize battle logger
+    const logger = createBattleLogger();
+    logger.initializeBattle(enemies.length);
+
+    /**
+     * Check which characters are still alive
+     * @returns {Object} Object with alive characters arrays
+     */
+    function checkCharactersAlive() {
+        const aliveEnemies = enemies.filter(enemy => enemy.life > 0);
+        const isPlayerAlive = player.life > 0;
+        
+        battleState.aliveCharacters = [
+            ...(isPlayerAlive ? [player] : []),
+            ...aliveEnemies
+        ];
+
+        return {
+            player: isPlayerAlive ? player : null,
+            enemies: aliveEnemies,
+            all: battleState.aliveCharacters,
+            playerAlive: isPlayerAlive,
+            enemiesAlive: aliveEnemies.length > 0
+        };
+    }
+
+    /**
+     * Store player's chosen action for the round
+     * @param {Object} action - Player action object
+     */
+    function storePlayerAction(action) {
+        battleState.playerAction = action;
+    }
+
+    /**
+     * Calculate turn order based on character speed
+     * @param {Object} aliveChars - Result from checkCharactersAlive()
+     * @returns {Array} Array of characters in turn order
+     */
+    function calculateTurnOrder(aliveChars) {
+        const turnOrder = [...aliveChars.all];
+        
+        // Sort by speed (highest first)
+        turnOrder.sort((a, b) => {
+            const speedA = a.secondaryAttributes?.speed || a.speed || 0;
+            const speedB = b.secondaryAttributes?.speed || b.speed || 0;
+            
+            if (speedA === speedB) {
+                // In case of tie, player goes first
+                if (a === player) return -1;
+                if (b === player) return 1;
+                return 0; // Enemies can be in any order for ties
+            }
+            
+            return speedB - speedA; // Descending order (highest speed first)
+        });
+
+        battleState.turnOrder = turnOrder;
+        return turnOrder;
+    }
+
+    /**
+     * Apply environmental effects at the start of a round
+     * @param {Object} aliveChars - Alive characters
+     */
+    function processEnvironmentalEffects(aliveChars) {
+        // Use new environmental system
+        aliveChars.all.forEach(character => {
+            try {
+                applyEnvironmentalEffects(character, logger.addMessagesToLog);
+            } catch (error) {
+                console.error('Error applying environmental effects to', character.name, ':', error);
+            }
+        });
+    }
+
+    /**
+     * Start a new round
+     * @returns {Promise<boolean>} True if round started successfully
+     */
+    async function startNewRound() {
+        battleState.round++;
+        battleState.currentTurn = 0;
+        battleState.roundActions = [];
+        
+
+
+        // 1. Check alive characters
+        const aliveChars = checkCharactersAlive();
+        
+        // 2. Check battle end conditions
+        if (checkBattleEndConditions(aliveChars)) {
+            return false;
+        }
+
+        // 3. Apply environmental effects
+        processEnvironmentalEffects(aliveChars);
+
+        // 4. Get player action for this round
+        if (aliveChars.playerAlive) {
+            battleState.playerAction = await onPlayerAction(player, aliveChars.enemies);
+            if (!battleState.playerAction) {
+                console.error('❌ No player action received');
+                return false;
+            }
+        }
+
+        // 5. Calculate turn order
+        calculateTurnOrder(aliveChars);
+
+        // 6. Start executing turns
+        await executeTurns();
+        
+        return true;
+    }
+
+    /**
+     * Execute all character turns in the calculated order
+     */
+    async function executeTurns() {
+
+        
+        for (let i = 0; i < battleState.turnOrder.length; i++) {
+            const character = battleState.turnOrder[i];
+            battleState.currentTurn = i + 1;
+            
+            // Skip if character died during this round
+            if (character.life <= 0) {
+
+                continue;
+            }
+
+            await executeCharacterTurn(character);
+            
+            // Check if battle ended after this turn
+            const aliveChars = checkCharactersAlive();
+            if (checkBattleEndConditions(aliveChars)) {
+                break;
+            }
+        }
+
+        // End of round
+        await endRound();
+    }
+
+    /**
+     * Execute a single character's turn
+     * @param {Object} character - Character taking the turn
+     */
+    async function executeCharacterTurn(character) {
+
+        
+        // 1. Apply start-of-turn status effects
+        applyStartOfTurnEffects(character);
+        
+        // 2. Check if character can act
+        if (!canCharacterAct(character)) {
+
+            logger.addMessagesToLog([`${character.name} cannot act this turn due to status effects`]);
+            return;
+        }
+
+        // 3. Execute character action
+        if (character === player) {
+            await executePlayerTurn(character);
+        } else {
+            await executeEnemyTurn(character);
+        }
+
+        // 4. Apply end-of-turn effects
+        applyEndOfTurnEffects(character);
+    }
+
+    /**
+     * Execute player's turn using stored action
+     * @param {Object} character - Player character
+     */
+    async function executePlayerTurn(character) {
+
+        
+        if (!battleState.playerAction) {
+            console.error('❌ No player action available');
+            return;
+        }
+
+        const action = battleState.playerAction;
+        
+        // Record action in round history
+        battleState.roundActions.push({
+            character: character.name,
+            action: action,
+            turn: battleState.currentTurn
+        });
+
+        // Execute the action based on type
+        switch (action.type) {
+            case 'ability':
+                // Handle ability usage
+                // This would integrate with your existing ability system
+
+                break;
+            case 'item':
+                // Handle item usage
+
+                break;
+            case 'escape':
+                // Handle escape attempt
+
+                break;
+            default:
+                console.warn('⚠️ Unknown action type:', action.type);
+        }
+    }
+
+    /**
+     * Execute enemy's turn using AI
+     * @param {Object} character - Enemy character
+     */
+    async function executeEnemyTurn(character) {
+
+        
+        try {
+            const aliveChars = checkCharactersAlive();
+            const enemyIndex = enemies.findIndex(e => e === character);
+            
+            // Use existing AI system from battle-enemies-ai.js
+            await handleEnemyTurn(
+                { round: battleState.round, turn: battleState.currentTurn },
+                aliveChars.enemies,
+                player,
+                enemies,
+                this, // Pass turn manager reference
+                logger.addMessagesToLog,
+                logger.addRecentAction,
+                () => {}, // nextTurn callback
+                battleState,
+                {} // lastEnemyAbilities tracking
+            );
+
+            // Record action in round history
+            battleState.roundActions.push({
+                character: character.name,
+                action: { type: 'ai_action' },
+                turn: battleState.currentTurn
+            });
+
+        } catch (error) {
+            console.error('Error executing enemy turn:', error);
+            logger.addMessagesToLog([`${character.name} failed to act due to an error`]);
+        }
+    }
+
+    /**
+     * Apply status effects at the start of a character's turn
+     * @param {Object} character - Character starting their turn
+     */
+    function applyStartOfTurnEffects(character) {
+
+        
+        try {
+            // Reduce status effect durations and apply effects
+            reduceTurns(character, logger.addMessagesToLog);
+            
+            // Apply any DoT (damage over time) effects here
+            // This would integrate with your status system
+            
+        } catch (error) {
+            console.error('Error applying start-of-turn effects:', error);
+        }
+    }
+
+    /**
+     * Apply effects at the end of a character's turn
+     * @param {Object} character - Character ending their turn
+     */
+    function applyEndOfTurnEffects(character) {
+
+        
+        try {
+            // Apply any end-of-turn status effects
+            // Apply regeneration, poison, etc.
+            
+        } catch (error) {
+            console.error('Error applying end-of-turn effects:', error);
+        }
+    }
+
+    /**
+     * Check if battle should end
+     * @param {Object} aliveChars - Result from checkCharactersAlive()
+     * @returns {boolean} True if battle should end
+     */
+    function checkBattleEndConditions(aliveChars) {
+        if (battleState.battleEnded) return true;
+
+        // Player defeated
+        if (!aliveChars.playerAlive) {
+            battleState.battleEnded = true;
+            battleState.winner = 'enemies';
+
+            onBattleEnd('defeat');
+            return true;
+        }
+
+        // All enemies defeated
+        if (!aliveChars.enemiesAlive) {
+            battleState.battleEnded = true;
+            battleState.winner = 'player';
+
+            onBattleEnd('victory');
+            return true;
+        }
+
+        // Survival battle conditions
+        if (battleState.battleConfig.survivalTurns && 
+            battleState.round >= battleState.battleConfig.survivalTurns) {
+            battleState.battleEnded = true;
+            battleState.winner = 'player';
+
+            onBattleEnd('survival');
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * End the current round and prepare for next
+     */
+    async function endRound() {
+
+        
+        // Finalize round in battle logger
+        logger.finalizeRoundLog();
+        
+        // Store round history
+        battleState.turnHistory.push({
+            round: battleState.round,
+            actions: [...battleState.roundActions],
+            turnOrder: [...battleState.turnOrder.map(char => char.name)]
+        });
+
+        // Check if battle continues
+        const aliveChars = checkCharactersAlive();
+        if (!checkBattleEndConditions(aliveChars)) {
+            // Start next round
+            setTimeout(() => startNewRound(), 100);
+        }
+    }
+
+    // Public API
+    return {
+        // Core battle flow
+        startBattle: startNewRound,
+        endBattle: () => {
+            battleState.battleEnded = true;
+            logger.completeBattle();
+        },
+        
+        // State access
+        getBattleState: () => ({ ...battleState }),
+        getCurrentRound: () => battleState.round,
+        getCurrentTurn: () => battleState.currentTurn,
+        isPlayerTurn: () => battleState.isPlayerTurn,
+        
+        // Action management
+        setPlayerAction: storePlayerAction,
+        getPlayerAction: () => battleState.playerAction,
+        
+        // Character management
+        getAliveCharacters: checkCharactersAlive,
+        getTurnOrder: () => [...battleState.turnOrder],
+        
+        // Battle state queries
+        isBattleEnded: () => battleState.battleEnded,
+        getWinner: () => battleState.winner,
+        getBattleHistory: () => [...battleState.turnHistory],
+        
+        // Logging
+        getLogger: () => logger,
+        
+        // Internal functions (for AI integration)
+        _internal: {
+            executeCharacterTurn,
+            applyStartOfTurnEffects,
+            applyEndOfTurnEffects,
+            checkBattleEndConditions
+        }
+    };
+}
+
+/**
+ * Legacy compatibility function - creates old-style turn manager interface
+ * This bridges the gap between old battle.js code and new round management system
+ * @param {Object} player - Player character
+ * @param {Array} enemies - Array of enemy characters
+ * @returns {Object} Legacy turn manager interface
+ */
+export function createTurnManager(player, enemies) {
+    // Only show warning once per session to reduce console noise
+    if (!window._turnManagerWarningShown) {
+        console.info('ℹ️ Battle system using legacy turn management (compatible mode)');
+        window._turnManagerWarningShown = true;
+    }
+    
+    // Create the new round manager
+    const roundManager = createRoundManager(player, enemies, null, {}, () => {}, () => {});
+    
+    // Create legacy interface that bridges to new system
+    let currentTurn = 0;
+    let playerTurn = true;
+    let roundCompleteCallback = null;
+    let currentRound = 1;
+    
+    // Track who has acted this round
+    let playerActed = false;
+    let enemiesActed = [];
+    
+    function resetRound() {
+
+        playerActed = false;
+        enemiesActed = enemies.map(() => false);
+        playerTurn = true; // Player always starts the round
+        currentTurn = 0;
+    }
+    
+    function checkRoundComplete() {
+        const aliveEnemies = enemies.filter(e => e.secondary?.life > 0 || e.life > 0);
+        const allEnemiesActed = aliveEnemies.every((enemy, index) => {
+            const enemyIndex = enemies.indexOf(enemy);
+            return enemiesActed[enemyIndex] === true;
+        });
+        
+        const roundComplete = playerActed && allEnemiesActed;
+
+        
+        if (roundComplete) {
+
+            
+            // Update cooldowns at the end of each round
+            if (window.battleState && window.battleState.abilityCooldowns) {
+                updateCooldowns(window.battleState.abilityCooldowns);
+            }
+            
+            if (roundCompleteCallback) {
+                roundCompleteCallback();
+            }
+            currentRound++;
+            resetRound();
+            return true;
+        }
+        return false;
+    }
+    
+    // Initialize first round
+    resetRound();
+    
+    /**
+     * Update ability cooldowns - called at the start of each player turn
+     * @param {Object} abilityCooldowns - Cooldown tracking object
+     */
+    function updateCooldowns(abilityCooldowns) {
+        if (!abilityCooldowns) return;
+        
+        Object.keys(abilityCooldowns).forEach(abilityId => {
+            if (abilityCooldowns[abilityId] > 0) {
+                abilityCooldowns[abilityId]--;
+                const remainingTurns = abilityCooldowns[abilityId];
+                if (remainingTurns === 0) {
+
+                } else {
+
+                }
+            }
+        });
+    }
+    
+    return {
+        // Legacy methods expected by battle.js
+        setRoundCompleteCallback(callback) {
+            roundCompleteCallback = callback;
+
+        },
+        
+        getTurnInfo() {
+            const battleState = roundManager.getBattleState();
+            const aliveChars = roundManager.getAliveCharacters();
+            
+            return {
+                currentTurn: currentTurn,
+                playerTurn: playerTurn,
+                playerStats: player,
+                enemyStats: enemies[0], // Legacy expects single enemy stats
+                canPlayerAct: true, // Simplified for compatibility
+                canEnemyAct: true,
+                enemies: enemies,
+                isPlayerTurn: playerTurn
+            };
+        },
+        
+        nextTurn(battleState, addLog, battleEnvironment, addLogDupe) {
+
+            
+            // Update cooldowns when it's player's turn
+            if (playerTurn && battleState && battleState.abilityCooldowns) {
+                updateCooldowns(battleState.abilityCooldowns);
+            }
+            
+            // Check if round is complete first
+            if (checkRoundComplete()) {
+                // Round completed, start new round with player turn
+                return;
+            }
+            
+            // Determine next turn based on who hasn't acted yet
+            const aliveEnemies = enemies.filter(e => e.secondary?.life > 0 || e.life > 0);
+            
+            if (!playerActed && playerTurn) {
+                // Player's turn but they haven't acted - shouldn't happen, but just in case
+
+                return;
+            }
+            
+            if (playerActed && !playerTurn) {
+                // Currently enemy turn, check if all enemies have acted
+                const allEnemiesActed = aliveEnemies.every((enemy, index) => {
+                    const enemyIndex = enemies.indexOf(enemy);
+                    return enemiesActed[enemyIndex] === true;
+                });
+                
+                if (allEnemiesActed) {
+                    // All characters have acted, complete the round
+                    checkRoundComplete();
+                    return;
+                } else {
+                    // More enemies need to act, stay on enemy turn
+
+                    return;
+                }
+            }
+            
+            // Normal turn progression
+            this.switchTurn();
+        },
+        
+        switchTurn() {
+            const wasPlayerTurn = playerTurn;
+            playerTurn = !playerTurn;
+            currentTurn++;
+
+        },
+        
+        markCharacterActed(isPlayer, enemyIndex = 0) {
+            if (isPlayer) {
+                playerActed = true;
+
+            } else {
+                if (enemyIndex >= 0 && enemyIndex < enemies.length) {
+                    enemiesActed[enemyIndex] = true;
+
+                }
+            }
+            
+            // Check if round is complete after marking
+            checkRoundComplete();
+        },
+        
+        // Bridge to new system methods
+        getBattleState: () => roundManager.getBattleState(),
+        getAliveCharacters: () => roundManager.getAliveCharacters(),
+        isBattleEnded: () => roundManager.isBattleEnded(),
+        
+        // Internal access to new system
+        _newRoundManager: roundManager,
+        
+        // Debug methods
+        _debug: {
+            playerActed: () => playerActed,
+            enemiesActed: () => [...enemiesActed],
+            currentRound: () => currentRound,
+            resetRound
+        }
+    };
 }

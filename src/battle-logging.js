@@ -1,140 +1,340 @@
-// battle-logging.js - Battle message and history management
+// battle-logging.js - Simplified Battle Logging System
 
 /**
- * Initialize battle logging system
- * @returns {Object} - Battle logging functions and state
+ * Create a battle logger with simplified structure
+ * @returns {Object} - Battle logging functions
  */
 export function createBattleLogger() {
-    let battleLog = [];            // Current "turn" log messages
-    let groupedBattleLogs = [];    // All grouped logs for this battle
-    let recentActions = [];        // Last few actions for recent display (max 2-3 actions)
-    let systemMessages = [];       // System messages like buff expiration
+    let battleLog = [];           // All messages for the entire battle
+    let currentRound = [];        // Current round data
+    let allRounds = [];          // All completed rounds for history
+    let currentRoundNumber = 1;   // Track round number
+    let totalParticipants = 1;    // Player + enemies count
 
+    // DOM elements for display
     const logDiv = document.getElementById("combat-log");
     const recentDiv = document.getElementById("combat-recent");
 
     /**
-     * Add a message to the current turn's log
-     * @param {string} msg - Message to add
+     * Initialize the logger for a new battle
+     * @param {number} enemyCount - Number of enemies in the battle
      */
-    function addLog(msg) {
-        battleLog.push(msg);
+    function initializeBattle(enemyCount) {
+        totalParticipants = 1 + enemyCount; // Player + enemies
+        clearLogs();
+        addRecentRound();
+    }
 
-        // Don't update recentDiv here - let updateRecentDisplay handle it
-        // Auto-scroll main log
+    /**
+     * Update the main combat log display with proper round grouping
+     */
+    function updateMainLogDisplay() {
+        if (!logDiv) return;
+        
+        let displayHTML = '';
+        
+        // Show completed rounds first
+        allRounds.forEach(round => {
+            displayHTML += `<div style="margin: 10px 0; border: 1px solid #666; padding: 8px; background-color: rgba(0,0,0,0.1);">`;
+            displayHTML += `<div style="font-weight: bold; color: #444; margin-bottom: 5px;">Round ${round.roundNumber}</div>`;
+            
+            round.actions.forEach(action => {
+                displayHTML += `<div style="margin: 3px 0; padding-left: 10px;">`;
+                displayHTML += `<strong>${action.actor}</strong> used <em>${action.actionName}</em> on <strong>${action.target}</strong>`;
+                
+                // Add ability image button if ability has an image
+                if (action.ability && action.ability.img) {
+                    const imageSrc = window.getAbilityImageSrc ? window.getAbilityImageSrc(action.ability.img) : action.ability.img;
+                    displayHTML += ` <button class="history-image-btn" onclick="showAbilityImageModal('${imageSrc}', '${action.ability.name || action.actionName}')">Show Attack Image</button>`;
+                }
+                
+                if (action.messages && action.messages.length > 0) {
+                    action.messages.forEach(msg => {
+                        displayHTML += `<div style="margin-left: 15px; font-size: 0.9em; color: #666;">${msg}</div>`;
+                    });
+                }
+                displayHTML += `</div>`;
+            });
+            
+            // Show environmental effects
+            if (round.environmentalEffects && round.environmentalEffects.length > 0) {
+                displayHTML += `<div style="margin-top: 5px; font-style: italic; color: #888;">`;
+                round.environmentalEffects.forEach(effect => {
+                    displayHTML += `<div style="margin-left: 10px;">${effect}</div>`;
+                });
+                displayHTML += `</div>`;
+            }
+            
+            displayHTML += `</div>`;
+        });
+        
+        // Show current round in progress
+        if (currentRound.length > 0) {
+            displayHTML += `<div style="margin: 10px 0; border: 1px solid #999; padding: 8px;">`;
+            displayHTML += `<div style="font-weight: bold; margin-bottom: 5px;">Round ${currentRoundNumber} (In Progress)</div>`;
+            
+            currentRound.forEach(action => {
+                displayHTML += `<div style="margin: 3px 0; padding-left: 10px;">`;
+                displayHTML += `<strong>${action.actor}</strong> used <em>${action.actionName}</em> on <strong>${action.target}</strong>`;
+                if (action.messages && action.messages.length > 0) {
+                    action.messages.forEach(msg => {
+                        displayHTML += `<div style="margin-left: 15px; font-size: 0.9em;">${msg}</div>`;
+                    });
+                }
+                displayHTML += `</div>`;
+            });
+            
+            displayHTML += `</div>`;
+        }
+        
+        // Show any additional battle log messages that aren't part of actions
+        const additionalMessages = battleLog.filter(msg => {
+            // Filter out messages that are already shown in the action displays
+            return !allRounds.some(round => 
+                round.actions.some(action => 
+                    action.messages.includes(msg)
+                )
+            ) && !currentRound.some(action => 
+                action.messages.includes(msg)
+            );
+        });
+    
+        
+        logDiv.innerHTML = displayHTML;
         logDiv.scrollTop = logDiv.scrollHeight;
     }
 
     /**
-     * Add a system message (like buff expiration) that appears below recent actions
-     * @param {string} msg - System message to add
+     * Add messages to the main battle log
+     * @param {string|Array<string>} messages - Message(s) to add
      */
-    function addSystemMessage(msg) {
-        systemMessages.push(msg);
-        updateRecentDisplay();
+    function addMessagesToLog(messages) {
+        if (typeof messages === 'string') {
+            battleLog.push(messages);
+        } else if (Array.isArray(messages)) {
+            battleLog.push(...messages);
+        }
+        
+        // Update the main combat log display with proper formatting
+        updateMainLogDisplay();
     }
 
     /**
-     * Add an action to the recent actions display
-     * @param {string} actionSummary - Summary of the action (e.g., "Player used Quick Attack")
-     * @param {Array} actionMessages - All messages from this action
+     * Start a new round
      */
-    function addRecentAction(actionSummary, actionMessages) {
-        // Add to recent actions list
-        recentActions.push({
-            summary: actionSummary,
-            messages: actionMessages,
-            timestamp: Date.now()
-        });
-
-        // Keep only the last 2 actions (most recent player and enemy)
-        if (recentActions.length > 2) {
-            recentActions.shift();
+    function addRecentRound() {
+        // Finalize previous round if it exists
+        if (currentRound.length > 0) {
+            allRounds.push({
+                roundNumber: currentRoundNumber - 1,
+                actions: [...currentRound],
+                environmentalEffects: []
+            });
         }
 
-        // Clear system messages when new actions occur
-        systemMessages = [];
+        // Start new round
+        currentRound = [];
+        currentRoundNumber++;
+    }
 
-        // Update recent display
+    /**
+     * Add an action to the current round
+     * @param {Object} actionData - Action details
+     * @param {string} actionData.actor - Who performed the action (e.g., "Player", "Enemy 1")
+     * @param {string} actionData.actionName - Name of the action/ability used
+     * @param {string} actionData.target - Target of the action
+     * @param {Array<string>} actionData.messages - All messages from this action
+     * @param {Object} actionData.results - Action results (damage, hit/miss, crit, overkill)
+     */
+    function addRecentAction(actionData) {
+        const action = {
+            actor: actionData.actor,
+            actionName: actionData.actionName,
+            target: actionData.target,
+            messages: actionData.messages || [],
+            results: {
+                hit: actionData.results?.hit || false,
+                damage: actionData.results?.damage || 0,
+                isCritical: actionData.results?.isCritical || false,
+                isOverkill: actionData.results?.isOverkill || false,
+                statusEffects: actionData.results?.statusEffects || []
+            },
+            ability: actionData.ability || null, // Store ability data including image
+            timestamp: Date.now()
+        };
+
+        currentRound.push(action);
+
+        // Update recent actions display
         updateRecentDisplay();
+
+        // Add messages to main log
+        addMessagesToLog(actionData.messages);
+    }
+
+    /**
+     * Log environmental effects at the end of a round
+     * @param {Array<string>} effects - Environmental effect messages
+     */
+    function logEnvironmentalEffects(effects) {
+        if (effects && effects.length > 0) {
+            // Add to current round if it exists in allRounds
+            if (allRounds.length > 0) {
+                allRounds[allRounds.length - 1].environmentalEffects.push(...effects);
+            }
+
+            // Add to main log
+            addMessagesToLog(effects);
+
+            // Update recent display to show environmental effects
+            updateRecentDisplay();
+        }
     }
 
     /**
      * Update the recent actions display
      */
     function updateRecentDisplay() {
-        // Build recent actions HTML
-        const recentHTML = recentActions.map(action => {
-            const messagesHTML = action.messages.map(msg => `<div class="recent-message">${msg}</div>`).join("");
-            return `<div class="recent-action">
-                <div class="recent-summary">${action.summary}</div>
-                ${messagesHTML}
-            </div>`;
-        }).join("");
+        if (!recentDiv) return;
 
-        // Build system messages HTML
-        const systemHTML = systemMessages.map(msg => 
-            `<div class="system-message" style="color: #ccc; font-style: italic; margin-top: 8px;">${msg}</div>`
-        ).join("");
+        let recentHTML = '';
 
-        // Combine both in recentDiv
-        recentDiv.innerHTML = recentHTML + systemHTML;
+        // Show current round actions
+        if (currentRound.length > 0) {
+            recentHTML += `<div class="current-round">
+                <h4>Current Round ${currentRoundNumber}</h4>`;
+            
+            currentRound.forEach(action => {
+                recentHTML += `<div class="recent-action" style="margin-bottom: 10px; border: 1px solid #ccc; padding: 8px;">
+                    <div class="action-summary" style="font-weight: bold; margin-bottom: 5px;">
+                        <strong>${action.actor}</strong> used <em>${action.actionName}</em> on <strong>${action.target}</strong>
+                    </div>`;
+                        
+                // Show ability image directly if ability has an image
+                if (action.ability && action.ability.img) {
+                    const imageSrc = window.getAbilityImageSrc ? window.getAbilityImageSrc(action.ability.img) : action.ability.img;
+                    recentHTML += `<div style="text-align: center; margin: 8px 0;">
+                        <img src="${imageSrc}" alt="${action.ability.name || action.actionName}" 
+                             style="max-width: 150px; max-height: 100px; border-radius: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.3); border: 1px solid #666; cursor: pointer;" 
+                             onclick="showAbilityImageModal('${imageSrc}', '${action.ability.name || action.actionName}')" 
+                             onerror="this.style.display='none'">
+                    </div>`;
+                }
+                
+                // Show hit/miss and damage info
+                if (action.results.hit) {
+                    recentHTML += `<div class="action-results">`;
+                    if (action.results.damage > 0) {
+                        recentHTML += ` <span></span>`;
+                    }
+                    if (action.results.isCritical) {
+                        recentHTML += ` <span></span>`;
+                    }
+                    if (action.results.isOverkill) {
+                        recentHTML += ` <span></span>`;
+                    }
+                    recentHTML += `</div>`;
+                } else {
+                    recentHTML += `<div class="action-results">But you Dodged</div>`;
+                }
+                
+                // Show messages if any
+                if (action.messages && action.messages.length > 0) {
+                    recentHTML += `<div class="action-messages" style="margin-top: 5px; font-size: 0.9em; color: #666;">`;
+                    action.messages.forEach(msg => {
+                        recentHTML += `<div class="message">${msg}</div>`;
+                    });
+                    recentHTML += `</div>`;
+                }
+                
+                recentHTML += `</div>`;
+            });
+            
+            recentHTML += `</div>`;
+        }
+
+        // Show environmental effects if any
+        if (allRounds.length > 0) {
+            const lastRound = allRounds[allRounds.length - 1];
+            if (lastRound.environmentalEffects.length > 0) {
+                recentHTML += `<div class="environmental-effects">
+                    <h5>Environmental Effects</h5>
+                    ${lastRound.environmentalEffects.map(effect => `<div class="env-effect">${effect}</div>`).join('')}
+                </div>`;
+            }
+        }
+
+        recentDiv.innerHTML = recentHTML;
     }
 
     /**
-     * Separate the current turn's messages into a grouped log
+     * Finalize the current round and prepare for history
+     * @param {Function} pushToHistory - Function to push the round to history (optional, only for individual rounds)
      */
-    function separateLog() {
-        if (battleLog.length === 0) return; // Nothing to group
+    function finalizeRoundLog(pushToHistory = null) {
+        if (currentRound.length > 0) {
+            // Create final round object
+            const finalRound = {
+                roundNumber: currentRoundNumber,
+                actions: [...currentRound],
+                environmentalEffects: []
+            };
 
-        // Display in logDiv with proper formatting
-        const formattedMessages = battleLog.map(msg => `<div>${msg}</div>`).join('');
-        logDiv.innerHTML += `<div class="battle-log-group">${formattedMessages}</div>`;
+            // Add to completed rounds
+            allRounds.push(finalRound);
 
-        // Save this group for history (keep turns as groups)
-        groupedBattleLogs.push([...battleLog]);
+            // Only push individual rounds to history if specifically requested
+            // This should typically NOT be called during battle, only at battle end
+            if (typeof pushToHistory === 'function' && pushToHistory.name === 'forceRoundToHistory') {
+                // Convert to format expected by history system for individual rounds
+                const historyFormat = finalRound.actions.map(action => ({
+                    summary: `${action.actor} used ${action.actionName}`,
+                    messages: action.messages,
+                    timestamp: action.timestamp
+                }));
+                
+                // Get enemy name from the round actions
+                const enemyName = finalRound.actions.find(action => action.actor !== "Character00")?.actor || "Enemy";
+                const summary = `Round ${finalRound.roundNumber} completed`;
+                
+                pushToHistory(enemyName, historyFormat, summary);
+            }
 
-        // Clear current turn log
-        battleLog = [];
+            // Start new round
+            addRecentRound();
+        }
     }
 
     /**
-     * Get all grouped battle logs for history
-     * @returns {Array} - Array of grouped log strings
+     * Get all rounds for history export
+     * @returns {Array} - All rounds data
      */
-    function getGroupedLogs() {
-        return [...groupedBattleLogs];
+    function getAllRounds() {
+        return [...allRounds];
     }
 
     /**
-     * Get the current length of the battle log
-     * @returns {number} - Current battle log length
+     * Get current battle log messages
+     * @returns {Array} - All battle log messages
      */
-    function getBattleLogLength() {
-        return battleLog.length;
+    function getBattleLog() {
+        return [...battleLog];
     }
 
     /**
-     * Get messages added since a specific point
-     * @param {number} fromIndex - Starting index to get messages from
-     * @returns {Array} - Array of messages
-     */
-    function getCurrentBattleLogMessages(fromIndex) {
-        return battleLog.slice(fromIndex);
-    }
-
-    /**
-     * Clear all battle logs and rewards
+     * Clear all logs for a new battle
      */
     function clearLogs() {
         battleLog = [];
-        groupedBattleLogs = [];
-        recentActions = [];
-        systemMessages = [];
-        logDiv.innerHTML = "";
-        recentDiv.innerHTML = "";
-        
-        // Hide rewards div at battle start
+        currentRound = [];
+        allRounds = [];
+        currentRoundNumber = 1;
+
+        // Clear display elements
+        if (logDiv) logDiv.innerHTML = '';
+        if (recentDiv) recentDiv.innerHTML = '';
+
+        // Hide rewards div
         const rewardsDiv = document.getElementById("combat-rewards");
         if (rewardsDiv) {
             rewardsDiv.style.display = "none";
@@ -142,32 +342,124 @@ export function createBattleLogger() {
         }
     }
 
+    /**
+     * Complete the entire battle and send all rounds to history
+     * @param {Function} addBattleToHistory - Function to add complete battle to history
+     * @param {string} enemyNames - Names of enemies fought
+     * @param {string} battleSummary - Battle result summary
+     */
+    function completeBattle(addBattleToHistory, enemyNames, battleSummary) {
+        // Finalize any remaining round without pushing to history
+        if (currentRound.length > 0) {
+            const finalRound = {
+                roundNumber: currentRoundNumber,
+                actions: [...currentRound],
+                environmentalEffects: []
+            };
+            allRounds.push(finalRound);
+        }
+
+        // Send the complete battle log to history as one entry
+        if (typeof addBattleToHistory === 'function') {
+            addBattleToHistory(enemyNames, allRounds, battleSummary);
+        }
+    }
+
+    /**
+     * Check if round is complete based on participant count
+     * @returns {boolean} - True if all participants have acted
+     */
+    function isRoundComplete() {
+        return currentRound.length >= totalParticipants;
+    }
+
+    /**
+     * Force completion of current round (called by round manager)
+     */
+    function forceRoundCompletion() {
+        if (currentRound.length > 0) {
+            // Create final round object
+            const finalRound = {
+                roundNumber: currentRoundNumber,
+                actions: [...currentRound],
+                environmentalEffects: []
+            };
+
+            // Add to completed rounds
+            allRounds.push(finalRound);
+
+            // Start new round
+            currentRound = [];
+            currentRoundNumber++;
+            
+            // Update the main log display to show the completed round
+            updateMainLogDisplay();
+        }
+    }
+
     return {
-        addLog,
-        addSystemMessage,
+        initializeBattle,
+        addMessagesToLog,
+        addRecentRound,
         addRecentAction,
-        getBattleLogLength,
-        getCurrentBattleLogMessages,
-        separateLog,
-        getGroupedLogs,
-        clearLogs
+        logEnvironmentalEffects,
+        finalizeRoundLog,
+        forceRoundCompletion,
+        completeBattle,
+        clearLogs,
+        getAllRounds,
+        getBattleLog,
+        isRoundComplete,
+        
+        // Backward compatibility methods
+        addLog: addMessagesToLog,
+        getBattleLogLength: () => battleLog.length,
+        getCurrentBattleLogMessages: (fromIndex) => battleLog.slice(fromIndex),
+        getGroupedLogs: getAllRounds
     };
 }
 
 /**
- * Log damage dealt in battle
+ * Helper function to create action data for logging
+ * @param {string} actor - Who performed the action
+ * @param {string} actionName - Name of the action
+ * @param {string} target - Target of the action
+ * @param {Array<string>} messages - Action messages
+ * @param {Object} results - Action results
+ * @param {Object} ability - The ability used (optional, for image support)
+ * @returns {Object} - Formatted action data
+ */
+export function createActionData(actor, actionName, target, messages, results = {}, ability = null) {
+    return {
+        actor,
+        actionName,
+        target,
+        messages: Array.isArray(messages) ? messages : [messages],
+        results: {
+            hit: results.hit || false,
+            damage: results.damage || 0,
+            isCritical: results.isCritical || false,
+            isOverkill: results.isOverkill || false,
+            statusEffects: results.statusEffects || []
+        },
+        ability: ability // Include ability data for image support
+    };
+}
+
+/**
+ * Log damage results - utility function for backward compatibility
  * @param {Object} damageInfo - Damage calculation results
  * @param {Object} critInfo - Critical hit information
  * @param {Object} ability - The ability used
  * @param {Function} addLog - Logging function
- * @param {number} actualFinalDamage - The actual final damage after all calculations (optional)
- * @param {boolean} isOverkill - Whether this attack was an overkill (optional)
+ * @param {number} actualFinalDamage - The actual final damage
+ * @param {boolean} isOverkill - Whether this attack was an overkill
  */
 export function logDamage(damageInfo, critInfo, ability, addLog, actualFinalDamage = null, isOverkill = false) {
     const displayDamage = actualFinalDamage || damageInfo.finalDamage;
     
     if (displayDamage > 0) {
-        // Priority 1: Overkill message (replaces normal hit message entirely)
+        // Priority 1: Overkill message
         if (isOverkill && ability.onOverkill) {
             addLog(ability.onOverkill);
             addLog(`${displayDamage} damage!`);
@@ -186,27 +478,11 @@ export function logDamage(damageInfo, critInfo, ability, addLog, actualFinalDama
             }
             addLog(`${displayDamage} damage!`);
         }
-
-        /*// Log size advantage/disadvantage
-        if (damageInfo.sizeBonus > 0) {
-            addLog("Size advantage increases damage!");
-        } else if (damageInfo.sizeBonus < 0) {
-            addLog("Size disadvantage reduces damage!");
-        }
-
-        // Log weight bonus
-        if (damageInfo.weightBonus > 0) {
-            addLog("Heavy impact from massive weight!");
-        }
-
-        if (damageInfo.defenseBypass) {
-            addLog("Defense bypassed!");
-        }*/
     }
 }
 
 /**
- * Log ability hit/miss results
+ * Log ability hit/miss results - utility function for backward compatibility
  * @param {boolean} hit - Whether the ability hit
  * @param {Object} ability - The ability used
  * @param {string} attackerName - Name of the attacker

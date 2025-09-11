@@ -1,0 +1,21 @@
+[
+    "pinned.js",
+    "flying.js",
+    "floating.js",
+    "high-ground.js",
+    "poisoned.js",
+    "burning.js",
+    "stunned.js",
+    "riding.js",
+    "mount.js",
+    "struggling.js",
+    "constitutionUp.js",
+    "dexterityUp.js",
+    "strengthUp.js",
+    "wisdomUp.js",
+    "charismaUp.js",
+    "defenseUp.js",
+    "clumsiness.js",
+    "weaknessCurse.js",
+    "focusAttack.js"
+]

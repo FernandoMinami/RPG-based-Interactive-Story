@@ -1,22 +1,37 @@
 import { addExp, getExpForLevel } from './leveling.js';
 import { getInventory, removeItem, addLoot } from './inventory.js';
-import { updateSecondaryStats } from './character.js';
+import { updateSecondaryStats } from './characters.js';
 import { updateLifeBar } from './ui.js';
 import { 
-    applyStatus, 
-    updateStatuses, 
+    addStatus, 
+    removeStatus,
+    reduceTurns,
+    processDoTDamage,
     statusSummary, 
     isStatusActive, 
     isCharacterTrapped, 
-    BuffRegistry,
-    applyStunnedStatus
+    canCharacterAct,
+    StatusRegistry,
+    applyStatus,
+    updateStatuses,
+    applyStunnedStatus,
+    removeMountPartnership,
+    initializeCharacter,
+    attemptBreakFree,
+    removeStatusAtEnd
 } from './status.js';
 import { getAbilities, useAbility, canUseAbility } from './abilities.js';
 import { getLootById } from './loot.js';
 import './history.js'; // Ensure history module is loaded
-import { getTypeMatchupDescription, calculateAbilityTypeBonus, getStatusEffectInteraction } from './types.js';
-import { calculateEnvironmentalHealing, calculateEnvironmentalDamage } from './environmental.js';
-import { calculateStatusBasedStruggle } from './special-effects.js';
+import { getTypeMatchupDescription, calculateAbilityTypeBonus, getStatusEffectInteraction } from './elements.js';
+import { 
+    setActiveEnvironment, 
+    applyEnvironmentalEffects, 
+    applyEnvironmentalAttributes, 
+    initializeCharacterEnvironment, 
+    cleanupEnvironmentalEffects,
+    modifyAbilityByEnvironment
+} from './environments.js';
 import { 
     createAbilityButtons, 
     createConsumableButtons, 
@@ -30,69 +45,153 @@ import {
     calculateDamage, 
     calculateCriticalHit, 
     applyDamage, 
-    handleFlyingInteractions, 
-    handleAbilityEffects,
-    handlePinnedInteractions
+    handleAbilityEffects
 } from './combat-calculations.js';
-import { createBattleLogger, logDamage, logAttackResult } from './battle-logging.js';
+// Import new modular system
+import { handleModularBattleInteractions, removeIsHighStatuses, handleForcefulBreakFree, cleanupAllTrappedStatuses } from './special-effects.js';
+import { createBattleLogger, createActionData, logDamage, logAttackResult } from './battle-logging.js';
 import { 
-    createTurnManager, 
+    createRoundManager,
+    createTurnManager,
     initializeAbilityTracking, 
     handleEscapeAttempt, 
-    handleStruggleAttempt 
+    handleStruggleAttempt
 } from './turn-management.js';
+import { 
+    handleEnemyTurn as handleEnemyTurnAI,
+    checkForEnemyCombo,
+    executeEnemyAbility,
+    selectEnemyAbility
+} from './battle-enemies-ai.js'; // Enemy AI logic moved to separate module for better organization
+import { advanceTimeForBattleRound } from './day-night.js';
 
-// Starts a battle between the player and an enemy
-export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null) {
-  
+
+
+// Starts a battle between the player and enemy(ies)
+export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null, battleConfig = {}) {
+    // Support both single enemy and multi-enemy battles
+    const enemies = Array.isArray(enemy) ? enemy : [enemy];
+    
+    // Ensure all enemies have the isEnemy flag for proper identification
+    enemies.forEach(enemy => {
+        enemy.isEnemy = true;
+    });
+    
+    const isSurvivalBattle = battleConfig.survivalTurns && battleConfig.survivalTurns > 0;
+    
     const modal = document.getElementById("combat-modal");
     const actionsDiv = document.getElementById("combat-actions");
+
+    // Initialize battle logging
+    const logger = createBattleLogger();
+    logger.initializeBattle(enemies.length);
+    const { addMessagesToLog, addRecentAction, finalizeRoundLog, forceRoundCompletion, completeBattle, clearLogs, getAllRounds, logEnvironmentalEffects } = logger;
+    
+    // Create compatibility wrapper for old addLog function
+    const addLog = addMessagesToLog;
 
     // Set up global battle environment for damage calculations
     if (battleEnvironment) {
         if (typeof battleEnvironment === "string") {
-            // Convert string environment to object format
-            window.battleEnvironment = {
-                type: battleEnvironment,
-                intensity: getDefaultIntensity(battleEnvironment)
-            };
+            // Set up new environmental system
+            setActiveEnvironment(battleEnvironment, 5, addLog);
         } else if (battleEnvironment.type) {
-            // Use object format directly
-            window.battleEnvironment = battleEnvironment;
-        } else {
-            window.battleEnvironment = null;
+            // Use object format with intensity
+            const intensity = battleEnvironment.intensity || 5;
+            setActiveEnvironment(battleEnvironment.type, intensity, addLog);
         }
     } else {
-        window.battleEnvironment = null;
+        // Set neutral environment
+        setActiveEnvironment('neutral', 1, addLog);
+    }
+    
+    // Function to sync compatibility layer back to secondary attributes
+    function syncCharacterAttributes(character) {
+        if (character.secondary) {
+            character.secondary.life = character.life;
+            // Don't sync maxLife - it should never change during battle
+            character.secondary.mp = character.mp;
+            character.secondary.maxMp = character.maxMp;
+            character.secondary.attack = character.attack;
+            character.secondary.defense = character.defense;
+            character.secondary.speed = character.speed;
+            character.secondary.accuracy = character.accuracy;
+            character.secondary.evasion = character.evasion;
+            character.secondary.luck = character.luck;
+            character.secondary.critChance = character.critChance;
+            character.secondary.critMultiplier = character.critMultiplier;
+        }
     }
 
-    // Initialize battle logging
-    const logger = createBattleLogger();
-    const { addLog, addSystemMessage, addRecentAction, getBattleLogLength, getCurrentBattleLogMessages, separateLog, getGroupedLogs, clearLogs } = logger;
+    // Initialize characters in the new status system
+    initializeCharacter(player);
+    initializeCharacterEnvironment(player);
+    
+    enemies.forEach(enemy => {
+        initializeCharacter(enemy);
+        initializeCharacterEnvironment(enemy);
+        updateSecondaryStats(enemy, false); // Calculate secondary stats for enemies
+    });
 
-    // Initialize turn management
-    const turnManager = createTurnManager(player, enemy);
+    // Apply initial environmental attribute modifiers
+    applyEnvironmentalAttributes(player, addLog);
+    enemies.forEach(enemy => {
+        applyEnvironmentalAttributes(enemy, addLog);
+    });
+
+    // Initialize round management (using legacy interface for compatibility)
+    const roundManager = createTurnManager(player, enemies);
+    
+    // Set up round completion callback for logging - use forceRoundCompletion
+    roundManager.setRoundCompleteCallback(() => {
+        // Force the logger to complete the current round
+        forceRoundCompletion();
+        
+        // Advance time for battle round
+        advanceTimeForBattleRound();
+    });
 
     // Initialize ability tracking
     const { abilityCooldowns, abilityUsesLeft } = initializeAbilityTracking(player);
     
     // Combo system tracking
     let lastPlayerAbility = null;
-    let lastEnemyAbility = null;
+    let lastEnemyAbilities = {}; // Track last ability per enemy for combos
+    let currentTurnNumber = 0;
 
     // Battle state object for ability functions
     const battleState = {
+        player,
         abilityCooldowns,
         abilityUsesLeft,
         lastPlayerAbility,
-        lastEnemyAbility
+        lastEnemyAbilities,
+        enemies,
+        isSurvivalBattle,
+        survivalTurnsLeft: battleConfig.survivalTurns || 0,
+        currentTurnNumber
     };
+
+    // Make battleState globally accessible for turn management
+    window.battleState = battleState;
 
     modal.style.display = "block";
     clearLogs();
 
     // Setup battle history
     setupBattleHistory();
+
+    // Display battle type information
+    if (isSurvivalBattle) {
+        addLog(`🛡️ SURVIVAL BATTLE: Survive for ${battleConfig.survivalTurns} turns to win!`);
+        addLog(`Objective: ${battleConfig.survivalObjective || "Hold your ground and don't fall!"}`);
+    }
+
+    if (enemies.length > 1) {
+        const enemyNames = enemies.map(e => e.name).join(", ");
+        addLog(`⚔️ OUTNUMBERED: Facing ${enemies.length} enemies - ${enemyNames}`);
+        addLog(`Watch out for enemy combo attacks!`);
+    }
 
     // Display environmental information if present and not neutral
     if (window.battleEnvironment && window.battleEnvironment.type !== "neutral") {
@@ -140,13 +239,13 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
         }
         
         // Show specific environmental effects for current characters
-        if (player.type) {
+        if (player.misc?.elementalAlignments) {
             const playerEnvEffect = calculateEnvironmentalDamage(player, envType, intensity);
             
             if (playerEnvEffect.hasImmunity) {
-                addLog(`🌟 ${player.name}'s ${player.type} type is immune to ${envType} environments!`);
+                addLog(`🌟 ${player.name}'s ${player.misc.elementalAlignments[0]} type is immune to ${envType} environments!`);
             } else if (playerEnvEffect.perTurnDamage > 0) {
-                addLog(`⚠️ ${player.name}'s ${player.type} type will take ${playerEnvEffect.perTurnDamage} environmental damage per turn!`);
+                addLog(`⚠️ ${player.name}'s ${player.misc.elementalAlignments[0]} type will take ${playerEnvEffect.perTurnDamage} environmental damage per turn!`);
                 if (playerEnvEffect.statusChance > 0) {
                     addLog(`🔥 ${playerEnvEffect.statusChance}% chance per turn of being affected by ${playerEnvEffect.statusType}!`);
                 }
@@ -155,25 +254,29 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
     }
 
     // Check if an ability can be used (considering cooldowns, uses, and combos)
-    function canUseAbilityInBattle(abilityId, ability) {
+    function canUseAbilityInBattle(abilityId, ability, targetEnemy = null) {
         // Update battleState with current values
         battleState.lastPlayerAbility = lastPlayerAbility;
-        battleState.lastEnemyAbility = lastEnemyAbility;
+        battleState.lastEnemyAbilities = lastEnemyAbilities;
         
+        // For multi-enemy battles, use the first alive enemy if no specific target
+        const enemy = targetEnemy || enemies.find(e => e.secondary.life > 0) || enemies[0];
         return canUseAbility(player, enemy, abilityId, ability, battleState);
     }
 
     // Use an ability (apply cooldown, reduce uses, and track for combos)
-    function useAbilityInBattle(abilityId, ability, isPlayer = true) {
+    function useAbilityInBattle(abilityId, ability, isPlayer = true, enemyIndex = 0) {
         // Update battleState with current values
         battleState.lastPlayerAbility = lastPlayerAbility;
-        battleState.lastEnemyAbility = lastEnemyAbility;
+        battleState.lastEnemyAbilities = lastEnemyAbilities;
         
         useAbility(abilityId, ability, battleState, isPlayer);
         
         // Update local variables from battleState
         lastPlayerAbility = battleState.lastPlayerAbility;
-        lastEnemyAbility = battleState.lastEnemyAbility;
+        if (!isPlayer && enemies[enemyIndex]) {
+            lastEnemyAbilities[enemies[enemyIndex].id || enemyIndex] = battleState.lastEnemyAbility;
+        }
     }
 
     // Process enemy loot drops
@@ -200,39 +303,93 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
         return lootReceived;
     }
 
+    // Clean up all mount partnerships for battle end
+    function cleanupAllMountPartnerships() {
+        // Clean up player mount partnerships
+        if (player.mountPartner) {
+            player.mountPartner = null;
+        }
+        if (player.riders) {
+            delete player.riders;
+        }
+        
+        // Clean up enemy mount partnerships
+        enemies.forEach(enemy => {
+            if (enemy.mountPartner) {
+                enemy.mountPartner = null;
+            }
+            if (enemy.riderPartner) {
+                enemy.riderPartner = null;
+            }
+            if (enemy.riders) {
+                delete enemy.riders;
+            }
+        });
+    }
+
     // shows the result of the battle
     function showResult(result) {
-        // Separate any remaining logs before ending battle
-        separateLog();
+        // Clean up all mount partnerships when battle ends
+        cleanupAllMountPartnerships();
+        
+        // Clean up all trapped statuses when battle ends
+        cleanupAllTrappedStatuses();
+        
+        // Clean up battle-specific statuses (endsWithBattle=true)
+        removeStatusAtEnd(player, addLog);
+        enemies.forEach(enemy => removeStatusAtEnd(enemy, addLog));
         
         actionsDiv.innerHTML = "";
-        let summary = result === "win" ? "Victory!" : result === "lose" ? "Defeat!" : result === "escape" ? "Escaped!" : "Battle Ended";
+        let summary = result === "win" ? "Victory!" : 
+                     result === "survival_win" ? "Survival Success!" :
+                     result === "lose" ? "Defeat!" : 
+                     result === "escape" ? "Escaped!" : "Battle Ended";
 
-        // Add grouped log to history
-        const logs = getGroupedLogs();
-        
+        // Complete the battle and send all rounds to history as one entry
         if (typeof window.addBattleToHistory === "function") {
-            window.addBattleToHistory(enemy.name, logs, summary);
+            const enemyNames = enemies.length > 1 ? 
+                enemies.map(e => e.name).join(" & ") : 
+                enemies[0]?.name || "Unknown Enemy";
+            
+            // Use the new completeBattle function to send all rounds at once
+            completeBattle(window.addBattleToHistory, enemyNames, summary);
         }
 
         const logDiv = document.getElementById("combat-log");
         const rewardsDiv = document.getElementById("combat-rewards");
 
-        if (result === "win") {
+        if (result === "win" || result === "survival_win") {
             // Show rewards in the dedicated rewards area
             rewardsDiv.style.display = "block";
-            let rewardsHTML = '<h3>Victory Rewards!</h3>';
+            let rewardsHTML = result === "survival_win" ? 
+                '<h3>Survival Rewards!</h3>' : 
+                '<h3>Victory Rewards!</h3>';
             
-            // Process loot drops and collect them for display
-            const lootReceived = processLootDrops(enemy, () => {}); // Don't add to log, collect for display
+            // Calculate total EXP and process loot from all enemies
+            let totalExp = 0;
+            const allLootReceived = [];
+            
+            if (result === "win") {
+                // Regular victory - process all defeated enemies
+                enemies.forEach(enemy => {
+                    const lootReceived = processLootDrops(enemy, () => {}); // Don't add to log, collect for display
+                    if (lootReceived && lootReceived.length > 0) {
+                        allLootReceived.push(...lootReceived);
+                    }
+                    totalExp += enemy.exp || Math.floor(Math.random() * 10 + 10);
+                });
+            } else {
+                // Survival victory - reduced rewards
+                totalExp = Math.floor(enemies.reduce((sum, e) => sum + (e.exp || 10), 0) * 0.6);
+                rewardsHTML += '<p>Survival bonuses apply to rewards!</p>';
+            }
             
             // Add EXP to rewards display
-            const exp = enemy.exp || Math.floor(Math.random() * 10 + 10);
-            rewardsHTML += `<div class="reward-item exp-reward">Gained ${exp} EXP</div>`;
+            rewardsHTML += `<div class="reward-item exp-reward">Gained ${totalExp} EXP</div>`;
             
             // Add loot to rewards display
-            if (lootReceived && lootReceived.length > 0) {
-                lootReceived.forEach(loot => {
+            if (allLootReceived && allLootReceived.length > 0) {
+                allLootReceived.forEach(loot => {
                     rewardsHTML += `<div class="reward-item loot-reward">Found: ${loot.name} x${loot.quantity}</div>`;
                 });
             }
@@ -242,19 +399,25 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
             const contBtn = document.createElement("button");
             contBtn.textContent = "Continue";
             contBtn.onclick = () => {
-                const leveledUp = addExp(player, exp);
+                const leveledUp = addExp(player, totalExp);
                 if (typeof window.updateCharacterUI === "function") window.updateCharacterUI();
                 if (leveledUp) {
                     // Add level up message to rewards
                     rewardsDiv.innerHTML += `<div class="reward-item level-up">🌟 Level Up! You are now level ${player.level}! 🌟</div>`;
                     // Give a moment to see the level up message
                     setTimeout(() => {
+                        // Clean up environmental effects
+                        cleanupEnvironmentalEffects(player, addLog);
+                        enemies.forEach(enemy => cleanupEnvironmentalEffects(enemy, addLog));
                         modal.style.display = "none";
-                        onBattleEnd("win");
+                        onBattleEnd(result === "survival_win" ? "survival_win" : "win");
                     }, 2000);
                 } else {
+                    // Clean up environmental effects
+                    cleanupEnvironmentalEffects(player, addLog);
+                    enemies.forEach(enemy => cleanupEnvironmentalEffects(enemy, addLog));
                     modal.style.display = "none";
-                    onBattleEnd("win");
+                    onBattleEnd(result === "survival_win" ? "survival_win" : "win");
                 }
             };
             actionsDiv.appendChild(contBtn);
@@ -263,6 +426,9 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
             const contBtn = document.createElement("button");
             contBtn.textContent = "Continue";
             contBtn.onclick = () => {
+                // Clean up environmental effects
+                cleanupEnvironmentalEffects(player, addLog);
+                enemies.forEach(enemy => cleanupEnvironmentalEffects(enemy, addLog));
                 modal.style.display = "none";
                 onBattleEnd("escape");
             };
@@ -270,9 +436,39 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
         } else if (result === "lose") {
             logDiv.innerHTML += `<div style="color:red;font-weight:bold;">You died!</div>`;
             const contBtn = document.createElement("button");
-            contBtn.textContent = "Continue";
+            contBtn.textContent = "Respawn";
             contBtn.onclick = () => {
-                onBattleEnd("respawn");
+                // Handle respawn logic here
+                const respawnNodes = window.storyData?.respawn || window.selectedStory?.respawn || [];
+                let respawnNode = "start";
+                
+                if (respawnNodes.length > 0) {
+                    respawnNode = respawnNodes[Math.floor(Math.random() * respawnNodes.length)];
+                }
+                
+                console.log(`💀 Player died. Respawning at: ${respawnNode}`, respawnNodes);
+                
+                // Set player life to half of max life
+                player.secondary.life = Math.floor(player.maxLife / 2);
+                player.life = player.secondary.life; // Sync compatibility layer
+                
+                console.log(`❤️ Player respawned with ${player.secondary.life}/${player.maxLife} life`);
+                
+                // Update character stats
+                if (typeof window.updateSecondaryStats === "function") {
+                    window.updateSecondaryStats(player, true);
+                }
+                if (typeof window.updateCharacterUI === "function") {
+                    window.updateCharacterUI();
+                }
+                
+                // Clean up environmental effects
+                cleanupEnvironmentalEffects(player, addLog);
+                enemies.forEach(enemy => cleanupEnvironmentalEffects(enemy, addLog));
+                modal.style.display = "none";
+                
+                // Go to respawn node
+                onBattleEnd(respawnNode);
             };
             actionsDiv.appendChild(contBtn);
         }
@@ -280,39 +476,153 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
 
     // Main turn function
     function nextTurn() {
-        // Update turn state
-        turnManager.nextTurn(battleState, addLog, battleEnvironment, addSystemMessage);
-        updateBattleStats(player, enemy);
+        // Increment turn counter
+        currentTurnNumber++;
+        battleState.currentTurnNumber = currentTurnNumber;
+        
+        // Check survival battle condition first
+        if (isSurvivalBattle) {
+            battleState.survivalTurnsLeft = battleConfig.survivalTurns - currentTurnNumber;
+            if (currentTurnNumber >= battleConfig.survivalTurns) {
+                addLog(`🎉 SURVIVAL SUCCESS: You survived ${battleConfig.survivalTurns} turns!`);
+                return showResult("survival_win");
+            }
+            // Show remaining turns
+            if (battleState.survivalTurnsLeft <= 3) {
+                addLog(`⏰ Survival: ${battleState.survivalTurnsLeft} turns remaining!`);
+            }
+        }
+        
+        // Update round state
+        roundManager.nextTurn(battleState, addLog, battleEnvironment, addLog);
+        
+        // Update battle stats for all enemies (alive and dead for display)
+        const aliveEnemies = enemies.filter(e => e.secondary.life > 0);
+        updateBattleStatsMulti(player, enemies); // Show all enemies including dead ones
 
-        if (player.life <= 0) return showResult("lose");
-        if (enemy.life <= 0) return showResult("win");
+        // Check win/lose conditions
+        if (player.secondary.life <= 0) return showResult("lose");
+        
+        // Check if all enemies are defeated (only for non-survival battles)
+        if (!isSurvivalBattle && aliveEnemies.length === 0) {
+            return showResult("win");
+        }
 
-        const turnInfo = turnManager.getTurnInfo();
+        const turnInfo = roundManager.getTurnInfo();
         actionsDiv.innerHTML = "";
 
+
         if (turnInfo.playerTurn) {
+            // Don't clear round actions when player turn starts - let them read what happened
+            // Round actions will be cleared when player makes their choice
+
             handlePlayerTurn(turnInfo);
         } else {
-            handleEnemyTurn(turnInfo);
+
+            handleEnemyTurnAI(turnInfo, aliveEnemies, player, enemies, roundManager, addLog, addRecentAction, nextTurn, battleState, lastEnemyAbilities);
+        }
+    }
+
+    // Update battle stats for multi-enemy battles
+    function updateBattleStatsMulti(player, allEnemies) {
+        const aliveEnemies = allEnemies.filter(e => e.secondary.life > 0);
+        
+        if (allEnemies.length === 1) {
+            // Single enemy - use original function
+            updateBattleStats(player, allEnemies[0]);
+        } else {
+            // Multiple enemies - create combined display
+            const playerStats = document.getElementById("combat-player-stats");
+            const enemyStats = document.getElementById("combat-enemy-stats");
+
+            // Player display (same as before)
+            const playerImageHtml = player.imagePath
+                ? `<div style="display: flex; align-items: center;width: 100%; justify-content: space-between;">
+                     <img src="${player.imagePath}" alt="${player.name}" 
+                       style="width: 180px; object-fit: cover; border-radius: 8px; margin-right: 15px;" 
+                       onerror="this.style.display='none';">
+                     <div style="flex: 1;display: flex; flex-direction: column;align-items: center;">
+                       <div><b>${player.name}</b></div>
+                       <div>HP: ${player.secondary.life}/${player.secondary.maxLife}</div>
+                       <div>MP: ${player.secondary.mp}/${player.secondary.maxMp}</div>
+                       <div>Status: ${statusSummary(player)}</div>
+                     </div>
+                   </div>`
+                : `<div><b>${player.name}</b> <span>HP: ${player.secondary.life}/${player.secondary.maxLife}</span> <span>MP: ${player.secondary.mp}/${player.secondary.maxMp}</span> <span>Status: ${statusSummary(player)}</span></div>`;
+
+            // Multi-enemy display - show ALL enemies (alive and dead)
+            const enemiesHtml = allEnemies.map((enemy, index) => {
+                const isDead = enemy.secondary.life <= 0;
+                const enemyClass = isDead ? 'defeated-enemy' : '';
+                const deadLabel = isDead ? ' ⚰️ DEAD' : '';
+                return `<div class="${enemyClass}" style="display: flex; justify-content: center; align-items: center; flex-direction: column; padding: 8px; margin: 4px; border-radius: 4px; ${isDead ? 'opacity: 0.5; background-color: #2a2a2a;' : ''}">
+                    <div><b>${enemy.name}${deadLabel}</b> <span>HP: ${enemy.secondary.life}/${enemy.secondary.maxLife}</span></div>
+                    <div>Status: ${statusSummary(enemy)}</div>
+                </div>`;
+            }).join('');
+
+            playerStats.innerHTML = playerImageHtml;
+            enemyStats.innerHTML = `<div>${enemiesHtml}</div>`;
         }
     }
 
     // Handle player turn
     function handlePlayerTurn(turnInfo) {
-        separateLog();
+
         
         if (!turnInfo.canPlayerAct) {
+
             addLog(`${player.name} is unable to move!`);
             lastPlayerAbility = null; // Reset combo when player can't act
-            turnManager.switchTurn();
+            roundManager.switchTurn();
             setTimeout(nextTurn, 1000);
             return;
         }
 
+
         // Create ability and item buttons
-        const abilityDiv = createAbilityButtons(player, enemy, battleState, handleAbilityUse);
+        const aliveEnemies = enemies.filter(e => e.secondary.life > 0);
+        const abilityDiv = createAbilityButtons(player, aliveEnemies[0], battleState, handleAbilityUse);
         const consumablesDiv = createConsumableButtons(player, handleItemUse);
-        const escapeDiv = createEscapeButton(player, enemy, handleEscape, handleStruggle);
+        const escapeDiv = createEscapeButton(player, aliveEnemies[0], handleEscape, handleStruggle);
+
+
+
+        // Add target selection for multi-enemy battles
+        if (aliveEnemies.length > 1) {
+            const targetDiv = document.createElement("div");
+            targetDiv.className = "target-selection";
+            targetDiv.innerHTML = '<h4>Select Target:</h4>';
+            
+            aliveEnemies.forEach((enemy, index) => {
+                const targetBtn = document.createElement("button");
+                targetBtn.textContent = `${enemy.name} (${enemy.secondary.life}/${enemy.secondary.maxLife} HP)`;
+                targetBtn.onclick = () => {
+                    // Update selected target
+                    window.selectedTarget = enemy;
+                    window.selectedTargetIndex = enemies.indexOf(enemy);
+                    
+                    // Update button visual feedback
+                    targetDiv.querySelectorAll('button').forEach(btn => btn.classList.remove('selected'));
+                    targetBtn.classList.add('selected');
+                };
+                
+                // Select first target by default
+                if (index === 0) {
+                    targetBtn.classList.add('selected');
+                    window.selectedTarget = enemy;
+                    window.selectedTargetIndex = enemies.indexOf(enemy);
+                }
+                
+                targetDiv.appendChild(targetBtn);
+            });
+            
+            actionsDiv.appendChild(targetDiv);
+        } else {
+            // Single enemy - set as default target
+            window.selectedTarget = aliveEnemies[0];
+            window.selectedTargetIndex = 0;
+        }
 
         // Setup action buttons
         setupActionButtons(actionsDiv, abilityDiv, consumablesDiv);
@@ -325,25 +635,51 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
 
     // Handle ability use
     function handleAbilityUse(abilityId, ability) {
-        if ((ability.mpCost || 0) > player.mp) return;
+        if ((ability.mpCost || 0) > player.secondary.mp) return;
         if (!canUseAbilityInBattle(abilityId, ability)) return;
         
-        player.mp -= ability.mpCost || 0;
-        player.mana = player.mp; // Keep in sync
+        player.secondary.mp -= ability.mpCost || 0;
         useAbilityInBattle(abilityId, ability, true);
 
+        // Initialize action tracking for this ability use
+        const target = window.selectedTarget || enemies.filter(e => e.secondary.life > 0)[0] || enemies[0];
+        let actionResults = {
+            hit: false,
+            damage: 0,
+            isCritical: false,
+            isOverkill: false,
+            statusEffects: []
+        };
+        
+        // Store current action tracking globally for executePlayerAbility to use
+        window.currentActionResults = actionResults;
+
         // Store current log state to capture this action's messages
-        const beforeActionLogLength = getBattleLogLength();
+        const actionMessages = [];
+        const captureLog = (message) => {
+            addLog(message);
+            actionMessages.push(message);
+        };
         
-        executePlayerAbility(ability, abilityId);
+        executePlayerAbility(ability, abilityId, captureLog);
         
-        // Capture messages from this action for recent display
-        const actionMessages = getCurrentBattleLogMessages(beforeActionLogLength);
-        addRecentAction(`${player.name} used ${ability.name}`, actionMessages);
+        // Create action data for logging with captured results
+        const actionData = createActionData(
+            player.name,
+            ability.name,
+            target?.name || "Enemy",
+            actionMessages,
+            window.currentActionResults || actionResults,
+            ability // Pass the ability object for image support
+        );
+        addRecentAction(actionData);
         
-        updateBattleStats(player, enemy);
-        turnManager.switchTurn();
-        nextTurn();
+        // Clean up global tracking
+        window.currentActionResults = null;
+        
+        // Update battle stats for multi-enemy battles
+        updateBattleStatsMulti(player, enemies);
+        // Don't call switchTurn() and nextTurn() here - executePlayerAbility already handles it
     }
 
     // Handle item use
@@ -351,8 +687,8 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
         if (itemDef.use(player)) {
             removeItem(itemId, 1);
             addLog(`${player.name} used ${itemDef.name}!`);
-            updateBattleStats(player, enemy);
-            turnManager.switchTurn();
+            updateBattleStatsMulti(player, enemies);
+            roundManager.switchTurn();
             nextTurn();
         } else {
             addLog(`Can't use ${itemDef.name} right now!`);
@@ -364,12 +700,22 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
         const escapeResult = handleEscapeAttempt(player, enemy);
         
         // Add to recent actions display
-        addRecentAction(`${player.name} tried to escape`, escapeResult.messages);
+        const escapeActionData = createActionData(
+            player.name,
+            "Escape",
+            "battlefield",
+            escapeResult.messages,
+            { hit: escapeResult.success }
+        );
+        addRecentAction(escapeActionData);
         
         if (escapeResult.success) {
             return showResult("escape");
         } else {
-            turnManager.switchTurn();
+            // Mark that player has acted this round (failed escape attempt)
+            roundManager.markCharacterActed(true);
+            
+            roundManager.switchTurn();
             setTimeout(nextTurn, 1000);
         }
     }
@@ -390,8 +736,12 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
             struggleMessages.push(message); // Also capture for recent action
         };
 
-        // Use the new status-based struggle system with opponent data
-        const success = calculateStatusBasedStruggle(player, pinnedStatusDef, captureLog, enemy);
+        // Use the new status-based struggle system
+        const result = attemptBreakFree(player, captureLog);
+        const success = result.success;
+        
+        // Add the result messages
+        result.messages.forEach(msg => struggleMessages.push(msg));
         
         // Add the final result message
         const resultMessage = success ? 
@@ -401,261 +751,201 @@ export function startBattle(player, enemy, onBattleEnd, battleEnvironment = null
         struggleMessages.push(resultMessage);
         
         // Add to recent actions display with all the detailed messages
-        addRecentAction(`${player.name} struggled to break free`, struggleMessages);
+        const struggleActionData = createActionData(
+            player.name,
+            "Struggle",
+            enemy.name,
+            struggleMessages,
+            { hit: success }
+        );
+        addRecentAction(struggleActionData);
         
         if (success) {
-            // Remove pinned status using BuffRegistry
-            BuffRegistry.removeBuff(player, 'pinned', addLog);
+            // Remove pinned status using new status system
+            removeStatus(player, 'pinned', addLog);
         }
         
+        // Mark that player has acted this round
+        roundManager.markCharacterActed(true);
+        
         // Continue the battle - switch turn and proceed
-        turnManager.switchTurn();
+        roundManager.switchTurn();
         setTimeout(nextTurn, 1000);
     }
 
     // Execute player ability
-    function executePlayerAbility(ability, abilityId) {
-        const turnInfo = turnManager.getTurnInfo();
+    function executePlayerAbility(ability, abilityId, logger = addLog) {
+        // Check if player should dismount when using close range attacks (except mount ability)
+        if (abilityId !== 'mount' && (ability.range === 'close' || ability.type === 'physical') && player.mountPartner) {
+            logger(`${player.name} dismounts to use ${ability.name}!`);
+            removeMountPartnership(player, player.mountPartner, logger, false); // No stun for voluntary dismount
+        }
+        
+        const turnInfo = roundManager.getTurnInfo();
+        
+        // Determine target based on ability range
+        let target;
+        if (ability.range === 'self') {
+            target = player;
+        } else {
+            target = window.selectedTarget || enemies.filter(e => e.secondary.life > 0)[0] || enemies[0];
+        }
 
         if (ability.type === "physical" || ability.type === "magic") {
-            addLog(`${player.name} used ${ability.name}`);
+            // For self-targeting abilities, adjust the log message
+            if (ability.range === 'self') {
+                logger(`${player.name} used ${ability.name} on themselves`);
+            } else {
+                logger(`${player.name} used ${ability.name} on ${target.name}`);
+            }
             
+            // Log ability description if available
+            if (ability.description) {
+                logger(ability.description);
+            }
+            
+            // ✨ NEW: Check modular battle interactions FIRST (before accuracy check)
+            const battleResult = handleModularBattleInteractions(ability, player, target, logger);
+            if (!battleResult.canHit) {
+                // Update action results - IMMUNITY MISS
+                if (window.currentActionResults) {
+                    window.currentActionResults.hit = false;
+                }
+                logger(`${player.name}'s ${ability.name} cannot reach ${target.name}!`);
+                return; // Attack cannot reach target due to range immunity
+            }
+
             // 🎯 PLAYER ATTACK HIT DETECTION - Calculate accuracy and roll for hit/miss
-            const accuracy = calculateAccuracy(ability, player, enemy, turnInfo.playerStats.effectiveSpeed, turnInfo.enemyStats.effectiveSpeed, turnInfo.playerStats.effectiveAccuracy);
+            const playerSpeed = player.secondaryAttributes?.speed || player.secondary?.speed || player.speed || 0;
+            const targetSpeed = target.secondaryAttributes?.speed || target.secondary?.speed || target.speed || 0;
+            const accuracy = calculateAccuracy(ability, player, target, playerSpeed, targetSpeed, 1.0);
             const roll = Math.floor(Math.random() * 100) + 1;
+            
+
             
             // 🎯 HIT CHECK: Roll must be <= accuracy to hit (minimum 30% chance guaranteed)
             if (roll <= accuracy) {
-                logAttackResult(true, ability, player.name, addLog);
-
-                // Check flying interactions
-                const flyingResult = handleFlyingInteractions(ability, player, enemy, addLog);
-                if (!flyingResult.canHit) {
-                    return;
+                // Update action results - HIT
+                if (window.currentActionResults) {
+                    window.currentActionResults.hit = true;
                 }
-
-                // Check pinned interactions
-                const pinnedResult = handlePinnedInteractions(ability, player, enemy, addLog);
+                
+                logAttackResult(true, ability, player.name, logger);
+                
+                // Log any interaction messages
+                battleResult.messages.forEach(msg => logger(msg));
 
                 // Calculate all damage using the organized formula
-                const damageInfo = calculateDamage(ability, player, enemy);
+                let damageInfo = calculateDamage(ability, player, target);
+                
+                // Apply environmental modifications to ability
+                const envModification = modifyAbilityByEnvironment(ability, player, target, damageInfo.finalDamage, ability.accuracy || 100);
+                if (envModification.alwaysMiss) {
+                    logger(`${ability.name} always misses in this environment!`);
+                    logAttackResult(false, ability, player.name, logger);
+                    nextTurn(); // Move to next turn since ability missed
+                    return;
+                }
+                if (envModification.damage !== damageInfo.finalDamage) {
+                    damageInfo.finalDamage = envModification.damage;
+                    logger(`Environmental effects modify ${ability.name} damage!`);
+                }
+                
+                // Apply any damage multipliers from modular interactions (e.g., swoop down)
+                if (battleResult.damageMultiplier !== 1.0) {
+                    damageInfo.finalDamage = Math.floor(damageInfo.finalDamage * battleResult.damageMultiplier);
+                    logger(`Battle modifier applied: ${battleResult.damageMultiplier}x damage!`);
+                }
                 
                 // Log type effectiveness message only
                 if (damageInfo.typeEffectivenessText) {
-                    addLog(damageInfo.typeEffectivenessText);
+                    logger(damageInfo.typeEffectivenessText);
                 }
                 
                 // Log environmental effect message if present
                 if (damageInfo.environmentalEffectText) {
-                    addLog(damageInfo.environmentalEffectText);
+                    logger(damageInfo.environmentalEffectText);
                 }
                 
                 // Apply critical hit to the final damage
                 const critInfo = calculateCriticalHit(ability, player, damageInfo.finalDamage, true);
                 
-                // Apply extra damage from flying interactions (fall damage)
-                const finalDamage = critInfo.finalDamage + flyingResult.extraDamage;
+                // ✨ NEW: Final damage (fall damage now handled in applyDamage automatically)
+                const finalDamage = critInfo.finalDamage;
+                
+                // Update action results with damage and crit info
+                if (window.currentActionResults) {
+                    window.currentActionResults.damage = finalDamage;
+                    window.currentActionResults.isCritical = critInfo.isCritical;
+                }
                 
                 if (finalDamage > 0) {
-                    const damageResult = applyDamage(enemy, finalDamage, ability, player, addLog);
-                    logDamage(damageInfo, critInfo, ability, addLog, finalDamage, damageResult.isOverkill);
+                    const damageResult = applyDamage(target, finalDamage, ability, player, logger);
                     
-                    // Handle pinned status changes after successful hit
-                    if (pinnedResult.shouldRemovePinFromAttacker) {
-                        BuffRegistry.removeBuff(player, 'pinned', addLog);
+                    // Update action results with overkill info
+                    if (window.currentActionResults) {
+                        window.currentActionResults.isOverkill = damageResult.isOverkill;
                     }
-                    if (pinnedResult.shouldStunTarget) {
-                        applyStunnedStatus(player, enemy, addLog);
-                    }
+                    
+                    logDamage(damageInfo, critInfo, ability, logger, finalDamage, damageResult.isOverkill);
+                    
+                    // ✨ Status effects (pinned, trapped) are now handled automatically by the modular system
                 }
 
-                // Handle pinned status changes for target
-                if (pinnedResult.shouldRemovePinFromTarget) {
-                    BuffRegistry.removeBuff(enemy, 'pinned', addLog);
+                // ✨ Handle status removal from modular interactions (e.g., flying -> swooping down)
+                // This happens regardless of damage amount
+                if (battleResult.shouldRemoveStatus) {
+                    removeIsHighStatuses(player, logger);
                 }
+
+                // ✨ Check for forceful break-free from trapped status
+                if (finalDamage > 0) {
+                    handleForcefulBreakFree(player, target, logger);
+                }
+
+                // ✨ Status effects are now handled automatically by the modular system
 
                 // Handle ability effects
-                handleAbilityEffects(ability, player, enemy, addLog);
+                handleAbilityEffects(ability, player, target, logger, battleState);
             } else {
-                logAttackResult(false, ability, player.name, addLog);
-            }
-        } else if (ability.type === "heal") {
-            player.life = Math.min(player.maxLife, player.life + ability.amount);
-            addLog(`${player.name} heals for ${ability.amount} HP!`);
-        } else if (ability.type === "buff") {
-            // Use the new modular buff system
-            if (ability.apply) {
-                // New system - ability handles its own application
-                ability.apply(player, player, addLog);
-            } else {
-                console.error(`Buff ability ${ability.name} has no apply function - cannot be used`);
-                addLog(`${ability.name} cannot be used - missing application logic!`);
-            }
-        }
-    }
-
-    // Handle enemy turn
-    function handleEnemyTurn(turnInfo) {
-        separateLog();
-        setTimeout(() => {
-            // Check if enemy can act (not stunned)
-            if (!turnInfo.canEnemyAct) {
-                addLog(`${enemy.name} is stunned and cannot act!`);
-                addRecentAction(`${enemy.name} is stunned`, [`${enemy.name} cannot act due to being stunned!`]);
-                turnManager.switchTurn();
-                nextTurn();
-                return;
-            }
-
-            const enemyAbilities = getAbilities(enemy.abilityIds || []);
-            
-            // Select enemy ability (weighted random based on preferences)
-            const selectedAbilityId = selectEnemyAbility(enemy, enemyAbilities);
-            const ability = enemyAbilities[selectedAbilityId];
-            
-            // Track enemy ability usage for combo system
-            lastEnemyAbility = selectedAbilityId;
-            
-            addLog(`${enemy.name} used ${ability.name}`);
-
-            // Store current log state to capture this action's messages
-            const beforeActionLogLength = getBattleLogLength();
-
-            // Execute enemy ability
-            executeEnemyAbility(ability, turnInfo);
-            
-            // Capture messages from this action for recent display
-            const actionMessages = getCurrentBattleLogMessages(beforeActionLogLength);
-            addRecentAction(`${enemy.name} used ${ability.name}`, actionMessages);
-            
-            turnManager.switchTurn();
-            nextTurn();
-        }, 1000);
-    }
-
-    // Execute enemy ability
-    function executeEnemyAbility(ability, turnInfo) {
-        // Check flying interactions first
-        const flyingResult = handleFlyingInteractions(ability, enemy, player, addLog);
-        if (!flyingResult.canHit) {
-            return;
-        }
-
-        // Check pinned interactions
-        const pinnedResult = handlePinnedInteractions(ability, enemy, player, addLog);
-
-        // 🎯 ENEMY ATTACK HIT DETECTION - Calculate accuracy and roll for hit/miss
-        const accuracy = calculateAccuracy(ability, enemy, player, turnInfo.enemyStats.effectiveSpeed, turnInfo.playerStats.effectiveSpeed, turnInfo.enemyStats.effectiveAccuracy);
-        const roll = Math.floor(Math.random() * 100) + 1;
-
-        // 🎯 HIT CHECK: Roll must be <= accuracy to hit (minimum 30% chance guaranteed)
-        if (roll <= accuracy) {
-            if (ability.type === "physical" || ability.type === "magic") {
-                // Calculate all damage using the organized formula  
-                const damageInfo = calculateDamage(ability, enemy, player);
-                
-                // Log type effectiveness message only
-                if (damageInfo.typeEffectivenessText) {
-                    addLog(damageInfo.typeEffectivenessText);
+                // Update action results - MISS
+                if (window.currentActionResults) {
+                    window.currentActionResults.hit = false;
                 }
                 
-                // Log environmental effect message if present
-                if (damageInfo.environmentalEffectText) {
-                    addLog(damageInfo.environmentalEffectText);
-                }
-                
-                // Apply critical hit to the final damage
-                const critInfo = calculateCriticalHit(ability, enemy, damageInfo.finalDamage, false);
-                
-                // Apply extra damage from flying interactions (fall damage)
-                const finalDamage = critInfo.finalDamage + flyingResult.extraDamage;
-                
-                if (finalDamage > 0) {
-                    const damageResult = applyDamage(player, finalDamage, ability, enemy, addLog);
-                    logDamage(damageInfo, critInfo, ability, addLog, finalDamage, damageResult.isOverkill);
-                    
-                    // Handle pinned status changes after successful hit
-                    if (pinnedResult.shouldRemovePinFromAttacker) {
-                        BuffRegistry.removeBuff(enemy, 'pinned', addLog);
-                    }
-                    if (pinnedResult.shouldStunTarget) {
-                        applyStunnedStatus(enemy, player, addLog);
-                    }
-                }
-
-                // Handle pinned status changes for target
-                if (pinnedResult.shouldRemovePinFromTarget) {
-                    BuffRegistry.removeBuff(player, 'pinned', addLog);
-                }
+                logAttackResult(false, ability, player.name, logger);
             }
-
-            // Handle ability effects
-            handleAbilityEffects(ability, enemy, player, addLog);
         } else {
-            addLog(`${enemy.name} uses ${ability.name} but you dodge!`);
-        }
-    }
-
-    // Select enemy ability using weighted random
-    function selectEnemyAbility(enemy, enemyAbilities) {
-        // Filter available abilities based on status requirements
-        const availableAbilityIds = (enemy.abilityIds || []).filter(abilityData => {
-            const abilityId = typeof abilityData === 'string' ? abilityData : abilityData.id;
-            const ability = enemyAbilities[abilityId];
-            if (!ability) return false;
+            // Non-damaging abilities (buffs, healing, etc.)
+            // Update action results - these always "hit"
+            if (window.currentActionResults) {
+                window.currentActionResults.hit = true;
+                window.currentActionResults.damage = 0; // No damage for buff/utility abilities
+            }
             
-            if (ability.requiresStatusSelf && !isStatusActive(enemy, ability.requiresStatusSelf)) return false;
-            if (ability.requiresStatusTarget && !isStatusActive(player, ability.requiresStatusTarget)) return false;
-            if (ability.requiresStatus && !isStatusActive(player, ability.requiresStatus)) return false;
-            
-            return true;
-        });
-        
-        // Fallback if no abilities are available
-        if (availableAbilityIds.length === 0) {
-            availableAbilityIds.push(...(enemy.abilityIds || []));
-        }
-
-        // Weighted random selection
-        let weighted = [];
-        const rateWeights = { 'preferred': 5, 'frequent': 4, 'normal': 3, 'rare': 2, 'super-rare': 1 };
-        
-        availableAbilityIds.forEach(abilityData => {
-            let abilityId, rate;
-            if (typeof abilityData === 'string') {
-                abilityId = abilityData;
-                rate = 'normal';
+            if (ability.range === 'self') {
+                logger(`${player.name} used ${ability.name} on themselves`);
             } else {
-                abilityId = abilityData.id;
-                rate = abilityData.rate || 'normal';
+                logger(`${player.name} used ${ability.name} on ${target.name}`);
             }
             
-            const weight = rateWeights[rate] || 3;
-            for (let i = 0; i < weight; i++) {
-                weighted.push(abilityId);
+            // Log ability description if available
+            if (ability.description) {
+                logger(ability.description);
             }
-        });
+            
+            handleAbilityEffects(ability, player, target, logger, battleState);
+        }
+
+        // Mark that player has acted this round
+        roundManager.markCharacterActed(true);
         
-        return weighted[Math.floor(Math.random() * weighted.length)];
+        roundManager.switchTurn();
+        setTimeout(nextTurn, 1000);
     }
 
     // Start the battle
     nextTurn();
 }
 
-/**
- * Get default intensity for environment types
- * @param {string} environmentType - The environment type
- * @returns {number} Default intensity value
- */
-function getDefaultIntensity(environmentType) {
-    const defaultIntensities = {
-        volcanic: 5,
-        underwater: 4,
-        storm: 5,
-        cave: 4,
-        neutral: 1
-    };
-    
-    return defaultIntensities[environmentType] || 3;
-}
+

@@ -9,7 +9,7 @@ export const item = {
     }
     
     // Check intelligence requirement
-    if (player.attributes && player.attributes.intelligence < 10) {
+    if (player.primary && player.primary.intelligence < 10) {
       return "A legendary scroll containing ancient knowledge. Requires 10 Intelligence to use.";
     }
     
@@ -34,7 +34,7 @@ export const item = {
 
   use(player) {
     // Check intelligence requirement
-    if (player.attributes && player.attributes[this.requiredAttribute] < this.requiredLevel) {
+    if (player.primary && player.primary[this.requiredAttribute] < this.requiredLevel) {
       const message = `${player.name} lacks the intelligence (${this.requiredLevel} required) to comprehend this ancient scroll!`;
       if (window.historyLog) {
         window.historyLog.push({ action: message });

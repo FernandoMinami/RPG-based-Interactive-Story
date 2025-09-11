@@ -1,0 +1,20 @@
+{
+  "id": "dragon",
+  "name": "Dragon",
+  "description": "Ancient and powerful draconic beings with elemental mastery",
+  "availableTypes": ["fire", "ice", "lightning", "dark", "light"],
+  "attributeModifiers": {
+    "strength": 2,
+    "constitution": 2,
+    "intelligence": 1,
+    "wisdom": 1,
+    "dexterity": -1,
+    "charisma": 0
+  },
+  "specialAbilities": ["flameBurst", "fly"],
+  "storylines": {
+    "unique": ["Your draconic heritage opens unique dialogue options and story paths"],
+    "power": ["NPCs may fear or revere your draconic nature"],
+    "magic": ["Natural affinity for elemental magic and flight"]
+  }
+}

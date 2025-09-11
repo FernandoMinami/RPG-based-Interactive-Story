@@ -1,5 +1,4 @@
-/**
- * ABILITY TEMPLATE
+/** ABILITY TEMPLATE
  * This template shows all possible properties an ability can have.
  * Copy this file and modify as needed for new abilities.
  * Remove properties that are not needed for your specific ability.
@@ -18,14 +17,14 @@ export default {
     usesWeight: false,                      // If true, uses attacker's weight in calculations
     
     // === RESOURCE COSTS ===
-    mpCost: 0,                              // Mana/MP cost to use this ability
+    mpCost: 0,                              // MP cost to use this ability
     hpCost: 0,                              // Health cost to use this ability (rare)
     
     // === HEALING PROPERTIES ===
     amount: 0,                              // Fixed healing amount or buff amount
     
     // === BUFF/DEBUFF PROPERTIES ===
-    attribute: "strength",                   // "strength", "physicDamage", "magicDamage", "physicDefense", "magicDefense", "speed", "charisma", "constitution", "dexterity", "wisdom", "intelligence"
+    attribute: "strength",                   // "strength", "physicalDamage", "magicDamage", "physicalDefense", "magicDefense", "speed", "charisma", "constitution", "dexterity", "wisdom", "intelligence"
     turns: 0,                               // Duration in turns (0 = permanent until battle ends)
     
     // === STATUS EFFECTS ===
@@ -57,7 +56,8 @@ export default {
     
     // === COMBO SYSTEM ===
     combo: {                               // Combo system
-        followsFrom: ["quick-attack", "fly", "power-surge"]  // Can combo after any of these!
+        type: "self",                      // "self", "ally", or "any" - who must have used the prerequisite
+        followsFrom: ["quick-attack", "fly", "power-surge"]  // Can combo after any of these abilities
     },
     
     // === DISPLAY PROPERTIES ===

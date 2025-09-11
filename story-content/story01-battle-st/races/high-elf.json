@@ -5,9 +5,10 @@
   "lore": "High elves are the most magically gifted of all elves, masters of arcane arts and keepers of ancient knowledge. They value intellect and magical prowess above all.",
   "availableTypes": ["light", "air", "neutral", "fire", "water"],
   "racialTraits": {
-    "arcane_mastery": "Superior magical abilities and mana capacity",
+    "arcane_mastery": "Superior magical abilities and mp capacity",
     "ancient_knowledge": "Access to powerful magical techniques"
   },
+  "specialAbilities": ["magicMissile", "magicShield"],
   "baseModifiers": {
     "strength": -2,
     "dexterity": 1, 

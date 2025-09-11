@@ -1,0 +1,14 @@
+{
+  "name": "interactive-story-app",
+  "version": "1.0.0",
+  "description": "An RPG-based interactive story application.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "echo \"No test specified\" && exit 0"
+  },
+  "keywords": ["RPG", "interactive", "story"],
+  "author": "Fernando Minami",
+  "license": "MIT"
+}

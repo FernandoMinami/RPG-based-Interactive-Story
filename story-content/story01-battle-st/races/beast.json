@@ -1,0 +1,20 @@
+{
+  "id": "beast",
+  "name": "Beast",
+  "description": "Animalistic beings with primal instincts and natural abilities",
+  "availableTypes": ["neutral", "earth", "air", "water"],
+  "attributeModifiers": {
+    "strength": 1,
+    "dexterity": 2,
+    "constitution": 1,
+    "intelligence": -1,
+    "wisdom": 1,
+    "charisma": -1
+  },
+  "specialAbilities": ["bite", "naturalInstincts"],
+  "storylines": {
+    "primal": ["Your beast nature allows you to communicate with animals"],
+    "survival": ["Enhanced survival skills and natural awareness"],
+    "instinct": ["Trust your instincts for better decision making"]
+  }
+}

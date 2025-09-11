@@ -6,7 +6,9 @@ export default {
     maxDamage: 0,
     accuracy: 95,
     mpCost: 0,
-    effect: { type: "poisoned", chance: 1, turns: 4 },
+    statusToApply: "poisoned",
+    statusChance: 1.0, // 100% chance
+    statusDuration: 4, // 4 turns
     description: "A strike that inflicts poison on the target.",
     onHit: "The poison strike hits and toxins spread!",
     onMiss: "The poison strike misses!"

@@ -12,7 +12,7 @@
       "title": "Display title for the node",
       "text": "Description text shown to player",
       "life": "Heal (+) or damage (-) player health",
-      "mana": "Restore (+) or drain (-) player mana",
+      "mp": "Restore (+) or drain (-) player mp",
       "exp": "Grant experience points",
       "str": "Increase strength attribute",
       "dex": "Increase dexterity attribute", 
@@ -34,7 +34,7 @@
       "requiredItem": "Require player to have specific item",
       "raceNext": "Object mapping races to different outcome nodes",
       "dice": "Dice roll configuration object with attribute and outcomes",
-      "effects": "life/mana/exp/attributes effects applied when choice is selected"
+      "effects": "life/mp/exp/attributes effects applied when choice is selected"
     },
     "_diceRollStructure": {
       "attribute": "Which attribute to add as modifier (str/dex/con/int/wis/cha)",
@@ -45,7 +45,7 @@
         "text": "Description of the result",
         "next": "Target node for this outcome",
         "raceNext": "Race-specific outcome nodes",
-        "effects": "life/mana/exp/items/attributes effects for this outcome"
+        "effects": "life/mp/exp/items/attributes effects for this outcome"
       }
     }
   },
@@ -63,7 +63,7 @@
       "text": "This is the description text that appears when the player reaches this node.",
       
       "life": 50,
-      "mana": 25,
+      "mp": 25,
       "exp": 100,
       "str": 1,
       "dex": 1,
@@ -94,7 +94,7 @@
         {
           "text": "Drink from the well",
           "life": 30,
-          "mana": 20,
+          "mp": 20,
           "next": "well-outcome"
         },
         {
@@ -118,7 +118,7 @@
         {
           "text": "Call upon ancient magic (Elf only)",
           "requiredRace": "elf",
-          "mana": 50,
+          "mp": 50,
           "next": "elf-magic-node"
         },
         {
@@ -374,7 +374,7 @@
                 "max": 9,
                 "text": "You become exhausted from the effort.",
                 "life": -15,
-                "mana": -10,
+                "mp": -10,
                 "next": "exhausted"
               },
               {
@@ -407,7 +407,7 @@
         {
           "text": "Enter the sacred grove (Elf only)",
           "requiredRace": "elf",
-          "mana": 50,
+          "mp": 50,
           "wis": 1,
           "next": "sacred-grove"
         },
