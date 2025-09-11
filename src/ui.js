@@ -1,11 +1,12 @@
 import { inventory, addItem, removeItem, hasItem, getInventory } from "./inventory.js";
 import { startBattle } from "./battle.js";
 import { addExp, getExpForLevel } from './leveling.js';
-import { updateSecondaryStats } from './character.js';
+import { updateSecondaryStats } from './characters.js';
 import { updateHistoryPanel, historyLog } from './history.js';
 import { loadItems, items } from './items.js';
 import { getAbilities, getAbility } from './abilities.js';
 import { statusSummary } from './status.js';
+import { formatElementalAlignments, formatRaces } from './element-helpers.js';
 
 // --- Grouped UI update functions ---
 function updateCharacterUI() {
@@ -14,9 +15,9 @@ function updateCharacterUI() {
     return;
   }
   
-  updateSecondaryStats(window.player);
+  updateSecondaryStats(window.player, true);
   updateLifeBar();
-  updateManaBar();
+  updateMpBar();
   updateAttributesBar();
   createAbilityButtons();
   updateStatusDisplay();
@@ -44,12 +45,14 @@ function updateCharacterUI() {
   
   // Update race and type display - Story layout only (old elements removed)
   const raceElementStory = document.getElementById("character-race-story");
-  const typeElementStory = document.getElementById("character-type-story");
-  if (raceElementStory && window.player.race) {
-    raceElementStory.textContent = `Race: ${window.player.race.charAt(0).toUpperCase() + window.player.race.slice(1)}`;
+  const elementalAlignmentsStory = document.getElementById("character-elementalAlignment-story");
+  if (raceElementStory && window.player.misc?.races) {
+    const raceText = formatRaces(window.player);
+    raceElementStory.textContent = `Race: ${raceText}`;
   }
-  if (typeElementStory && window.player.type) {
-    typeElementStory.textContent = `Type: ${window.player.type.charAt(0).toUpperCase() + window.player.type.slice(1)}`;
+  if (elementalAlignmentsStory && window.player.misc?.elementalAlignments) {
+    const typeText = formatElementalAlignments(window.player);
+    elementalAlignmentsStory.textContent = `Type: ${typeText}`;
   }
 }
 
@@ -58,24 +61,23 @@ function updateStoryUI() {
   updateHistoryPanel();
 }
 
-function updateManaBar() {
+function updateMpBar() {
   const player = window.player;
   if (!player) {
-    console.error("Player not available in updateManaBar");
+    console.error("Player not available in updateMpBar");
     return;
   }
-  
-  const mp = Number(player.mp) || Number(player.mana) || 0;  // Check mp first, then mana fallback
-  const maxMp = Number(player.maxMp) || Number(player.maxMana) || Number(player.secondary?.maxMp) || 1;
+  const mp = Number(player.secondary.mp) || 0;
+  const maxMp = Number(player.maxMp) || Number(player.secondary?.maxMp) || 1;
 
-  // Update story layout mana bar only (old elements removed)
-  const manaBarStory = document.getElementById("mana-bar-story");
+  // Update story layout mp bar only (old elements removed)
+  const mpBarStory = document.getElementById("mp-bar-story");
   const mpValueStory = document.getElementById("mp-value-story");
   const maxMpValueStory = document.getElementById("max-mp-value-story");
-  
-  if (manaBarStory) {
-    manaBarStory.value = Math.max(0, Math.min(mp, maxMp));
-    manaBarStory.max = maxMp;
+
+  if (mpBarStory) {
+    mpBarStory.value = Math.max(0, Math.min(mp, maxMp));
+    mpBarStory.max = maxMp;
   }
   if (mpValueStory) {
     mpValueStory.textContent = mp;
@@ -92,7 +94,7 @@ function updateLifeBar() {
     return;
   }
   
-  const life = Number(player.life) || 0;
+  const life = Number(player.secondary.life) || 0;
   const maxLife = Number(player.maxLife) || Number(player.secondary?.maxLife) || 1;  // Check direct property first
 
   // Update story layout life bar only (old elements removed)
@@ -151,8 +153,8 @@ function updateInventoryBar() {
           const current = player.equipment[item.slot];
           if (current && current !== item) {
             for (const [attr, mod] of Object.entries(current.modifiers)) {
-              if (player.attributes[attr] !== undefined) {
-                player.attributes[attr] -= mod;
+              if (player.primary[attr] !== undefined) {
+                player.primary[attr] -= mod;
               }
             }
             current.equipped = false;
@@ -160,8 +162,8 @@ function updateInventoryBar() {
           }
           if (!item.equipped) {
             for (const [attr, mod] of Object.entries(item.modifiers)) {
-              if (player.attributes[attr] !== undefined) {
-                player.attributes[attr] += mod;
+              if (player.primary[attr] !== undefined) {
+                player.primary[attr] += mod;
               }
             }
             item.equipped = true;
@@ -172,8 +174,8 @@ function updateInventoryBar() {
             }
           } else {
             for (const [attr, mod] of Object.entries(item.modifiers)) {
-              if (player.attributes[attr] !== undefined) {
-                player.attributes[attr] -= mod;
+              if (player.primary[attr] !== undefined) {
+                player.primary[attr] -= mod;
               }
             }
             item.equipped = false;
@@ -183,14 +185,14 @@ function updateInventoryBar() {
               updateHistoryPanel();
             }
           }
-          updateSecondaryStats(player);
+          updateSecondaryStats(player, true);
           updateCharacterUI();
           updateStoryUI();
         } else {
           const used = item.use(player);
           if (used) {
             removeItem(itemId, 1);
-            updateSecondaryStats(player);
+            updateSecondaryStats(player, true);
             updateCharacterUI();
             updateStoryUI();
             historyLog.push({ action: `Used item: ${item.name}` });
@@ -210,18 +212,25 @@ function updateAttributesBar() {
   const attrDiv = document.getElementById("attributes-bar-container");
   if (!attrDiv) return;
   
-  // Use new BuffRegistry system instead of legacy activeBoosts
-  import('./status.js').then(({ BuffRegistry }) => {
-    const buffSummary = BuffRegistry.getBuffSummary(window.player);
+  // Use new status system instead of legacy activeBoosts
+  import('./status.js').then(({ getActiveStatuses, StatusRegistry }) => {
+    const activeStatuses = getActiveStatuses(window.player);
+    const buffStatuses = activeStatuses.filter(statusData => {
+      const status = StatusRegistry[statusData.statusId];
+      return status && (status.increaseAtributes || status.increaseSecondary);
+    });
     
-    if (buffSummary.length === 0) {
+    if (buffStatuses.length === 0) {
       attrDiv.style.display = "none";
       attrDiv.innerHTML = "";
     } else {
       attrDiv.style.display = "";
-      const buffElements = buffSummary.map(buff => 
-        `<span style="color:blue; font-weight:bold; margin-right:10px;">${buff}</span>`
-      );
+      const buffElements = buffStatuses.map(statusData => {
+        const status = StatusRegistry[statusData.statusId];
+        const name = status ? status.name : statusData.statusId;
+        const turnsText = statusData.turns > 0 ? ` (${statusData.turns})` : "";
+        return `<span style="color:blue; font-weight:bold; margin-right:10px;">${name}${turnsText}</span>`;
+      });
       attrDiv.innerHTML = buffElements.join("");
     }
   }).catch(() => {
@@ -251,7 +260,7 @@ function createAbilityButtons() {
       buffActive = player.statusEffects && player.statusEffects.some(effect => effect.statusTag === ability.statusTag);
     }
     
-    btn.disabled = player.mp < (ability.mpCost || 0) || buffActive;
+    btn.disabled = player.secondary.mp < (ability.mpCost || 0) || buffActive;
     if (btn.disabled) {
       btn.style.opacity = "0.5";
       btn.style.cursor = "not-allowed";
@@ -265,8 +274,7 @@ function createAbilityButtons() {
       
       
       // Deduct MP cost
-      player.mp -= ability.mpCost || 0;
-      player.mana = player.mp; // Keep in sync
+      player.secondary.mp -= ability.mpCost || 0;
       
       try {
         if (ability.type === "buff" && ability.apply) {
@@ -275,9 +283,9 @@ function createAbilityButtons() {
           });
         } else if (ability.type === "heal") {
           // Handle heal abilities
-          if (player.life > 0 && player.life < player.maxLife) {
-            player.life += ability.amount;
-            if (player.life > player.maxLife) player.life = player.maxLife;
+          if (player.secondary.life > 0 && player.secondary.life < player.maxLife) {
+            player.secondary.life += ability.amount;
+            if (player.secondary.life > player.maxLife) player.secondary.life = player.maxLife;
           }
         } else {
           console.warn(`Story UI: Ability ${ability.name} type ${ability.type} not handled`);
@@ -301,8 +309,7 @@ function createAbilityButtons() {
       } catch (error) {
         console.error(`Error using ability ${ability.name}:`, error);
         // Refund MP on error
-        player.mp += ability.mpCost || 0;
-        player.mana = player.mp;
+        player.secondary.mp += ability.mpCost || 0;
         updateCharacterUI();
       }
     };
@@ -333,7 +340,7 @@ function updateStatusDisplay() {
 export {
   updateCharacterUI,
   updateStoryUI,
-  updateManaBar,
+  updateMpBar,
   updateLifeBar,
   updateInventoryBar,
   updateAttributesBar,

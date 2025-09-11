@@ -1,4 +1,4 @@
-export default {
+export const ability = {
     name: "Tail Whip",
     type: "physical",
     range: "close",

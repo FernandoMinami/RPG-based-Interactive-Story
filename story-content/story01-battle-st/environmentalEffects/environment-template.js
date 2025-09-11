@@ -139,7 +139,7 @@ export const environmentTemplate = {
  *    - Define combat modifiers
  *    - Configure visual and audio effects
  *    - Set scenario integration effects
- * 5. Add your new environment to the _environmentalEffects.json manifest file
+ * 5. Add your new environment to the environmentalEffects.json manifest file
  * 6. Test your environment in scenarios to ensure balance
  * 
  * EXAMPLE ENVIRONMENTS:

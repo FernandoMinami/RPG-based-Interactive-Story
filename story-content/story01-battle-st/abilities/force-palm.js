@@ -7,7 +7,9 @@ export default {
     accuracy: 90,
     mpCost: 12,
     cooldown: 2,                            // 2 turn cooldown
-    effect: { type: "stunned", chance: 0.4, turns: 1 },
+    statusToApply: "stunned",
+    statusChance: 0.4, // 40% chance
+    statusDuration: 1, // 1 turn
     description: "A powerful palm strike that may stun the target but requires recovery time.",
     onHit: "The force palm connects with tremendous force!",
     onMiss: "The force palm misses!"

@@ -8,6 +8,7 @@
     "nimbleness": "Enhanced dexterity and agility",
     "luck": "Occasional bonus to dice rolls and critical hits"
   },
+  "specialAbilities": ["dexterityBoost"],
   "baseModifiers": {
     "strength": -1,
     "dexterity": 2,

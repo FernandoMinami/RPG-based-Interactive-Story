@@ -6,7 +6,9 @@ export default {
     maxDamage: 0,
     accuracy: 95,
     mpCost: 0,
-    effect: { type: "stunned", chance: 1, turns: 2 },
+    statusToApply: "stunned",
+    statusChance: 1.0, // 100% chance
+    statusDuration: 2, // 2 turns
     description: "A blow that stuns the target.",
     onHit: "The stunning blow connects and dazes the target!",
     onMiss: "The stunning blow misses!"

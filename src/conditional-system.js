@@ -1,4 +1,6 @@
-// conditional-system.js - Advanced conditional choices and random encounter system
+// Conditional System for story nodes and choice validation
+
+import { hasAnyRace, getPrimaryRace } from './element-helpers.js';
 
 import { hasItem, hasLoot } from './inventory.js';
 import { getAbility } from './abilities.js';
@@ -10,10 +12,10 @@ import { getAbility } from './abilities.js';
  * @returns {boolean} - True if requirements are met
  */
 export function checkAttributeRequirements(player, requirements) {
-    if (!requirements || !player.attributes) return true;
+    if (!requirements || !player.primary) return true;
     
     for (const [attribute, minValue] of Object.entries(requirements)) {
-        if (player.attributes[attribute] < minValue) {
+        if (player.primary[attribute] < minValue) {
             return false;
         }
     }
@@ -31,21 +33,21 @@ export function checkPhysicalRequirements(player, requirements) {
     
     // Height requirements (in cm)
     if (requirements.height) {
-        if (requirements.height.min && player.height < requirements.height.min) {
-            return `You are too short (${player.height}cm, minimum ${requirements.height.min}cm required)`;
+        if (requirements.height.min && player.misc.height < requirements.height.min) {
+            return `You are too short (${player.misc.height}cm, minimum ${requirements.height.min}cm required)`;
         }
-        if (requirements.height.max && player.height > requirements.height.max) {
-            return `You are too tall (${player.height}cm, maximum ${requirements.height.max}cm allowed)`;
+        if (requirements.height.max && player.misc.height > requirements.height.max) {
+            return `You are too tall (${player.misc.height}cm, maximum ${requirements.height.max}cm allowed)`;
         }
     }
     
     // Weight requirements (in kg)
     if (requirements.weight) {
-        if (requirements.weight.min && player.weight < requirements.weight.min) {
-            return `You are too light (${player.weight}kg, minimum ${requirements.weight.min}kg required)`;
+        if (requirements.weight.min && player.misc.weight < requirements.weight.min) {
+            return `You are too light (${player.misc.weight}kg, minimum ${requirements.weight.min}kg required)`;
         }
-        if (requirements.weight.max && player.weight > requirements.weight.max) {
-            return `You are too heavy (${player.weight}kg, maximum ${requirements.weight.max}kg allowed)`;
+        if (requirements.weight.max && player.misc.weight > requirements.weight.max) {
+            return `You are too heavy (${player.misc.weight}kg, maximum ${requirements.weight.max}kg allowed)`;
         }
     }
     
@@ -62,12 +64,12 @@ export function checkRaceTypeRequirements(player, requirements) {
     if (!requirements) return true;
     
     // Race acceptance/rejection
-    if (requirements.acceptedRaces && !requirements.acceptedRaces.includes(player.race)) {
-        return `Your race (${player.race}) is not welcome here`;
+    if (requirements.acceptedRaces && !hasAnyRace(player, requirements.acceptedRaces)) {
+        return `Your race (${getPrimaryRace(player)}) is not welcome here`;
     }
     
-    if (requirements.rejectedRaces && requirements.rejectedRaces.includes(player.race)) {
-        return `Your race (${player.race}) is not allowed here`;
+    if (requirements.rejectedRaces && hasAnyRace(player, requirements.rejectedRaces)) {
+        return `Your race (${getPrimaryRace(player)}) is not allowed here`;
     }
     
     // Type acceptance/rejection
@@ -266,7 +268,7 @@ export function checkAbilityRequirements(player, requirements) {
 export function isChoiceVisible(choice, player) {
     // Existing filters
     if (choice.character && choice.character !== player.id) return false;
-    if (choice.requiredRace && choice.requiredRace !== player.race) return false;
+    if (choice.requiredRace && !hasAnyRace(player, [choice.requiredRace])) return false;
     
     // New requirement filters
     if (choice.requirements) {
@@ -357,7 +359,7 @@ export function processRandomEncounterNodes(node, player) {
             choices: encounter.choices || [],
             items: encounter.items,
             life: encounter.life,
-            mana: encounter.mana,
+            mp: encounter.mp,
             exp: encounter.exp,
             encounter: true // Mark as encounter node
         };

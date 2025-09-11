@@ -8,6 +8,7 @@
     "specialization": "Can access all combat types including dark",
     "focused_training": "Enhanced ability learning"
   },
+  "specialAbilities": ["charismaBoost"],
   "baseModifiers": {
     "strength": 0,
     "dexterity": 0, 

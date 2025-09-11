@@ -1,27 +1,14 @@
-import { applyEffects } from '../../../src/status.js';
-
 export default {
+    id: "clumsiness",
     name: "Clumsiness",
     type: "debuff", 
     range: "target",
-    turns: 4,
+    targetType: "enemy",
     mpCost: 6,
+    statusToApply: "clumsiness",
+    statusChance: 1.0, // 100% chance
+    statusDuration: 4, // 4 turns
     description: "Makes the target clumsy, reducing their dexterity significantly.",
     onHit: "The target becomes unsteady and clumsy!",
-    onMiss: "The clumsiness spell fails!",
-    statusTag: "clumsiness",
-    statusDesc: "Clumsy",
-    durationType: "turns",
-    
-    // Special effects configuration
-    effects: {
-        baseAttributeDebuffs: [
-            { attribute: 'dexterity', amount: 3 }
-        ]
-    },
-    
-    // Simple apply function - all logic handled by src/status.js
-    apply(caster, target, addLog = () => {}) {
-        return applyEffects(caster, target, this, addLog);
-    }
+    onMiss: "The clumsiness spell fails!"
 };

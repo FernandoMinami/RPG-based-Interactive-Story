@@ -2,13 +2,13 @@ export default {
     name: "Climbing Boots",
     displayName: "Climbing Boots",
     type: "armor",
-    category: "feet",
+    category: "foot",  // Changed from "feet" to "foot" to match character slots
     price: 180,
     description: "Sturdy boots with excellent grip designed for rocky terrain. Reduces the chance of tripping in caves.",
     onUse: null,
     effectType: "permanent",
     stats: {
-        physicDefense: 8,
+        physicalDefense: 8,
         stability: 15, // Reduces trip chance
         speed: 2 // Better movement on rough terrain
     },

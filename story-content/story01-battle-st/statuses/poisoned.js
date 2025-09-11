@@ -1,27 +1,19 @@
-// Poison DoT Status Definition
-// Pure data configuration for the DoT system
+// Poisoned Status - Character takes poison damage over time
 
 export default {
-    name: 'Poison',
-    statusTag: 'poison',
-    statusDesc: 'Poisoned',
-    type: 'dot',
-    damage: 3,
-    damageType: 'poison',
-    turns: 3,
-    durationType: 'turns',
-    description: 'Target is poisoned, taking poison damage each turn.',
+    id: "poisoned",
+    name: "Poisoned",
+    turns: 4, // Lasts 4 turns
+    immuneTypes: ["poison", "undead"], // Poison and undead types are immune
     
-    // Visual/UI properties
-    color: '#9932CC',
-    icon: '☠️',
+    type: "magic",
     
-    // Balance properties
-    stackable: false,
-    refreshable: true,
+    // DoT configuration
+    DoT: {
+        isDoT: true,
+        DoTAmount: 6,
+        DamageType: "poison"
+    },
     
-    // Resistance/immunity tags (optional)
-    immuneTypes: ['poison'], // Poison types are immune to poison
-    resistantTypes: [], 
-    vulnerableTypes: ['earth'] // Earth types are more susceptible to poison
-}
+    description: "Suffering from poison. Takes 6 poison damage each turn."
+};

@@ -1,0 +1,166 @@
+{
+    "potion": {
+        "id": "potion",
+        "name": "Potion",
+        "file": "potion.js"
+    },
+    "super-potion": {
+        "id": "super-potion",
+        "name": "Super Potion",
+        "file": "super-potion.js"
+    },
+    "mp-potion": {
+        "id": "mp-potion",
+        "name": "MP Potion",
+        "file": "mp-potion.js"
+    },
+    "super-mp-potion": {
+        "id": "super-mp-potion",
+        "name": "Super MP Potion",
+        "file": "super-mp-potion.js"
+    },
+    "metal-armor": {
+        "id": "metal-armor",
+        "name": "Metal Armor",
+        "file": "metal-armor.js"
+    },
+    "metal-helmet": {
+        "id": "metal-helmet",
+        "name": "Metal Helmet",
+        "file": "metal-helmet.js"
+    },
+    "leather-helmet": {
+        "id": "leather-helmet",
+        "name": "Leather Helmet",
+        "file": "leather-helmet.js"
+    },
+    "scroll-of-flight": {
+        "id": "scroll-of-flight",
+        "name": "Scroll of Flight",
+        "file": "scroll-of-flight.js"
+    },
+    "scroll-of-healing": {
+        "id": "scroll-of-healing",
+        "name": "Scroll of Healing",
+        "file": "scroll-of-healing.js"
+    },
+    "scroll-of-magic-missile": {
+        "id": "scroll-of-magic-missile",
+        "name": "Scroll of Magic Missile",
+        "file": "scroll-of-magic-missile.js"
+    },
+    "scroll-of-ancient-wisdom": {
+        "id": "scroll-of-ancient-wisdom",
+        "name": "Scroll of Ancient Wisdom",
+        "file": "scroll-of-ancient-wisdom.js"
+    },
+    "fire-protection-potion": {
+        "id": "fire-protection-potion",
+        "name": "Fire Protection Potion",
+        "file": "fire-protection-potion.js"
+    },
+    "heat-resistant-armor": {
+        "id": "heat-resistant-armor",
+        "name": "Heat Resistant Armor",
+        "file": "heat-resistant-armor.js"
+    },
+    "volcanic-cloak": {
+        "id": "volcanic-cloak",
+        "name": "Volcanic Cloak",
+        "file": "volcanic-cloak.js"
+    },
+    "diving-suit": {
+        "id": "diving-suit",
+        "name": "Diving Suit",
+        "file": "diving-suit.js"
+    },
+    "water-breathing-potion": {
+        "id": "water-breathing-potion",
+        "name": "Water Breathing Potion",
+        "file": "water-breathing-potion.js"
+    },
+    "aquatic-gear": {
+        "id": "aquatic-gear",
+        "name": "Aquatic Gear",
+        "file": "aquatic-gear.js"
+    },
+    "storm-cloak": {
+        "id": "storm-cloak",
+        "name": "Storm Cloak",
+        "file": "storm-cloak.js"
+    },
+    "lightning-rod": {
+        "id": "lightning-rod",
+        "name": "Lightning Rod",
+        "file": "lightning-rod.js"
+    },
+    "grounding-boots": {
+        "id": "grounding-boots",
+        "name": "Grounding Boots",
+        "file": "grounding-boots.js"
+    },
+    "spelunkers-helmet": {
+        "id": "spelunkers-helmet",
+        "name": "Spelunker's Helmet",
+        "file": "spelunkers-helmet.js"
+    },
+    "torch": {
+        "id": "torch",
+        "name": "Torch",
+        "file": "torch.js"
+    },
+    "climbing-boots": {
+        "id": "climbing-boots",
+        "name": "Climbing Boots",
+        "file": "climbing-boots.js"
+    },
+    "gold": {
+        "id": "gold",
+        "name": "Gold Coins",
+        "description": "Standard currency of the realm.",
+        "type": "currency",
+        "canUse": false
+    },
+    "advice-token": {
+        "id": "advice-token",
+        "name": "Advice Token",
+        "description": "A token representing wise advice received.",
+        "type": "misc",
+        "canUse": false
+    },
+    "hidden-gem": {
+        "id": "hidden-gem",
+        "name": "Hidden Gem",
+        "description": "A valuable gem discovered through careful observation.",
+        "type": "treasure",
+        "canUse": false
+    },
+    "ancient-clue": {
+        "id": "ancient-clue",
+        "name": "Ancient Clue",
+        "description": "A mysterious clue about ancient mysteries.",
+        "type": "quest",
+        "canUse": false
+    },
+    "cat-collar": {
+        "id": "cat-collar",
+        "name": "Cat Collar",
+        "description": "A small collar that belongs to a missing cat.",
+        "type": "quest",
+        "canUse": false
+    },
+    "horse": {
+        "id": "horse",
+        "name": "Horse",
+        "description": "A sturdy riding horse.",
+        "type": "mount",
+        "canUse": false
+    },
+    "draft-horse": {
+        "id": "draft-horse",
+        "name": "Draft Horse",
+        "description": "A strong horse capable of carrying heavy loads.",
+        "type": "mount",
+        "canUse": false
+    }
+}

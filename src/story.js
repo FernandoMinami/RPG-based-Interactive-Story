@@ -2,26 +2,41 @@ import { inventory, addItem, removeItem, hasItem, getInventory, addLoot, addMone
 import { startBattle } from "./battle.js";
 import { addExp, getExpForLevel } from './leveling.js';
 import { updateCharacterUI, updateStoryUI, updateInventoryBar } from './ui.js';
-import { updateSecondaryStats, regenMp, regenLife, syncManaProperties } from './character.js';
+import { updateSecondaryStats, regenMp, regenLife } from './characters.js';
 import { historyLog, updateHistoryPanel } from './history.js';
 import { loadItems, items } from './items.js';
 import { loadLoot } from './loot.js';
-import { loadStatuses, updateStatuses, BuffRegistry } from './status.js';
+import { loadStatuses, updateStatuses, StatusRegistry } from './status.js';
 import { loadAbilities } from './abilities.js';
+import { getPrimaryRace, getWeight, getHeight } from './element-helpers.js';
 import { executeDiceRoll, processChoice, handlePlayerDeath } from './utils.js';
 import { checkForRandomEncounter, triggerForcedBattle } from './encounters.js';
 import { showMerchantInterface } from './merchant.js';
 import { loadNpcs, showNpcInterface } from './npcs.js';
 import { downloadSave, handleSaveFileUpload, addSaveButton } from './save-load.js';
 import { loadRaces, getAllRaces, getAvailableRacesForCharacter, getAvailableTypesForRace, getTypeDescriptions, canRaceUseType } from './race.js';
-import { loadTypes } from './types.js';
-import { 
-  isChoiceVisible, 
-  getChoiceRejectionMessage, 
+import { loadElements } from './elements.js';
+import { loadEnvironments } from './environments.js';
+import { showCharacterSelection, setCharacterCreatedCallback } from './character-creator.js';
+import {
+  isChoiceVisible,
+  getChoiceRejectionMessage,
   processRandomEncounterNodes,
   startQuest,
-  completeQuest 
+  completeQuest
 } from './conditional-system.js';
+import { initializeModalEvents } from './modal-system.js'; // --- IGNORE ---
+import { getEquipmentCategories, findAvailableSlot, isSlotOccupied, getEquippedItem, findEquippedItemSlot, getEquippedItemsByType } from './equipment-utils.js';
+import { applyAllEquipmentBonuses } from './items.js';
+import { 
+  initializeDayNight, 
+  advanceTimeForChoice, 
+  advanceTimeForBattleRound,
+  isChoiceAvailableAtCurrentTime,
+  saveDayNightState,
+  loadDayNightState,
+  reinitializeDayNight
+} from './day-night.js';
 
 
 let stories = [];
@@ -31,7 +46,7 @@ let playerPath = [];
 
 let selectedStory = null;
 let selectedCharacterModule = null;
-let player = null;
+// Removed global player variable - using window.player instead
 
 let applyAttributes;
 
@@ -47,7 +62,7 @@ window.currentNode = currentNode;
 window.playerPath = playerPath;
 window.selectedStory = selectedStory;
 window.selectedCharacterModule = selectedCharacterModule;
-window.player = player;
+// window.player is set elsewhere when needed
 window.applyAttributes = applyAttributes;
 window.pendingNodeEffect = pendingNodeEffect;
 window.pendingDiceResult = pendingDiceResult;
@@ -55,8 +70,7 @@ window.battleJustHappened = battleJustHappened;
 
 // Function to set player for save loading
 export function setPlayer(playerObj) {
-  player = playerObj;
-  window.player = player;
+  window.player = playerObj;
 }
 
 // Function to restore all story state for save loading
@@ -79,15 +93,16 @@ export function restoreStoryState(saveData, characterModule) {
   window.battleJustHappened = battleJustHappened;
   window.storyData = storyData;
   window.visitedNodes = [...(saveData.progress.visitedNodes || [])];
+  
+  // Restore day-night state
+  if (saveData.gameState.dayNight) {
+    loadDayNightState(saveData.gameState.dayNight);
+  }
 }
 
 // --- Character selection and story loading ---
 async function showStorySelection() {
-  document.getElementById("inventory-modal").style.display = "none";
-  document.querySelector(".story-container").style.display = "none";
-  document.getElementById("gameover-container").style.display = "none";
-  document.getElementById("character-selection").style.display = "none";
-  document.getElementById("game-mode-selection").style.display = "none";
+  hideAllContainers();
   const list = document.getElementById("story-list");
   list.innerHTML = "";
 
@@ -107,35 +122,39 @@ async function showStorySelection() {
 
 // --- Load the story data ---
 async function loadStory(file) {
-  if (!player) {
+  if (!window.player) {
     console.error("Player not set before loading story!");
     return;
   }
+
+  const storyFolder = window.selectedStory?.folder?.replace('./', '');
+
   // Don't reset here - player was already reset during character selection
-  // player.reset();
+  // window.player.reset();
   playerPath = [];
   historyLog.length = 0;
-  document.getElementById("inventory-modal").style.display = "none";
-  document.getElementById("gameover-container").style.display = "none";
+  hideAllContainers();
   document.getElementById("attributes-bar-container").style.display = "";
 
   // Load statuses for this story
-  const statusManifest = await fetch('../story-content/story01-battle-st/statuses/_status.json?v=' + Date.now()).then(res => res.json());
-  await loadStatuses(statusManifest, '../story-content/story01-battle-st/statuses/');
+  const statusManifest = await fetch(`../story-content/${storyFolder}/statuses.json?v=` + Date.now()).then(res => res.json());
+  await loadStatuses(statusManifest, `../story-content/${storyFolder}/statuses/`);
 
   // Load abilities for this story
-  const abilityManifest = await fetch(`../story-content/story01-battle-st/abilities/_abilities.json?v=${Date.now()}`).then(res => res.json());
-  await loadAbilities(abilityManifest, '../story-content/story01-battle-st/abilities/');
+  const abilityManifest = await fetch(`../story-content/${storyFolder}/abilities.json?v=${Date.now()}`).then(res => res.json());
+  await loadAbilities(abilityManifest, `../story-content/${storyFolder}/abilities/`);
 
   // Load NPCs for this story
-  await loadNpcs('story01-battle-st');
+  await loadNpcs(`${storyFolder}`);
 
   // Load races for this story
-  await loadRaces('story01-battle-st');
+  await loadRaces(`${storyFolder}`);
 
   // Load types for this story
-  await loadTypes('story01-battle-st');
+  await loadElements(`${storyFolder}`);
 
+  // Load environments for this story
+  await loadEnvironments(`${storyFolder}`);
 
   // Add cache-busting query param
   const response = await fetch(file + "?v=" + Date.now());
@@ -162,7 +181,7 @@ async function loadStory(file) {
     document.getElementById("history-toggle-btn").style.display = "block";
   }
 
-  updateSecondaryStats(player);
+  updateSecondaryStats(window.player, true);
   updateCharacterUI();
   updateStoryUI();
   showNode(currentNode);
@@ -173,13 +192,18 @@ function showGameModeSelection(story) {
   selectedStory = story;
   window.selectedStory = story;
 
-  document.getElementById("story-selection").style.display = "none";
-  document.getElementById("character-selection").style.display = "none";
-  const gameModeDiv = document.getElementById("game-mode-selection");
+  showContainer("game-mode-selection");
   document.getElementById("game-mode-title").textContent = `${story.name} - Choose Game Mode`;
 
   // Set up event listeners for buttons
-  document.getElementById("new-game-btn").onclick = () => showCharacterSelection(story);
+  document.getElementById("new-game-btn").onclick = () => {
+    // Set up character creation callback before showing character selection
+    setCharacterCreatedCallback((player, story) => {
+      startGameWithCustomizedCharacter(player, story);
+    });
+    showContainer("character-selection");
+    showCharacterSelection(story);
+  };
   document.getElementById("load-game-btn").onclick = () => {
     document.getElementById("load-file-input").click();
   };
@@ -197,165 +221,17 @@ function showGameModeSelection(story) {
       fileInput.value = '';
     }
   };
-
-  gameModeDiv.style.display = "";
-}
-
-// --- Show character selection for a specific story ---
-async function showCharacterSelection(story) {
-  selectedStory = story;
-  window.selectedStory = story;
-  document.getElementById("story-selection").style.display = "none";
-  document.getElementById("game-mode-selection").style.display = "none";
-
-  // Load races and types before character selection
-  await loadRaces(story.folder.replace('./', ''));
-  await loadTypes(story.folder.replace('./', ''));
-
-  // Load abilities for this story
-  const abilityManifestUrl = `../story-content/${story.folder.replace('./', '')}/abilities/_abilities.json?v=${Date.now()}`;
-  const abilityManifest = await fetch(abilityManifestUrl).then(res => res.json());
-  await loadAbilities(abilityManifest, `../story-content/${story.folder.replace('./', '')}/abilities/`);
-
-
-  const charDiv = document.getElementById("character-selection");
-  charDiv.innerHTML = "<h2>Choose Your Character</h2>";
-  const manifestUrl = `../story-content/${story.folder.replace('./', '')}/characters/_characters.json`;
-  const characters = await fetch(manifestUrl).then(r => r.json());
-  characters.forEach(char => {
-    const btn = document.createElement("button");
-    btn.textContent = char.name;
-    btn.onclick = async () => {
-      // Load character but don't start game yet - show customization form
-      const charPath = `../story-content/${story.folder.replace('./', '')}/characters/${char.file.replace('./', '')}?v=${Date.now()}`;
-      selectedCharacterModule = await import(charPath);
-      player = selectedCharacterModule.player;
-      window.player = player;
-      window.selectedCharacterModule = selectedCharacterModule;
-      applyAttributes = selectedCharacterModule.applyAttributes;
-      window.applyAttributes = applyAttributes;
-
-      // Show character customization form
-      showCharacterCustomization(char, story);
-    };
-    charDiv.appendChild(btn);
-  });
-  charDiv.style.display = "";
-}
-
-// --- Show character customization form ---
-function showCharacterCustomization(baseChar, story) {
-
-  function updateTypeOptions(selectedRace) {
-    const typeSelect = document.getElementById("char-type");
-    const availableTypes = getAvailableTypesForRace(selectedRace);
-    const typeDescriptions = getTypeDescriptions();
-
-    typeSelect.innerHTML = "";
-    availableTypes.forEach(type => {
-      const option = document.createElement("option");
-      option.value = type;
-      option.textContent = typeDescriptions[type];
-      option.selected = player.type === type;
-      typeSelect.appendChild(option);
-    });
-
-    // If current type is not available for the race, reset to neutral
-    if (!canRaceUseType(selectedRace, player.type)) {
-      player.type = "neutral";
-      typeSelect.value = "neutral";
-    }
-  }
-
-  function buildRaceOptions() {
-    const races = getAvailableRacesForCharacter(player);
-    let raceOptionsHtml = '';
-
-    Object.values(races).forEach(race => {
-      const selected = player.race === race.id ? 'selected' : '';
-      const typeCount = race.availableTypes.length;
-      raceOptionsHtml += `<option value="${race.id}" ${selected}>${race.name} - ${race.description} (${typeCount} types)</option>`;
-    });
-
-    return raceOptionsHtml;
-  }
-
-  const charDiv = document.getElementById("character-selection");
-  charDiv.innerHTML = `
-    <h2>Customize Your Character</h2>
-    <div style="max-width: 500px; margin: 0 auto; text-align: left;">
-      <h3>Character: ${baseChar.name}</h3>
-      
-      <div style="margin-bottom: 15px;">
-        <label for="char-name" style="display: block; margin-bottom: 5px; font-weight: bold;">Character Name:</label>
-        <input type="text" id="char-name" value="${player.name}" 
-               style="width: 100%; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;" 
-               maxlength="20" placeholder="Enter your character name">
-      </div>
-      
-      <div style="margin-bottom: 15px;">
-        <label for="char-race" style="display: block; margin-bottom: 5px; font-weight: bold;">Race:</label>
-        <select id="char-race" style="width: 100%; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;">
-          ${buildRaceOptions()}
-        </select>
-        <small style="color: #666; font-style: italic;">Race affects available story choices and elemental affinities</small>
-      </div>
-      
-      <div style="margin-bottom: 20px;">
-        <label for="char-type" style="display: block; margin-bottom: 5px; font-weight: bold;">Combat Type:</label>
-        <select id="char-type" style="width: 100%; padding: 8px; font-size: 16px; border: 1px solid #ccc; border-radius: 4px;">
-        </select>
-        <small style="color: #666; font-style: italic;">Type affects combat damage and resistances (changes based on race)</small>
-      </div>
-      
-      <div style="text-align: center;">
-        <button id="confirm-character" style="background: #28a745; color: white; border: none; padding: 12px 24px; 
-                font-size: 16px; border-radius: 4px; cursor: pointer; margin-right: 10px;">
-          Start Adventure
-        </button>
-        <button id="back-to-selection" style="background: #6c757d; color: white; border: none; padding: 12px 24px; 
-                font-size: 16px; border-radius: 4px; cursor: pointer;">
-          Back to Character Selection
-        </button>
-      </div>
-    </div>
-  `;
-
-  // Initialize type options based on current race
-  updateTypeOptions(player.race);
-
-  // Add race change event listener
-  document.getElementById("char-race").onchange = function () {
-    updateTypeOptions(this.value);
-  };
-
-  // Add event listeners
-  document.getElementById("confirm-character").onclick = () => {
-    const newName = document.getElementById("char-name").value.trim();
-    const newRace = document.getElementById("char-race").value;
-    const newType = document.getElementById("char-type").value;
-
-    if (!newName) {
-      alert("Please enter a character name!");
-      return;
-    }
-
-    // Update player with customizations
-    player.name = newName;
-    player.race = newRace;
-    player.type = newType;
-
-    // Start the game
-    startGameWithCustomizedCharacter(story);
-  };
-
-  document.getElementById("back-to-selection").onclick = () => {
-    showCharacterSelection(story);
-  };
 }
 
 // --- Start game with customized character ---
-async function startGameWithCustomizedCharacter(story) {
+async function startGameWithCustomizedCharacter(player, story) {
+  // Set global references
+  selectedStory = story;
+  window.selectedStory = story;
+  window.player = player;
+
+  window.selectedCharacterModule = window.selectedCharacterModule;
+  window.applyAttributes = window.applyAttributes;
   // Initialize new story page layout
   initializeStoryPageLayout();
 
@@ -364,18 +240,29 @@ async function startGameWithCustomizedCharacter(story) {
   // Update story layout character name
   const characterNameStory = document.getElementById("current-character-name-story");
   if (characterNameStory) {
-    characterNameStory.textContent = player.name;
+    characterNameStory.textContent = window.player.name;
   }
 
-  if (typeof player.reset === "function") player.reset();
-
-  // Sync mana properties after reset
-  syncManaProperties(player);
+  if (typeof window.player.reset === "function") window.player.reset();
 
   await loadItems(story.folder.replace('./', ''));
   await loadLoot(story.folder.replace('./', ''));
-  updateSecondaryStats(player);
+
+  // Add some test items to inventory for debugging
+  import('./inventory.js').then(({ addItem, addMoney }) => {
+    addItem('potion', 3);
+    addItem('metal-helmet', 1);
+    addItem('leather-helmet', 1);
+    addMoney(50);
+  }).catch(err => console.error('Failed to add test items:', err));
+
+  updateSecondaryStats(window.player, true);
   await loadStory(`../story-content/${story.file.replace('./', '')}`);
+
+  // Refresh ability buttons now that abilities are loaded
+  if (window.createStoryAbilityButtons) {
+    window.createStoryAbilityButtons();
+  }
 
   // Add save button to UI
   addSaveButton();
@@ -386,7 +273,7 @@ async function startGameWithCustomizedCharacter(story) {
 
 // --- Load a specific scenario by ID ---
 async function loadScenario(storyFolder, scenarioId) {
-  const manifestUrl = `../story-content/${storyFolder}/scenarios/_scenarios.json?v=${Date.now()}`;
+  const manifestUrl = `../story-content/${storyFolder}/scenarios.json?v=${Date.now()}`;
   const scenarios = await fetch(manifestUrl).then(r => r.json());
   const scenarioInfo = scenarios.find(s => s.id === scenarioId);
   if (!scenarioInfo) throw new Error("Scenario not found: " + scenarioId);
@@ -398,10 +285,13 @@ async function loadScenario(storyFolder, scenarioId) {
 // --- Main story node function ---
 export async function showNode(nodeKey) {
 
-  if (!player || !player.id) {
-    console.error("Player not loaded or missing id!", player);
+  if (!window.player || !window.player.id) {
+    console.error("Player not loaded or missing id!", window.player);
     return;
   }
+
+  // Create local reference to window.player for convenience
+  const player = window.player;
 
   // Update global currentNode for save system
   currentNode = nodeKey;
@@ -410,7 +300,7 @@ export async function showNode(nodeKey) {
   // Legacy handleBoosts removed - buff expiration now handled by turn management system
   regenMp && regenMp();
   regenLife && regenLife();
-  updateSecondaryStats(player);
+  updateSecondaryStats(player, true);
   updateCharacterUI && updateCharacterUI();
 
   const gameoverContainer = document.getElementById("gameover-container");
@@ -424,7 +314,7 @@ export async function showNode(nodeKey) {
   if (!node && storyData.nodes) {
     node = storyData.nodes[nodeKey];
   }
-  
+
   if (!node && storyData.nextScenes && storyData.nextScenes[nodeKey]) {
     node = storyData.nextScenes[nodeKey];
   }
@@ -457,7 +347,7 @@ export async function showNode(nodeKey) {
         intensity: node.environment.intensity || 1
       };
     }
-    
+
     // Check for environmentalCheck format (alternative format)
     if (node.environmentalCheck) {
       return {
@@ -465,7 +355,7 @@ export async function showNode(nodeKey) {
         intensity: node.environmentalCheck.intensity || 1
       };
     }
-    
+
     // Check for scenario-level environment (from loaded story data)
     if (storyData.environment) {
       return {
@@ -473,18 +363,18 @@ export async function showNode(nodeKey) {
         intensity: 1 // Default intensity for scenario
       };
     }
-    
+
     return null;
   };
 
   const environmentInfo = getEnvironmentalInfo();
-  
+
   // Show dice roll result from previous choice
   let diceResultHtml = "";
   if (pendingDiceResult) {
     diceResultHtml = pendingDiceResult;
   }
-  
+
   // Show effects from previous choice (damage/healing)
   let effectHtml = "";
   if (pendingNodeEffect !== null && pendingNodeEffect !== 0) {
@@ -499,45 +389,19 @@ export async function showNode(nodeKey) {
   if (environmentInfo) {
     const envType = environmentInfo.type;
     const envIntensity = environmentInfo.intensity;
-    
-    
+
+
     // Load environmental data and display effects
-    import('./environmental.js').then(async ({ loadStoryEnvironments }) => {
+    import('./environments.js').then(async ({ getEnvironmentById, getAllEnvironments }) => {
       try {
-        const environments = await loadStoryEnvironments(selectedStory.folder.replace('./', ''));
+        const environments = getAllEnvironments();
         const envData = environments[envType];
-        // Find the intensity range that contains our intensity value
-        let intensityData = null;
-        let matchedRange = null;
         
-        if (envData && envData.intensityLevels) {
-          for (const [range, data] of Object.entries(envData.intensityLevels)) {
-            if (range.includes('-')) {
-              // Handle range format like "1-3", "4-6", etc.
-              const [min, max] = range.split('-').map(Number);
-              if (envIntensity >= min && envIntensity <= max) {
-                intensityData = data;
-                matchedRange = range;
-                break;
-              }
-            } else {
-              // Handle exact match format like "1", "2", etc. (backward compatibility)
-              if (parseInt(range) === envIntensity) {
-                intensityData = data;
-                matchedRange = range;
-                break;
-              }
-            }
-          }
-        }
-        
-        
-        if (intensityData) {
-          
+        if (envData) {
           // Create intensity indicator based on danger level
           let intensityColor = "#4a90e2"; // Default blue
           let dangerIcon = "🌍";
-          
+
           if (envIntensity >= 10) {
             intensityColor = "#dc3545"; // Red - extreme danger
             dangerIcon = "⚠️";
@@ -548,12 +412,12 @@ export async function showNode(nodeKey) {
             intensityColor = "#ffc107"; // Yellow - moderate danger
             dangerIcon = "⚡";
           }
-          
+
           const envMessage = `<div style="color:${intensityColor}; font-style:italic; margin-top:5px; padding:5px; background:rgba(74,144,226,0.1); border-radius:4px;">
-            ${dangerIcon} <strong>${envData.name}</strong> (${intensityData.name} - Intensity ${envIntensity})<br>
-            <small>${intensityData.effects.message || intensityData.description}</small>
+            ${dangerIcon} <strong>${envData.name}</strong> (Intensity ${envIntensity})<br>
+            <small>${envData.description}</small>
           </div>`;
-          
+
           // Update the effect display with environmental info
           const currentEffectHtml = effectHtml + envMessage;
           updateElementContent("node-effect", currentEffectHtml);
@@ -570,7 +434,7 @@ export async function showNode(nodeKey) {
         updateElementContent("dice-result", diceResultHtml);
       }
     }).catch(error => {
-      console.error('Failed to import environmental.js:', error);
+      console.error('Failed to import environments.js:', error);
       updateElementContent("node-effect", effectHtml);
       updateElementContent("dice-result", diceResultHtml);
     });
@@ -578,10 +442,13 @@ export async function showNode(nodeKey) {
     // No environmental effects, just update with base effects
     updateElementContent("node-effect", effectHtml);
   }
-  
+
   // Update dice result display
   updateElementContent("dice-result", diceResultHtml);
-  
+
+  // Display node image if available
+  displayNodeImage(node);
+
   pendingNodeEffect = null;
   pendingDiceResult = "";
 
@@ -593,11 +460,12 @@ export async function showNode(nodeKey) {
     showMerchantInterface();
   }
 
-  // Add to history (with effect)
+  // Add to history (with effect and image)
   historyLog.push({
     title: node.title || "",
     effect: effectHtml,
-    text: storyText
+    text: storyText,
+    img: node.img || null
   });
 
   // Update history panels
@@ -621,7 +489,7 @@ export async function showNode(nodeKey) {
   // Use the main container if available, otherwise use the old one
   const activeChoicesContainer = choicesContainerMain || choicesContainer;
 
-  if (player.life <= 0) {
+  if (window.player.secondary.life <= 0) {
     if (activeChoicesContainer) activeChoicesContainer.innerHTML = ""; // Hide all choices
 
     // Show death message and respawn button
@@ -637,8 +505,8 @@ export async function showNode(nodeKey) {
       if (respawnNodes.length > 0) {
         respawnNode = respawnNodes[Math.floor(Math.random() * respawnNodes.length)];
       }
-      player.life = Math.floor(player.maxLife / 2);
-      updateSecondaryStats(player);
+      window.player.secondary.life = Math.floor(window.player.maxLife / 2);
+      updateSecondaryStats(window.player, true);
       showNode(respawnNode);
     };
     if (activeChoicesContainer) activeChoicesContainer.appendChild(respawnBtn);
@@ -647,22 +515,25 @@ export async function showNode(nodeKey) {
   }
 
   // --- Process random encounter nodes ---
-  // Skip random encounters if battles are disabled in this scenario
+  // Skip random encounters if disabled in this scenario
   let encounterNode = null;
   let randomEncounterTriggered = false;
-  
-  if (!storyData.noBattle) {
+
+  // Check both the old noBattle flag and new randomEncounters flag
+  const randomEncountersDisabled = storyData.noBattle || storyData.randomEncounters === false;
+
+  if (!randomEncountersDisabled) {
     encounterNode = processRandomEncounterNodes(node, player);
     if (encounterNode) {
       randomEncounterTriggered = true;
     }
   }
-  
+
   if (encounterNode) {
     // Temporarily replace the current node with the encounter
     const originalNode = node;
     node = encounterNode;
-    
+
     // Add a choice to continue to the original destination after encounter
     if (!node.choices) node.choices = [];
     node.choices.push({
@@ -670,21 +541,21 @@ export async function showNode(nodeKey) {
       next: nodeKey, // Return to original node
       continueFromEncounter: true
     });
-    
+
     // Add encounter message to history
     historyLog.push({
       title: "⚡ Random Encounter!",
       effect: "",
       text: "Something unexpected happens..."
     });
-    
+
     // Set flag to prevent immediate battle encounters
     battleJustHappened = true;
   }
 
   // --- Random encounter check (traditional battle encounters) ---
-  // Skip if a random encounter node already triggered
-  if (!randomEncounterTriggered && checkForRandomEncounter({
+  // Skip if a random encounter node already triggered or if random encounters are disabled
+  if (!randomEncounterTriggered && !randomEncountersDisabled && checkForRandomEncounter({
     battleJustHappened,
     node,
     storyData,
@@ -704,31 +575,31 @@ export async function showNode(nodeKey) {
 
   // --- Choices ---
   (node.choices || [])
-    .filter(choice => isChoiceVisible(choice, player))
+    .filter(choice => isChoiceVisible(choice, player) && isChoiceAvailableAtCurrentTime(choice))
     .forEach(choice => {
       const choiceDiv = document.createElement("div");
       const btn = document.createElement("button");
-      
+
       // Create choice text with dice roll info if applicable
       let choiceText = choice.text;
       if (choice.dice && choice.dice.attribute) {
         const attributeName = choice.dice.attribute;
-        const attributeValue = player.attributes[attributeName] || 0;
+        const attributeValue = window.player.primary[attributeName] || 0;
         const attributeDisplayName = attributeName.charAt(0).toUpperCase() + attributeName.slice(1);
         choiceText += ` 🎲 (${attributeDisplayName}: ${attributeValue})`;
       } else if (choice.dice) {
         choiceText += " 🎲";
       }
-      
+
       btn.textContent = choiceText;
-      
+
       // Add data attributes to track dice choices for later updates
       if (choice.dice && choice.dice.attribute) {
         btn.setAttribute('data-dice-choice', 'true');
         btn.setAttribute('data-dice-attribute', choice.dice.attribute);
         btn.setAttribute('data-choice-base-text', choice.text);
       }
-      
+
       // Check for rejection conditions (choices that would be denied)
       const rejectionMessage = getChoiceRejectionMessage(choice, player);
       if (rejectionMessage) {
@@ -739,7 +610,7 @@ export async function showNode(nodeKey) {
           const rejectionDiv = document.createElement("div");
           rejectionDiv.style.cssText = "color: red; font-style: italic; margin: 10px 0; padding: 10px; background: rgba(255,0,0,0.1); border-radius: 4px;";
           rejectionDiv.textContent = rejectionMessage;
-          
+
           // Insert after the choice button temporarily
           choiceDiv.appendChild(rejectionDiv);
           setTimeout(() => {
@@ -759,7 +630,7 @@ export async function showNode(nodeKey) {
             startQuest(player, choice.questStart);
             historyLog.push({ action: `Started quest: ${choice.questStart}` });
           }
-          
+
           if (choice.questComplete) {
             completeQuest(player, choice.questComplete);
             historyLog.push({ action: `Completed quest: ${choice.questComplete}` });
@@ -767,7 +638,7 @@ export async function showNode(nodeKey) {
 
           // --- Forced battle support (works for any choice) ---
           if (choice.battle) {
-            // Check if battles are disabled in this scenario
+            // Check if battles are disabled in this scenario (backward compatibility)
             if (storyData.noBattle) {
               console.warn(`Battle attempted in no-battle scenario: ${choice.battle}`);
               // Skip the battle and go directly to the next node
@@ -776,7 +647,26 @@ export async function showNode(nodeKey) {
               }
               return;
             }
-            
+
+            await triggerForcedBattle(choice, selectedStory, player, (targetNode) => {
+              battleJustHappened = true; // Keep flag set to prevent immediate re-encounter
+              showNode(targetNode);
+            });
+            return;
+          }
+
+          // --- Multi-enemy battle support ---
+          if (choice.enemies && Array.isArray(choice.enemies)) {
+            // Check if battles are disabled in this scenario (backward compatibility)
+            if (storyData.noBattle) {
+              console.warn(`Multi-enemy battle attempted in no-battle scenario: ${choice.enemies.join(', ')}`);
+              // Skip the battle and go directly to the next node
+              if (choice.next) {
+                showNode(choice.next);
+              }
+              return;
+            }
+
             await triggerForcedBattle(choice, selectedStory, player, (targetNode) => {
               battleJustHappened = true; // Keep flag set to prevent immediate re-encounter
               showNode(targetNode);
@@ -786,23 +676,32 @@ export async function showNode(nodeKey) {
 
           // --- Scenario transition support ---
           if (choice.scenario) {
+            console.log(`🌲 Transitioning to scenario: ${choice.scenario}`);
             const scenarioData = await loadScenario(selectedStory.folder.replace('./', ''), choice.scenario);
-            
+
             // Preserve scenario metadata (noBattle, id, title, etc.) while setting nodes
             storyData = {
               ...scenarioData, // Include all scenario metadata (noBattle, id, title, etc.)
               nodes: scenarioData.nodes || scenarioData // Set the nodes
             };
-            
+
             // Legacy: ensure respawn is preserved (though it should already be in scenarioData)
             if (scenarioData.respawn && !storyData.respawn) {
               storyData.respawn = scenarioData.respawn;
             }
 
+            console.log(`🌲 Scenario loaded. Respawn points:`, storyData.respawn);
+
+            // Reinitialize day-night system for new scenario
+            console.log(`🕒 Reinitializing day-night system for scenario transition`);
+            setTimeout(() => {
+              reinitializeDayNight();
+            }, 200);
+
             // --- Determine next node based on race ---
             let nextNode = choice.next;
-            if (choice.raceNext && choice.raceNext[player.race]) {
-              nextNode = choice.raceNext[player.race];
+            if (choice.raceNext && choice.raceNext[getPrimaryRace(window.player)]) {
+              nextNode = choice.raceNext[getPrimaryRace(window.player)];
             }
 
             showNode(nextNode);
@@ -811,7 +710,7 @@ export async function showNode(nodeKey) {
 
           // --- EXP from choices ---
           if (choice.exp) {
-            const leveledUp = addExp(player, choice.exp);
+            const leveledUp = addExp(window.player, choice.exp);
             updateCharacterUI();
             if (leveledUp) {
               // Show level up message if you want
@@ -819,6 +718,9 @@ export async function showNode(nodeKey) {
           }
 
           if (choice.dice) {
+            // Advance time for choice (check for custom time value)
+            advanceTimeForChoice(choice.timeAdvancement);
+            
             executeDiceRoll(choice, player, applyAttributes, (nextNode, nodeEffect, diceResult) => {
               if (nodeEffect !== null) pendingNodeEffect = nodeEffect;
               if (diceResult) pendingDiceResult = diceResult;
@@ -841,6 +743,9 @@ export async function showNode(nodeKey) {
               }
             });
           } else {
+            // Advance time for choice (check for custom time value)
+            advanceTimeForChoice(choice.timeAdvancement);
+            
             pendingNodeEffect = processChoice(choice, player, applyAttributes);
 
             // Only tick buffs on significant story progression (not every choice)
@@ -861,8 +766,8 @@ export async function showNode(nodeKey) {
 
             // --- Determine next node based on race ---
             let nextNode = choice.next;
-            if (choice.raceNext && choice.raceNext[player.race]) {
-              nextNode = choice.raceNext[player.race];
+            if (choice.raceNext && choice.raceNext[getPrimaryRace(window.player)]) {
+              nextNode = choice.raceNext[getPrimaryRace(window.player)];
             }
 
             showNode(nextNode);
@@ -895,36 +800,20 @@ export async function showNode(nodeKey) {
   }
 }
 
-// --- Modal open/close handlers ---
-document.getElementById("close-inventory-modal").onclick = function () {
-  document.getElementById("inventory-modal").style.display = "none";
-};
-document.getElementById("close-character-stats-modal").onclick = function () {
-  document.getElementById("character-stats-modal").style.display = "none";
-};
-window.onclick = function (event) {
-  const inventoryModal = document.getElementById("inventory-modal");
-  const statsModal = document.getElementById("character-stats-modal");
-  if (event.target === inventoryModal) inventoryModal.style.display = "none";
-  if (event.target === statsModal) statsModal.style.display = "none";
-};
-
-// Toggle history panel visibility
-document.getElementById("history-toggle-btn").onclick = function () {
-  const panel = document.getElementById("history-panel");
-  if (panel.style.display === "none") {
-    panel.style.display = "block";
-    this.textContent = "Hide History";
-  } else {
-    panel.style.display = "none";
-    this.textContent = "Show History";
-  }
-};
+// Initialize modal events on page load
+initializeModalEvents();
 
 // --- Show character stats modal function (used by new layout buttons) ---
 function showCharacterStatsModal() {
+  // Create local reference to window.player
+  const player = window.player;
+  if (!player) {
+    console.error("Player not available for stats modal");
+    return;
+  }
+
   // Ensure secondary stats are up to date before displaying
-  updateSecondaryStats(player);
+  updateSecondaryStats(player, true);
   const modal = document.getElementById("character-stats-modal");
   const title = document.getElementById("character-stats-title");
   const content = document.getElementById("character-stats-content");
@@ -935,13 +824,33 @@ function showCharacterStatsModal() {
   title.textContent = characterName + " Stats";
 
   const mainAttributes = ["strength", "dexterity", "constitution", "charisma", "wisdom", "intelligence"];
-  const secondaryStats = ["speed", "physicDamage", "magicDamage", "physicDefense", "magicDefense"];
+  const secondaryStats = ["speed", "physicalDamage", "magicDamage", "physicalDefense", "magicDefense"];
 
   let html = "";
 
+  // Basic Character Info
+  html += `
+    <div style="margin-bottom: 20px; padding: 15px; background: #f8f9fa; border-radius: 6px;">
+      ${player.imagePath ? `<div style="text-align: center; margin-bottom: 15px;">
+        <img src="${player.imagePath}" style="max-width: 120px; max-height: 120px; border-radius: 8px; border: 2px solid #007bff;" 
+             onerror="this.style.display='none';" alt="Character Image">
+      </div>` : ''}
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 0.95em;">
+        <div><strong>Level:</strong> ${player.level || 1}</div>
+        <div><strong>EXP:</strong> ${player.exp || 0}</div>
+        <div><strong>Race:</strong> ${player.race ? player.race.charAt(0).toUpperCase() + player.race.slice(1) : 'Unknown'}</div>
+        <div><strong>Type:</strong> ${player.type ? player.type.charAt(0).toUpperCase() + player.type.slice(1) : 'Unknown'}</div>
+        <div><strong>Height:</strong> ${getHeight(player) + 'cm'}</div>
+        <div><strong>Weight:</strong> ${getWeight(player) + 'kg'}</div>
+        <div><strong>Profession:</strong> ${player.profession ? player.profession.charAt(0).toUpperCase() + player.profession.slice(1) : 'None'}</div>
+        <div><strong>Attribute Points:</strong> ${player.attributePoints || 0}</div>
+      </div>
+    </div>
+  `;
+
   // Attributes Accordion
   html += `
-    <div class="accordion-header" onclick="toggleAccordion('attributes')">
+    <div class="accordion-header" onclick="window.toggleAccordion('attributes')">
       <span><strong>Attributes</strong></span>
       <span id="arrow-attributes" class="accordion-arrow">▶</span>
     </div>
@@ -953,7 +862,7 @@ function showCharacterStatsModal() {
     html += `<li style="margin-bottom:6px; display: flex; justify-content: space-between; align-items: center;">
       <span>${attr.charAt(0).toUpperCase() + attr.slice(1)}:</span>
       <div>
-        <span id="attribute-${attr}" style="margin-right: 10px;">${player.attributes[attr]}</span>
+        <span id="attribute-${attr}" style="margin-right: 10px;">${player.primary[attr]}</span>
         ${player.attributePoints > 0
         ? `<button style="padding: 2px 8px; font-size: 12px;" onclick="event.stopPropagation(); window.assignAttributeUI && assignAttributeUI('${attr}')">+</button>`
         : ""
@@ -965,7 +874,7 @@ function showCharacterStatsModal() {
 
   // Secondary Stats Accordion
   html += `
-    <div class="accordion-header" onclick="toggleAccordion('secondary')">
+    <div class="accordion-header" onclick="window.toggleAccordion('secondary')">
       <span><strong>Secondary Stats</strong></span>
       <span id="arrow-secondary" class="accordion-arrow">▶</span>
     </div>
@@ -982,41 +891,73 @@ function showCharacterStatsModal() {
 
   // Equipment Accordion
   html += `
-    <div class="accordion-header" onclick="toggleAccordion('equipment')">
+    <div class="accordion-header" onclick="window.toggleAccordion('equipment')">
       <span><strong>Equipment</strong></span>
       <span id="arrow-equipment" class="accordion-arrow">▶</span>
     </div>
     <div id="content-equipment" class="accordion-content">
       <ul style='list-style:none;padding-left:0;margin:0;'>`;
 
-  const equipmentSlots = ["head", "body", "legs", "foot", "hand", "weapon"];
-  equipmentSlots.forEach(slot => {
-    const equippedItem = player.equipment[slot];
-    const slotName = slot.charAt(0).toUpperCase() + slot.slice(1);
-    if (equippedItem) {
-      let modifiersText = "";
-      if (equippedItem.modifiers) {
-        const modifiersList = Object.entries(equippedItem.modifiers)
-          .map(([attr, value]) => `${value > 0 ? '+' : ''}${value} ${attr}`)
-          .join(', ');
-        modifiersText = ` (${modifiersList})`;
-      }
-      html += `<li style="margin-bottom:6px;">
-        <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+  // Use our new array-based equipment system
+  if (Array.isArray(player.equipment)) {
+    // Get all unique slot types from the character's equipment array
+    const slotTypes = [...new Set(player.equipment.map(slot => slot.slot))];
+    
+    slotTypes.forEach(slotType => {
+      const slotName = slotType.charAt(0).toUpperCase() + slotType.slice(1);
+      
+      // Find all items in this slot type
+      const itemsInSlot = player.equipment.filter(slot => slot.slot === slotType && slot.item);
+      
+      if (itemsInSlot.length > 0) {
+        // Show each equipped item in this slot type
+        itemsInSlot.forEach((equipmentSlot, index) => {
+          const item = equipmentSlot.item;
+          let modifiersText = "";
+          
+          // Handle both old (modifiers) and new (stats) item structures
+          if (item.modifiers) {
+            const modifiersList = Object.entries(item.modifiers)
+              .map(([attr, value]) => `${value > 0 ? '+' : ''}${value} ${attr}`)
+              .join(', ');
+            modifiersText = ` (${modifiersList})`;
+          } else if (item.stats) {
+            const statsList = Object.entries(item.stats)
+              .map(([attr, value]) => `${value > 0 ? '+' : ''}${value} ${attr}`)
+              .join(', ');
+            modifiersText = ` (${statsList})`;
+          }
+          
+          const displayName = itemsInSlot.length > 1 ? `${slotName} ${index + 1}` : slotName;
+          
+          html += `<li style="margin-bottom:6px;">
+            <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+              <span style="font-weight: 600;">${displayName}:</span>
+              <div style="text-align: right;">
+                <div style="color:#87CEEB;">${item.name}</div>
+                <div style="color:#a0a0a0; font-size:0.9em;">${modifiersText}</div>
+              </div>
+            </div>
+          </li>`;
+        });
+      } else {
+        // Show empty slot
+        html += `<li style="margin-bottom:6px; display: flex; justify-content: space-between;">
           <span style="font-weight: 600;">${slotName}:</span>
-          <div style="text-align: right;">
-            <div style="color:#87CEEB;">${equippedItem.name}</div>
-            <div style="color:#a0a0a0; font-size:0.9em;">${modifiersText}</div>
-          </div>
-        </div>
-      </li>`;
-    } else {
+          <span style="color:#808080;">None</span>
+        </li>`;
+      }
+    });
+  } else {
+    // Fallback for old equipment system
+    const equipmentSlots = ["head", "body", "legs", "foot", "hand", "weapon"];
+    equipmentSlots.forEach(slot => {
       html += `<li style="margin-bottom:6px; display: flex; justify-content: space-between;">
-        <span style="font-weight: 600;">${slotName}:</span>
+        <span style="font-weight: 600;">${slot.charAt(0).toUpperCase() + slot.slice(1)}:</span>
         <span style="color:#808080;">None</span>
       </li>`;
-    }
-  });
+    });
+  }
   html += "</ul></div>";
 
   content.innerHTML = html;
@@ -1027,24 +968,29 @@ function showCharacterStatsModal() {
 function refreshCharacterStatsModal() {
   if (document.getElementById("character-stats-modal").style.display === "block") {
     const mainAttributes = ["strength", "dexterity", "constitution", "charisma", "wisdom", "intelligence"];
-    const secondaryStats = ["speed", "physicDamage", "magicDamage", "physicDefense", "magicDefense"];
+    const secondaryStats = ["speed", "physicalDamage", "magicDamage", "physicalDefense", "magicDefense"];
+
 
     // Update attribute points display
     const pointsElement = document.getElementById("attribute-points-display");
     if (pointsElement) {
-      pointsElement.innerHTML = `<b>Attribute Points Left:</b> ${player.attributePoints}`;
+      pointsElement.innerHTML = `<b>Attribute Points Left:</b> ${window.player.attributePoints}`;
     }
 
     // Update attribute values and button visibility
     mainAttributes.forEach(attr => {
       const element = document.getElementById(`attribute-${attr}`);
       if (element) {
-        element.textContent = player.attributes[attr];
+        const oldValue = element.textContent;
+        const newValue = window.player.primary[attr];
+        element.textContent = newValue;
+      } else {
+        console.warn(`⚠️ Element not found: attribute-${attr}`);
       }
 
       // Update or remove + buttons based on available points
       const buttonElement = element?.parentElement?.querySelector('button');
-      if (player.attributePoints > 0) {
+      if (window.player.attributePoints > 0) {
         if (!buttonElement) {
           // Add button if it doesn't exist
           const button = document.createElement('button');
@@ -1070,9 +1016,15 @@ function refreshCharacterStatsModal() {
     secondaryStats.forEach(stat => {
       const element = document.getElementById(`secondary-${stat}`);
       if (element) {
-        element.textContent = player.secondary[stat];
+        const oldValue = element.textContent;
+        const newValue = window.player.secondary[stat];
+        element.textContent = newValue;
+      } else {
+        console.warn(`⚠️ Element not found: secondary-${stat}`);
       }
     });
+    
+  } else {
   }
 }
 
@@ -1092,6 +1044,9 @@ function initializeStoryPageLayout() {
 
   // Initialize story content area
   setupStoryContentArea();
+  
+  // Initialize day-night system
+  initializeDayNight();
 }
 
 function setupCharacterInfoSection() {
@@ -1099,15 +1054,28 @@ function setupCharacterInfoSection() {
   const characterInfoStatus = document.getElementById("current-character-status");
 
   if (characterStorySection) {
-    // Create the new character info layout
+    // Create the new character info layout with enhanced display
+    const heightDisplay = `${getHeight(window.player)}cm`;
+    const weightDisplay = `${getWeight(window.player)}kg`;
+    const professionDisplay = (window.player && window.player.profession) ? window.player.profession.charAt(0).toUpperCase() + window.player.profession.slice(1) : 'None';
+
     characterStorySection.innerHTML = `
       <div class="character-basic-info">
+        ${window.player && window.player.imagePath ? `<div style="text-align: center; margin-bottom: 10px;">
+          <img src="${window.player.imagePath}" style="max-width: 80px; max-height: 80px; border-radius: 50%; border: 2px solid #007bff;" 
+               onerror="this.style.display='none';" alt="Character Image">
+        </div>` : ''}
         <div style="font-size: 1.3em; font-weight: bold; color: #e0e0e0;">
-          <strong>Character:</strong> <span id="current-character-name-story">${player.name || ''}</span>
+          <strong>Character:</strong> <span id="current-character-name-story">${window.player ? window.player.name || '' : ''}</span>
         </div>
-        <div style="display: flex; gap: 15px; color: #a0a0a0; font-size: 0.95em;">
-          <span id="character-race-story">${player.race || ''}</span>
-          <span id="character-type-story">${player.type || ''}</span>
+        <div style="display: flex; gap: 15px; color: #a0a0a0; font-size: 0.95em; flex-wrap: wrap;">
+          <span id="character-race-story">Race: ${window.player ? window.player.race || '' : ''}</span>
+          <span id="character-elementalAlignment-story">Type: ${window.player ? window.player.type || '' : ''}</span>
+        </div>
+        <div style="display: flex; gap: 15px; color: #a0a0a0; font-size: 0.9em; flex-wrap: wrap;">
+          <span>Profession: ${professionDisplay}</span>
+          <span>Height: ${heightDisplay}</span>
+          <span>Weight: ${weightDisplay}</span>
         </div>
         <div id="player-level-story" style="color: #d0d0d0; font-weight: 600;"></div>
         <div id="player-exp-story" style="color: #b0b0b0; font-size: 0.9em;"></div>
@@ -1124,7 +1092,7 @@ function setupCharacterInfoSection() {
           </div>
           <div style="display: flex; align-items: center; gap: 10px;">
             <label style="color: #e0e0e0; min-width: 40px;">MP:</label>
-            <progress id="mana-bar-story" value="0" max="0" style="width:120px;"></progress>
+            <progress id="mp-bar-story" value="0" max="0" style="width:120px;"></progress>
             <span style="color: #e0e0e0; font-size: 0.9em;">
               <span id="mp-value-story">0</span>/<span id="max-mp-value-story">0</span>
             </span>
@@ -1193,132 +1161,7 @@ function setupStoryLogSection() {
   }
 }
 
-function setupBuffsSection() {
-  const buffsArea = document.getElementById("ability-btns-story");
-  
-  if (buffsArea) {
-    // Set up a function to create working ability buttons for story layout
-    window.syncBuffsToNewLayout = function () {
-      createStoryAbilityButtons();
-    };
-    
-    // Initial setup
-    createStoryAbilityButtons();
-  }
-}
 
-// Flag to prevent multiple simultaneous button creation calls
-let creatingStoryButtons = false;
-
-function createStoryAbilityButtons() {
-  const container = document.getElementById("ability-btns-story");
-  if (!container || !window.player || creatingStoryButtons) return;
-  
-  creatingStoryButtons = true;
-  
-  // Clear existing buttons to prevent duplication
-  container.innerHTML = "";
-  
-  // Import abilities module to get player abilities
-  import('./abilities.js').then(({ getAbilities }) => {
-    const playerAbilities = getAbilities(window.player.abilityIds || []);
-    const player = window.player;
-    
-    
-    for (const [key, ability] of Object.entries(playerAbilities)) {
-      if (ability.type !== "buff" && ability.type !== "heal") continue; // Only buffs and heals
-      
-      const btn = document.createElement("button");
-      btn.textContent = (ability.name || key) + (ability.mpCost ? ` (MP: ${ability.mpCost})` : "");
-      
-      // Check if buff is already active using BuffRegistry
-      let buffActive = false;
-      if (ability.type === "buff" && ability.statusTag) {
-        // Check if this buff is already active in BuffRegistry
-        buffActive = BuffRegistry && BuffRegistry.isBuffActive(player, ability.statusTag);
-      }
-      
-      btn.disabled = player.mp < (ability.mpCost || 0) || buffActive;
-      if (btn.disabled) {
-        btn.style.opacity = "0.5";
-        btn.style.cursor = "not-allowed";
-      } else {
-        btn.style.opacity = "1";
-        btn.style.cursor = "";
-      }
-      
-      btn.onclick = function () {
-        if (btn.disabled) return;
-        
-        // Re-check conditions before using ability
-        const mpCost = ability.mpCost || 0;
-        if (player.mp < mpCost) {
-          return;
-        }
-        
-        // Check if buff is already active (for buffs only)
-        if (ability.type === "buff" && ability.statusTag) {
-          if (BuffRegistry && BuffRegistry.isBuffActive(player, ability.statusTag)) {
-            return;
-          }
-        }
-        
-        
-        // Deduct MP cost only after validation
-        player.mp -= mpCost;
-        player.mana = player.mp; // Keep in sync
-        
-        try {
-          if (ability.type === "buff" && ability.apply) {
-            // Use ability's apply function for buffs
-            ability.apply(player, player, (message) => {
-            });
-          } else if (ability.type === "heal") {
-            // Handle heal abilities
-            if (player.life > 0 && player.life < player.maxLife) {
-              player.life += ability.amount;
-              if (player.life > player.maxLife) player.life = player.maxLife;
-            }
-          } else {
-            console.warn(`Story layout: Ability ${ability.name} type ${ability.type} not handled`);
-          }
-          
-          // Update UI after ability use
-          if (typeof window.updateCharacterUI === 'function') {
-            window.updateCharacterUI();
-          }
-          if (typeof window.updateStoryUI === 'function') {
-            window.updateStoryUI();
-          }
-          
-          // Refresh ability buttons to update their state (mana, buff status)
-          setTimeout(() => {
-            if (!creatingStoryButtons) {
-              createStoryAbilityButtons(); // Refresh all buttons to update states
-            }
-          }, 100);
-          
-        } catch (error) {
-          console.error(`Error using ability ${ability.name}:`, error);
-          // Refund MP on error
-          player.mp += mpCost;
-          player.mana = player.mp;
-          if (typeof window.updateCharacterUI === 'function') {
-            window.updateCharacterUI();
-          }
-        }
-      };
-      
-      container.appendChild(btn);
-    }
-    
-    // Reset the flag when done
-    creatingStoryButtons = false;
-  }).catch(error => {
-    console.error("Failed to create story ability buttons:", error);
-    creatingStoryButtons = false; // Reset flag on error too
-  });
-}
 
 function setupStoryContentArea() {
   // The story content will be updated through the modified showNode function
@@ -1332,193 +1175,137 @@ function setupStoryContentArea() {
   if (choicesElement) choicesElement.innerHTML = "";
 }
 
-// Helper function to update content in both old and new layouts
-function updateElementContent(elementBaseName, content) {
-  // Update old layout
-  const oldElement = document.getElementById(elementBaseName);
-  if (oldElement) {
-    oldElement.innerHTML = content;
+// Function to display node image
+function displayNodeImage(node) {
+  const imageContainerMain = document.getElementById("node-image-main");
+  const imageContainer = document.getElementById("node-image");
+
+  // Clear existing images
+  if (imageContainerMain) imageContainerMain.innerHTML = "";
+  if (imageContainer) imageContainer.innerHTML = "";
+
+  if (node.img) {
+    let imageSrc = node.img;
+
+    // If it's not a web URL, construct path relative to scenarios img folder
+    if (!imageSrc.startsWith('http://') && !imageSrc.startsWith('https://') && !imageSrc.startsWith('data:')) {
+      imageSrc = `../story-content/${selectedStory.folder.replace('./', '')}/img/scenarios/${imageSrc}`;
+    }
+
+    const imageHtml = `<img src="${imageSrc}" alt="${node.title || 'Scene Image'}" onerror="this.style.display='none'">`;
+
+    if (imageContainerMain) imageContainerMain.innerHTML = imageHtml;
+    if (imageContainer) imageContainer.innerHTML = imageHtml;
+  }
+}
+
+// Function to show node image in a modal (for history)
+function showNodeImageModal(imageSrc, title) {
+  // Create modal if it doesn't exist
+  let modal = document.getElementById('node-image-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'node-image-modal';
+    modal.className = 'modal';
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 80%; max-height: 80%;">
+        <span class="close" onclick="document.getElementById('node-image-modal').style.display='none'">&times;</span>
+        <div class="modal-header">
+          <h2 id="image-modal-title"></h2>
+        </div>
+        <div style="text-align: center;">
+          <img id="image-modal-img" style="max-width: 100%; max-height: 70vh;" alt="Node Image">
+        </div>
+      </div>
+    `;
+
+    // Add click-outside-to-close functionality
+    modal.onclick = function (event) {
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    };
+
+    document.body.appendChild(modal);
   }
 
-  // Update new layout
-  const newElement = document.getElementById(elementBaseName + "-main");
-  if (newElement) {
-    newElement.innerHTML = content;
+  // Set image and title
+  document.getElementById('image-modal-title').textContent = title || 'Scene Image';
+  const imgElement = document.getElementById('image-modal-img');
+  imgElement.src = imageSrc;
+  imgElement.alt = title || 'Scene Image';
+
+  // Show modal
+  modal.style.display = 'block';
+}
+
+// Function to show ability image in a modal (for battle actions)
+function showAbilityImageModal(imageSrc, abilityName) {
+  // Create modal if it doesn't exist
+  let modal = document.getElementById('ability-image-modal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'ability-image-modal';
+    modal.className = 'modal';
+    modal.style.zIndex = '20000'; // Ensure it appears above combat modal
+    modal.innerHTML = `
+      <div class="modal-content" style="max-width: 70%; max-height: 80%;">
+        <span class="close" onclick="document.getElementById('ability-image-modal').style.display='none'">&times;</span>
+        <div class="modal-header">
+          <h2 id="ability-modal-title"></h2>
+        </div>
+        <div style="text-align: center;">
+          <img id="ability-modal-img" style="max-width: 100%; max-height: 60vh; border-radius: 8px;" alt="Ability Image">
+        </div>
+      </div>
+    `;
+
+    // Add click-outside-to-close functionality
+    modal.onclick = function (event) {
+      if (event.target === modal) {
+        modal.style.display = 'none';
+      }
+    };
+
+    document.body.appendChild(modal);
   }
+
+  // Ensure modal has proper z-index every time it's shown
+  modal.style.zIndex = '20000';
+
+  // Set image and title
+  document.getElementById('ability-modal-title').textContent = abilityName || 'Ability';
+  const imgElement = document.getElementById('ability-modal-img');
+  imgElement.src = imageSrc;
+  imgElement.alt = abilityName || 'Ability';
+
+  // Show modal
+  modal.style.display = 'block';
 }
 
-// Helper function to update story title
-function updateStoryTitle(title) {
-  const oldTitle = document.getElementById("story-title");
-  const newTitle = document.getElementById("story-title-main");
+// Helper function to get ability image source path
+function getAbilityImageSrc(imgPath) {
+  if (!imgPath) return '';
 
-  if (oldTitle) oldTitle.textContent = title;
-  if (newTitle) newTitle.textContent = title;
-}
-
-// Helper function to update choices
-function updateChoicesContainer(choicesHtml) {
-  const oldChoices = document.getElementById("choices-container");
-  const newChoices = document.getElementById("choices-container-main");
-
-  if (oldChoices) oldChoices.innerHTML = choicesHtml;
-  if (newChoices) newChoices.innerHTML = choicesHtml;
-}
-
-/**
- * Rebuild the inventory modal content
- */
-function rebuildInventoryModal() {
-  const modal = document.getElementById("inventory-modal");
-  const title = modal.querySelector(".modal-header h2");
-  const content = modal.querySelector(".modal-content > div:last-child");
-
-  if (!content) {
-    return;
+  // If it's already a web URL, return as is
+  if (imgPath.startsWith('http://') || imgPath.startsWith('https://') || imgPath.startsWith('data:')) {
+    return imgPath;
   }
 
-  // Capture current accordion states before rebuilding
-  const accordionStates = {};
-  const categoryOrder = ['loot', 'consumables', 'head', 'body', 'legs', 'foot', 'hand', 'weapon'];
-  categoryOrder.forEach(categoryKey => {
-    const contentElement = document.getElementById(`content-${categoryKey}`);
-    accordionStates[categoryKey] = contentElement && contentElement.classList.contains('active');
-  });
+  // Construct path relative to abilities img folder
+  const selectedStory = window.selectedStory;
+  if (selectedStory) {
+    return `../story-content/${selectedStory.folder.replace('./', '')}/img/abilities/${imgPath}`;
+  }
 
-  // Set the correct title
-  title.textContent = "Inventory";
-
-  // Import necessary functions and build inventory content
-  import('./inventory.js').then(({ getInventory, getLootInventory, getMoney }) => {
-    import('./loot.js').then(({ getLootById }) => {
-      const inventory = getInventory();
-      const lootInventory = getLootInventory();
-      const itemIds = Object.keys(inventory);
-      const lootIds = Object.keys(lootInventory);
-
-      let html = `<div style="margin-bottom: 15px; text-align: center; font-weight: bold; color: gold;">
-                    Gold: ${getMoney()}
-                  </div>`;
-
-      // Organize items by category
-      const categories = {
-        loot: [],
-        consumables: [],
-        head: [],
-        body: [],
-        legs: [],
-        foot: [],
-        hand: [],
-        weapon: []
-      };
-
-      // Process regular items
-      itemIds.forEach(itemId => {
-        const quantity = inventory[itemId];
-        const item = items[itemId];
-
-        if (item) {
-          // Handle both old and new item structures
-          const isEquipable = (item.type === "equipable" && item.slot) || (item.type === "armor" && item.category);
-          const itemSlot = item.slot || item.category;
-          
-          if (isEquipable) {
-            // Keep items in their equipment category regardless of equipped status
-            categories[itemSlot].push({ id: itemId, item, quantity, isItem: true });
-          } else {
-            categories.consumables.push({ id: itemId, item, quantity, isItem: true });
-          }
-        }
-      });
-
-      // Process loot items
-      lootIds.forEach(lootId => {
-        const quantity = lootInventory[lootId];
-        const loot = getLootById(lootId);
-
-        if (loot) {
-          categories.loot.push({ id: lootId, item: loot, quantity, isItem: false });
-        }
-      });
-
-      // Build accordion structure
-      const categoryOrder = ['loot', 'consumables', 'head', 'body', 'legs', 'foot', 'hand', 'weapon'];
-      const categoryLabels = {
-        loot: 'Monster Loot',
-        consumables: 'Consumables', 
-        head: 'Head Equipment',
-        body: 'Body Equipment',
-        legs: 'Legs Equipment',
-        foot: 'Foot Equipment',
-        hand: 'Hand Equipment',
-        weapon: 'Weapon Equipment'
-      };
-
-      categoryOrder.forEach(categoryKey => {
-        const categoryItems = categories[categoryKey];
-        const itemCount = categoryItems.length;
-        const categoryLabel = categoryLabels[categoryKey];
-
-        html += `
-          <div class="accordion-header" onclick="toggleAccordion('${categoryKey}')">
-            <span>${categoryLabel} (${itemCount})</span>
-            <span class="accordion-arrow" id="arrow-${categoryKey}">▶</span>
-          </div>
-          <div class="accordion-content" id="content-${categoryKey}">`;
-
-        if (itemCount > 0) {
-          categoryItems.forEach(({ id, item, quantity, isItem }) => {
-            // Handle both old and new item structures
-            const isEquipable = (item.type === "equipable" && item.slot) || (item.type === "armor" && item.category);
-            const itemSlot = item.slot || item.category;
-            
-            // Check if this specific item is currently equipped
-            const isEquipped = isEquipable && window.player.equipment && window.player.equipment[itemSlot] && window.player.equipment[itemSlot].id === id;
-            
-            const btnLabel = isEquipable 
-              ? (isEquipped ? "Unequip" : "Equip")
-              : (categoryKey === 'loot' ? "Sell" : "Use");
-            const equippedLabel = isEquipped ? " <span style=\"color:#28a745; font-weight:bold;\">(Equipped)</span>" : "";
-
-            html += `
-              <div class="item-row">
-                <div>
-                  <strong>${item.name}</strong> x${quantity}${equippedLabel}<br>
-                  <small style="color: #666;">${item.description || ''}</small>
-                </div>
-                <button onclick="handleInventoryItemAction('${id}', '${categoryKey}')" 
-                        style="background: #007bff; color: white; border: none; padding: 5px 10px; border-radius: 3px;">
-                  ${btnLabel}
-                </button>
-              </div>`;
-          });
-        } else {
-          html += `<div class="item-row"><span style="color: #666;">No items in this category</span></div>`;
-        }
-
-        html += `</div>`;
-      });
-
-      content.innerHTML = html;
-      
-      // Restore accordion states after rebuilding
-      categoryOrder.forEach(categoryKey => {
-        if (accordionStates[categoryKey]) {
-          const contentElement = document.getElementById(`content-${categoryKey}`);
-          const arrowElement = document.getElementById(`arrow-${categoryKey}`);
-          const headerElement = arrowElement ? arrowElement.parentElement : null;
-          
-          if (contentElement && arrowElement && headerElement) {
-            contentElement.classList.add('active');
-            arrowElement.classList.add('active');
-            headerElement.classList.add('active');
-          }
-        }
-      });
-      
-    });
-  });
+  return imgPath; // Fallback
 }
+
+// Import helper functions from UI modules
+import { updateElementContent, updateStoryTitle, updateChoicesContainer, hideAllContainers, showContainer } from './ui-helpers.js';
+import { rebuildInventoryModal, handleInventoryItemAction, toggleAccordion, updateInventoryModal } from './inventory-ui.js';
+import { updateDiceChoiceTexts, createStoryAbilityButtons, setupBuffsSection } from './abilities-ui.js';
+
 
 /**
  * Handle use/equip/unequip actions from the inventory modal
@@ -1526,7 +1313,7 @@ function rebuildInventoryModal() {
 window.handleInventoryItemAction = function (itemId, categoryKey) {
   import('./items.js').then(({ items }) => {
     import('./inventory.js').then(({ removeItem }) => {
-      import('./character.js').then(({ updateSecondaryStats }) => {
+      import('./characters.js').then(({ updateSecondaryStats }) => {
         const item = items[itemId];
         if (!item) {
           console.error('Item not found:', itemId);
@@ -1547,10 +1334,10 @@ window.handleInventoryItemAction = function (itemId, categoryKey) {
             // Unequip
             if (itemStats) {
               for (const [attr, mod] of Object.entries(itemStats)) {
-                if (window.player.attributes[attr] !== undefined) {
-                  window.player.attributes[attr] -= mod;
+                if (window.player.primary[attr] !== undefined) {
+                  window.player.primary[attr] -= mod;
                 }
-                if (attr === "physicDefense" || attr === "magicDefense") {
+                if (attr === "physicalDefense" || attr === "magicDefense") {
                   window.player.secondary[attr] -= mod;
                 }
               }
@@ -1563,10 +1350,10 @@ window.handleInventoryItemAction = function (itemId, categoryKey) {
               const currentStats = currentEquip.modifiers || currentEquip.stats;
               if (currentStats) {
                 for (const [attr, mod] of Object.entries(currentStats)) {
-                  if (window.player.attributes[attr] !== undefined) {
-                    window.player.attributes[attr] -= mod;
+                  if (window.player.primary[attr] !== undefined) {
+                    window.player.primary[attr] -= mod;
                   }
-                  if (attr === "physicDefense" || attr === "magicDefense") {
+                  if (attr === "physicalDefense" || attr === "magicDefense") {
                     window.player.secondary[attr] -= mod;
                   }
                 }
@@ -1578,10 +1365,10 @@ window.handleInventoryItemAction = function (itemId, categoryKey) {
             if (item.equipped !== undefined) item.equipped = true;
             if (itemStats) {
               for (const [attr, mod] of Object.entries(itemStats)) {
-                if (window.player.attributes[attr] !== undefined) {
-                  window.player.attributes[attr] += mod;
+                if (window.player.primary[attr] !== undefined) {
+                  window.player.primary[attr] += mod;
                 }
-                if (attr === "physicDefense" || attr === "magicDefense") {
+                if (attr === "physicalDefense" || attr === "magicDefense") {
                   window.player.secondary[attr] += mod;
                 }
               }
@@ -1597,11 +1384,10 @@ window.handleInventoryItemAction = function (itemId, categoryKey) {
           } else if (item.effect) {
             // Fallback to effect-based system
             if (item.effect.heal) {
-              window.player.life = Math.min(window.player.life + item.effect.heal, window.player.maxLife);
+              window.player.secondary.life = Math.min(window.player.secondary.life + item.effect.heal, window.player.maxLife);
             }
-            if (item.effect.mana) {
-              window.player.mp = Math.min(window.player.mp + item.effect.mana, window.player.maxMp);
-              window.player.mana = window.player.mp; // Keep in sync
+            if (item.effect.mp) {
+              window.player.secondary.mp = Math.min(window.player.secondary.mp + item.effect.mp, window.player.maxMp);
             }
             consumed = true;
           }
@@ -1613,7 +1399,7 @@ window.handleInventoryItemAction = function (itemId, categoryKey) {
         }
 
         // Update UI
-        updateSecondaryStats(window.player);
+        updateSecondaryStats(window.player, true);
         updateCharacterUI();
 
         // Force refresh character stats modal if it's open
@@ -1627,7 +1413,7 @@ window.handleInventoryItemAction = function (itemId, categoryKey) {
           // Rebuild the inventory modal content
           rebuildInventoryModal();
         }
-        
+
       });
     });
   });
@@ -1797,28 +1583,28 @@ window.updateInventoryModal = function () {
   }
 };
 
-/**
- * Update dice choice button texts to reflect current attribute values
- * This should be called whenever the player's attributes change due to buffs/debuffs
- */
-function updateDiceChoiceTexts() {
-  if (!player) return;
-  
-  const diceButtons = document.querySelectorAll('button[data-dice-choice="true"]');
-  diceButtons.forEach(btn => {
-    const attributeName = btn.getAttribute('data-dice-attribute');
-    const baseText = btn.getAttribute('data-choice-base-text');
-    
-    if (attributeName && baseText && player.attributes[attributeName] !== undefined) {
-      const attributeValue = player.attributes[attributeName];
-      const attributeDisplayName = attributeName.charAt(0).toUpperCase() + attributeName.slice(1);
-      btn.textContent = `${baseText} 🎲 (${attributeDisplayName}: ${attributeValue})`;
-    }
-  });
-}
-
-// Make the function available globally so it can be called from other modules
-window.updateDiceChoiceTexts = updateDiceChoiceTexts;
-
 window.onload = showStorySelection;
 window.updateCharacterUI = updateCharacterUI;
+
+// Make imported functions globally available
+window.rebuildInventoryModal = rebuildInventoryModal;
+window.handleInventoryItemAction = handleInventoryItemAction;
+window.toggleAccordion = toggleAccordion;
+window.updateInventoryModal = updateInventoryModal;
+window.updateDiceChoiceTexts = updateDiceChoiceTexts;
+window.createStoryAbilityButtons = createStoryAbilityButtons;
+window.setupBuffsSection = setupBuffsSection;
+window.hideAllContainers = hideAllContainers;
+window.showContainer = showContainer;
+window.showNodeImageModal = showNodeImageModal;
+window.showAbilityImageModal = showAbilityImageModal;
+window.getAbilityImageSrc = getAbilityImageSrc;
+
+// Make equipment utilities globally available
+window.getEquipmentCategories = getEquipmentCategories;
+window.findAvailableSlot = findAvailableSlot;
+window.isSlotOccupied = isSlotOccupied;
+window.getEquippedItem = getEquippedItem;
+window.findEquippedItemSlot = findEquippedItemSlot;
+window.getEquippedItemsByType = getEquippedItemsByType;
+window.applyAllEquipmentBonuses = applyAllEquipmentBonuses;

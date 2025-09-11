@@ -1,0 +1,17 @@
+[
+    {
+        "id": "smallBone",
+        "name": "Small Bone",
+        "file": "./loot/small-bone.js"
+    },
+    {
+        "id": "toughHide", 
+        "name": "Tough Hide",
+        "file": "./loot/tough-hide.js"
+    },
+    {
+        "id": "sharpClaw",
+        "name": "Sharp Claw", 
+        "file": "./loot/sharp-claw.js"
+    }
+]

@@ -1,13 +1,14 @@
 {
   "id": "town-demo",
   "title": "Demo Town - New Features",
-  "noBattle": true,
+  "randomEncounters": false,
   "respawn": [
     "town-entrance"
   ],
   "nodes": {
     "town-entrance": {
       "title": "Town Entrance - Demo",
+      "img": "https://www.celebritycruises.com/blog/content/uploads/2021/12/medieval-cities-in-europe-bruges-belgium-canals-1024x683.jpg",
       "text": "You stand at the entrance to a demonstration town showcasing the new conditional systems.",
       "randomEncounters": [
         {
@@ -132,6 +133,7 @@
     },
     "town-center": {
       "title": "Town Center",
+      "img": "https://worldwildschooling.com/wp-content/uploads/2024/06/Medieval-Cities-and-Towns-in-Europe_Carcassonne-France_%C2%A9-Horia-Merla_Adobe-Stock_552126264.webp",
       "text": "The heart of the demonstration town. Various paths are available depending on your character.",
       "choices": [
         {
@@ -193,6 +195,28 @@
           "next": "healing-demonstration"
         },
         {
+          "text": "Test Mount System Battle (Sky Crusher + Iron Beast)",
+          "enemies": ["sky-crusher", "iron-beast"],
+          "next": "mount-test-victory"
+        },
+        {
+          "text": "Test Survival Battle (Survive 5 turns vs Iron Beast)",
+          "enemies": ["iron-beast"],
+          "survivalTurns": 5,
+          "survivalObjective": "Survive the massive Iron Beast's assault for 5 turns while the town evacuates!",
+          "next": "survival-test-victory"
+        },
+        {
+          "text": "Ultimate Challenge: 2v1 Battle (Sky Crusher + Iron Beast)",
+          "enemies": ["sky-crusher", "iron-beast"],
+          "next": "ultimate-challenge-victory"
+        },
+        {
+          "text": "Test Crush Mechanics (Tiny Goblin + Massive Ogre + Iron Beast)",
+          "enemies": ["tiny-goblin", "massive-ogre", "iron-beast"],
+          "next": "crush-test-victory"
+        },
+        {
           "text": "Report quest progress (Ancient Mystery active)",
           "requirements": {
             "quests": {
@@ -205,6 +229,7 @@
     },
     "library-access": {
       "title": "Grand Library",
+      "img": "https://via.placeholder.com/600x400/2a2a2a/ffffff?text=Grand+Library",
       "text": "The librarian recognizes your intelligence and grants you access to rare books!",
       "items": {
         "rare-book": 1,
@@ -541,6 +566,147 @@
       "choices": [
         {
           "text": "Help more people",
+          "next": "town-center"
+        }
+      ]
+    },
+    "mount-test-victory": {
+      "title": "Mount System Test Complete!",
+      "text": "Congratulations! You have successfully defeated the Sky Crusher and Iron Beast duo. During the battle, you should have witnessed:\n\n• Iron Beast attempting to mount or be mounted by Sky Crusher\n• Devastating dogpile combos when one enemy pins you and the other follows up\n• Combined weight damage calculations (400kg total)\n• Aerial crush attacks if they formed a mount partnership\n\nThis demonstrates the advanced enemy AI coordination and mount formation systems!",
+      "exp": 100,
+      "items": {
+        "mount-test-trophy": 1,
+        "gold": 150,
+        "combat-data": 1
+      },
+      "choices": [
+        {
+          "text": "Analyze the battle data",
+          "next": "battle-analysis"
+        },
+        {
+          "text": "Return to town center",
+          "next": "town-center"
+        }
+      ]
+    },
+    "battle-analysis": {
+      "title": "Advanced Combat Analysis",
+      "text": "Reviewing the battle data reveals the sophisticated AI behaviors:\n\n• Enemy coordination systems detected ally abilities\n• Mount formation requirements calculated automatically\n• Combo damage included combined creature weights\n• Status effects properly managed mount partnerships\n\nThe combat system successfully demonstrated multi-enemy tactics, mount formations, and enhanced damage calculations!",
+      "exp": 50,
+      "items": {
+        "advanced-tactics-knowledge": 1
+      },
+      "choices": [
+        {
+          "text": "Fascinating! Return to town",
+          "next": "town-center"
+        }
+      ]
+    },
+    "survival-test-victory": {
+      "title": "Survival Test Complete!",
+      "text": "Excellent! You successfully survived 5 turns against the Iron Beast while the town evacuated. This demonstrates the survival battle system where victory comes from endurance rather than elimination.\n\nKey features demonstrated:\n• Turn counter showing survival progress\n• Victory condition based on time rather than enemy defeat\n• Tactical focus on defense and evasion\n• Narrative context for survival objectives",
+      "exp": 75,
+      "items": {
+        "survival-medal": 1,
+        "gold": 100,
+        "evacuee-gratitude": 1
+      },
+      "choices": [
+        {
+          "text": "Check on the evacuated townspeople",
+          "next": "evacuation-success"
+        },
+        {
+          "text": "Return to town center",
+          "next": "town-center"
+        }
+      ]
+    },
+    "evacuation-success": {
+      "title": "Heroes Welcome",
+      "text": "Thanks to your brave stand, all townspeople escaped safely! The mayor declares you a hero of the town and grants you special recognition.",
+      "exp": 25,
+      "items": {
+        "hero-certificate": 1,
+        "town-key": 1
+      },
+      "choices": [
+        {
+          "text": "Accept the honor graciously",
+          "next": "town-center"
+        }
+      ]
+    },
+    "ultimate-challenge-victory": {
+      "title": "ULTIMATE VICTORY!",
+      "text": "INCREDIBLE! You have defeated THREE enemies simultaneously! This epic 3v1 battle showcased the complete multi-enemy combat system:\n\n🎯 FEATURES DEMONSTRATED:\n• Multi-target selection UI\n• Complex enemy coordination\n• Multiple combo opportunities\n• Strategic target prioritization\n• Advanced AI behaviors\n• Mount formations AND dogpile combos\n• Sequential enemy turns with proper management\n\nYou are truly a master combatant! This represents the pinnacle of the enhanced combat system.",
+      "exp": 200,
+      "items": {
+        "ultimate-champion-trophy": 1,
+        "gold": 300,
+        "legendary-status": 1,
+        "combat-mastery-certificate": 1
+      },
+      "choices": [
+        {
+          "text": "Bask in the glory of victory!",
+          "next": "legendary-recognition"
+        },
+        {
+          "text": "Humbly return to town center",
+          "next": "town-center"
+        }
+      ]
+    },
+    "crush-test-victory": {
+      "title": "CRUSH MECHANICS MASTERY!",
+      "text": "SPECTACULAR! You have defeated the Tiny Goblin, Massive Ogre, and Iron Beast trio! This battle perfectly demonstrated the advanced size-based crush mechanics:\n\n🔥 CRUSH FEATURES DEMONSTRATED:\n• Small character (Goblin size 1) mounting capabilities\n• Large character (Ogre size 4) crush damage when sharing mounts\n• Multi-rider weight stacking calculations\n• Size-based vulnerability detection\n• coordinated enemy AI with mount preferences\n• Progressive crush damage scaling\n• Mount partnership management under stress\n\nKey mechanics observed:\n• Goblin (40kg, size 1) can mount any target\n• Ogre (350kg, size 4) crushes small riders when mounting same target\n• Iron Beast (200kg, size 2) serves as stable mounting platform\n• Weight ratios affect struggle mechanics and damage\n\nThe size-based crush system is working perfectly!",
+      "exp": 250,
+      "items": {
+        "crush-mechanics-trophy": 1,
+        "gold": 400,
+        "size-mastery-certificate": 1,
+        "multi-rider-badge": 1
+      },
+      "choices": [
+        {
+          "text": "Analyze the crush mechanics data",
+          "next": "crush-analysis"
+        },
+        {
+          "text": "Return to town center",
+          "next": "town-center"
+        }
+      ]
+    },
+    "crush-analysis": {
+      "title": "Crush Mechanics Analysis",
+      "text": "Detailed analysis of the crush mechanics battle reveals:\n\n📊 SIZE INTERACTIONS:\n• Tiny Goblin (size 1): Can mount any creature, vulnerable to crushing\n• Iron Beast (size 2): Medium mount platform, stable for multiple riders\n• Massive Ogre (size 4): Large crusher, can pin down small creatures\n\n⚖️ WEIGHT CALCULATIONS:\n• Single rider scenarios: Normal weight-based struggle mechanics\n• Multi-rider scenarios: Combined weight affects mount stability\n• Crush scenarios: Size difference determines crush damage multiplier\n\n🤖 AI COORDINATION:\n• preferredTarget settings guide mount selection\n• Size awareness prevents impossible mount attempts\n• Tactical crush positioning for maximum damage\n\nThe multi-rider crush system demonstrates sophisticated combat depth!",
+      "exp": 100,
+      "items": {
+        "mechanics-analysis-report": 1,
+        "tactical-insights": 1
+      },
+      "choices": [
+        {
+          "text": "Continue testing other systems",
+          "next": "town-center"
+        }
+      ]
+    },
+    "legendary-recognition": {
+      "title": "Legend Status Achieved",
+      "text": "Word of your incredible 3v1 victory spreads throughout the land! Bards sing songs of your tactical prowess and combat mastery. You have become a living legend!",
+      "exp": 100,
+      "items": {
+        "legendary-reputation": 1,
+        "epic-tale-scroll": 1
+      },
+      "choices": [
+        {
+          "text": "The legend continues...",
           "next": "town-center"
         }
       ]

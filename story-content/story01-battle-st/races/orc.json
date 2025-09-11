@@ -8,6 +8,7 @@
     "primalFury": "Access to destructive fire and dark magic",
     "warrior": "Enhanced strength and combat prowess"
   },
+  "specialAbilities": ["strengthBoost"],
   "baseModifiers": {
     "strength": 3,
     "dexterity": 0,

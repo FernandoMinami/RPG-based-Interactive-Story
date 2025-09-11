@@ -1,30 +1,16 @@
-// Stunned Status Definition - UPDATED VERSION 2.0
-// Pure data configuration for the buff system
+// Stunned Status - Character cannot act
 
 export default {
-    name: 'Stunned',
-    statusTag: 'stunned',
-    statusDesc: 'Stunned',
-    type: 'debuff',
-    turns: 1, // Default 1 turn
-    durationType: 'turns',
-    description: 'Unable to act for the specified number of turns.',
-    version: '2.0', // Debug identifier
+    id: "stunned",
+    name: "Stunned",
+    turns: 1, // Usually lasts 1 turn
+    immuneTypes: [],
+    endsWithBattle: true, // Stunned status ends when battle is over
     
-    // Visual/UI properties
-    color: '#FFD700',
-    icon: '😵',
+    type: "physical",
     
-    // Stun properties
-    preventsAction: true, // This status prevents the character from acting
+    // Cannot act at all
+    unnableAct: true,
     
-    // Effect configuration for special-effects system
-    // Stunned doesn't modify attributes, so we provide empty arrays
-    effects: {
-        baseAttributeBoosts: [],
-        baseAttributeDebuffs: [],
-        secondaryAttributeBoosts: [],
-        secondaryAttributeDebuffs: [],
-        percentageAttributeBoosts: []
-    }
-}
+    description: "Stunned and unable to act for this turn."
+};

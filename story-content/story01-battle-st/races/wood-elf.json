@@ -8,6 +8,7 @@
     "nature_bond": "Deep connection with natural environments",
     "forest_guardian": "Enhanced earth and nature magic"
   },
+  "specialAbilities": ["dexterityBoost"],
   "baseModifiers": {
     "strength": 1,
     "dexterity": 3, 

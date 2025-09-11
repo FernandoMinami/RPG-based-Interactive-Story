@@ -231,7 +231,7 @@ function showItemSellModal(npcName = null) {
         const itemCount = hasItems ? items.length : 0;
         
         html += `
-          <div class="accordion-header" onclick="toggleAccordion('sell-${categoryKey}')">
+          <div class="accordion-header" onclick="window.toggleAccordion('sell-${categoryKey}')">>
             <span>${title} ${hasItems ? `(${itemCount})` : '(0)'}</span>
             <span class="accordion-arrow" id="arrow-sell-${categoryKey}">▶</span>
           </div>
@@ -300,7 +300,7 @@ function showItemSellModal(npcName = null) {
       
       const hasEquippedItems = equippedItems.length > 0;
       html += `
-        <div class="accordion-header" onclick="toggleAccordion('sell-equipped')">
+        <div class="accordion-header" onclick="window.toggleAccordion('sell-equipped')">>
           <span>Equipped Items ${hasEquippedItems ? `(${equippedItems.length})` : '(0)'}</span>
           <span class="accordion-arrow" id="arrow-sell-equipped">▶</span>
         </div>
@@ -344,7 +344,7 @@ function showItemSellModal(npcName = null) {
 window.sellItem = function(itemId, quantity, totalValue) {
   import('./inventory.js').then(({ removeItem, addMoney, getMoney }) => {
     import('./items.js').then(({ items }) => {
-      import('./character.js').then(({ updateSecondaryStats }) => {
+      import('./characters.js').then(({ updateSecondaryStats }) => {
         const item = items[itemId];
         
         // Check if this item is currently equipped and unequip it
@@ -354,10 +354,10 @@ window.sellItem = function(itemId, quantity, totalValue) {
             // Remove modifiers from the equipped item
             if (equippedItem.modifiers) {
               for (const [attr, mod] of Object.entries(equippedItem.modifiers)) {
-                if (window.player.attributes[attr] !== undefined) {
-                  window.player.attributes[attr] -= mod;
+                if (window.player.primary[attr] !== undefined) {
+                  window.player.primary[attr] -= mod;
                 }
-                if (attr === "physicDefense" || attr === "magicDefense") {
+                if (attr === "physicalDefense" || attr === "magicDefense") {
                   window.player.secondary[attr] -= mod;
                 }
               }
@@ -373,7 +373,7 @@ window.sellItem = function(itemId, quantity, totalValue) {
         addMoney(totalValue);
         
         // Update character stats
-        updateSecondaryStats(window.player);
+        updateSecondaryStats(window.player, true);
         window.updateCharacterUI();
         
         // Update the gold display immediately in the modal
@@ -400,7 +400,7 @@ window.sellItem = function(itemId, quantity, totalValue) {
  */
 window.sellEquippedItem = function(slot, sellValue) {
   import('./inventory.js').then(({ addMoney, getMoney }) => {
-    import('./character.js').then(({ updateSecondaryStats }) => {
+    import('./characters.js').then(({ updateSecondaryStats }) => {
       const equippedItem = window.player.equipment[slot];
       if (!equippedItem) {
         showMerchantMessage(`No item equipped in ${slot} slot!`, 'error');
@@ -410,10 +410,10 @@ window.sellEquippedItem = function(slot, sellValue) {
       // Remove modifiers from the equipped item
       if (equippedItem.modifiers) {
         for (const [attr, mod] of Object.entries(equippedItem.modifiers)) {
-          if (window.player.attributes[attr] !== undefined) {
-            window.player.attributes[attr] -= mod;
+          if (window.player.primary[attr] !== undefined) {
+            window.player.primary[attr] -= mod;
           }
-          if (attr === "physicDefense" || attr === "magicDefense") {
+          if (attr === "physicalDefense" || attr === "magicDefense") {
             window.player.secondary[attr] -= mod;
           }
         }
@@ -426,7 +426,7 @@ window.sellEquippedItem = function(slot, sellValue) {
       addMoney(sellValue);
       
       // Update character stats
-      updateSecondaryStats(window.player);
+      updateSecondaryStats(window.player, true);
       window.updateCharacterUI();
       
       // Update displays

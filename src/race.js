@@ -2,7 +2,7 @@
  * Race management system for the Interactive Story Game
  */
 
-import { getAllTypes } from './types.js';
+import { getAllElements } from './elements.js';
 
 let races = {};
 
@@ -12,7 +12,7 @@ let races = {};
  */
 export async function loadRaces(storyFolder) {
   try {
-    const manifestUrl = `../story-content/${storyFolder}/races/_races.json?v=${Date.now()}`;
+    const manifestUrl = `../story-content/${storyFolder}/races.json?v=${Date.now()}`;
     const raceManifest = await fetch(manifestUrl).then(res => res.json());
     
     // Load each race file
@@ -77,7 +77,6 @@ export function getAvailableRacesForCharacter(character) {
     
     // If no valid races found, fall back to all races
     if (Object.keys(availableRaces).length === 0) {
-      console.warn("No valid races found for character, falling back to all races");
       return allRaces;
     }
     
@@ -103,7 +102,7 @@ export function getAvailableTypesForRace(raceId) {
  * @returns {Object} Object mapping type IDs to descriptions
  */
 export function getTypeDescriptions() {
-  const types = getAllTypes();
+  const types = getAllElements();
   const descriptions = {};
   
   for (const typeId in types) {

@@ -1,9 +1,13 @@
 // combat-calculations.js - Combat damage, accuracy, and critical hit calculations
 
-import { isStatusActive, applyStatus, applyPinnedStatus, applyStunnedStatus, isCharacterTrapped, BuffRegistry, StatusRegistry, applyStatusDoT } from './status.js';
+import { isStatusActive, addStatus, removeStatus, applyStunnedStatus, isCharacterTrapped, StatusRegistry, equipMount, tameMount, linkCharacters, removeMountPartnership } from './status.js';
 import { updateLifeBar } from './ui.js';
-import { calculateTypeEffectiveness, calculateAbilityTypeBonus } from './types.js';
-import { getEnvironmentalPenalties } from './environmental.js';
+import { calculateTypeEffectiveness, calculateAbilityTypeBonus } from './elements.js';
+import { calculateBestTypeEffectiveness, calculateBestAbilityTypeBonus, getPrimaryElementalAlignment, getWeight, getHeight } from './element-helpers.js';
+// Import fall damage and swoop down systems
+import { handleFallingInteractions, applySwoopDownModifier, cleanupTrappedStatusesOnDeath } from './special-effects.js';
+import { getActiveEnvironment, modifyAbilityByEnvironment } from './environments.js';
+import { isTargetAlly } from './abilities.js';
 
 /**
  * Calculate final accuracy for an attack including size and weight factors
@@ -24,8 +28,8 @@ export function calculateAccuracy(ability, attacker, defender, attackerSpeed, de
     let finalAccuracy = baseAccuracy + (attackerSpeed - defenderSpeed) * 2;
     
     // Size-based accuracy modifiers
-    const attackerHeight = attacker.height || 175; // Default: 175cm (medium)
-    const defenderHeight = defender.height || 175; // Default: 175cm (medium)
+    const attackerHeight = getHeight(attacker, 175); // Default: 175cm (medium)
+    const defenderHeight = getHeight(defender, 175); // Default: 175cm (medium)
     
     // Convert height to size categories for accuracy calculations
     const heightToSizeCategory = (height) => {
@@ -54,8 +58,8 @@ export function calculateAccuracy(ability, attacker, defender, attackerSpeed, de
     }
     
     // Weight-based agility modifiers
-    const attackerWeight = attacker.weight || 65; // Default: 65kg (average human)
-    const defenderWeight = defender.weight || 65; // Default: 65kg (average human)
+    const attackerWeight = getWeight(attacker, 65); // Default: 65kg (average human)
+    const defenderWeight = getWeight(defender, 65); // Default: 65kg (average human)
     
     // Attacker weight modifier (heavier = less accurate)
     let attackerAgilityModifier = 0;
@@ -77,25 +81,18 @@ export function calculateAccuracy(ability, attacker, defender, attackerSpeed, de
     finalAccuracy += targetSizeModifier + attackerAgilityModifier + defenderAgilityModifier;
     
     // Apply environmental accuracy penalties
-    if (window.battleEnvironment && attacker.type) {
-        const penalties = getEnvironmentalPenalties(attacker, window.battleEnvironment.type, window.battleEnvironment.intensity);
-        if (penalties.accuracyPenalty > 0) {
-            finalAccuracy *= (1 - penalties.accuracyPenalty);
-        }
+    const activeEnv = getActiveEnvironment();
+    if (activeEnv && attacker.misc?.elementalAlignments) {
+        // Use a mock ability to check environmental modifications
+        const mockAbility = { element: getPrimaryElementalAlignment(attacker) || 'neutral' };
+        const envModification = modifyAbilityByEnvironment(mockAbility, attacker, attacker, 100, finalAccuracy);
+        finalAccuracy = envModification.accuracy;
     }
     
     // Apply status multiplier and clamp to valid range (minimum 30%, maximum 100%)
     finalAccuracy = Math.max(30, Math.min(100, finalAccuracy * accuracyMultiplier));
     
-    // Debug log for accuracy calculation
-    /*console.log(`🎯 ACCURACY CALCULATION:
-    Base Accuracy: ${baseAccuracy}%
-    Speed Modifier: ${(attackerSpeed - defenderSpeed) * 2} (${attackerSpeed} - ${defenderSpeed})
-    Target Size: ${defenderSize} = ${targetSizeModifier}%
-    Attacker Agility: ${attackerWeight}kg = ${attackerAgilityModifier}%
-    Defender Agility: ${defenderWeight}kg = ${defenderAgilityModifier}%
-    Status Multiplier: ${accuracyMultiplier}x
-    FINAL ACCURACY: ${Math.floor(finalAccuracy)}%`);*/
+
     
     return Math.floor(finalAccuracy);
 }
@@ -114,13 +111,13 @@ export function calculateDamage(ability, attacker, defender) {
     // Step 2: Initialize damage components
     let weightBonusDamage = 0;
     let sizeDifferenceDamage = 0;
-    let flyingMultiplier = 1.0;
+    let elevationMultiplier = 1.0;
     let defense = 0;
     
     // Step 3: Check if ability is physical
     if (ability.type === "physical") {
         // Use physical defense
-        defense = ability.breaksDefense ? 0 : (defender.secondary?.physicDefense || 0);
+        defense = ability.breaksDefense ? 0 : (defender.secondary?.physicalDefense || 0);
         
         // Step 4: Calculate weight bonus if ability uses weight
         if (ability.usesWeight) {
@@ -130,9 +127,10 @@ export function calculateDamage(ability, attacker, defender) {
         // Step 5: Calculate size difference damage
         sizeDifferenceDamage = calculateSizeBonus(attacker, defender);
         
-        // Step 6: Check if attacker is flying (diving attack)
-        if (isStatusActive(attacker, 'flying')) {
-            flyingMultiplier = 1.6;
+        // ✨ NEW: Step 6: Check for elevation-based attacks (swoop down)
+        const swoopResult = applySwoopDownModifier(attacker, ability, baseDamage);
+        if (swoopResult.shouldRemoveStatus) {
+            elevationMultiplier = swoopResult.damage / baseDamage; // Get the multiplier
         }
     }
     // Step 7: Check if ability is magic
@@ -144,8 +142,9 @@ export function calculateDamage(ability, attacker, defender) {
     // Step 8: Calculate type effectiveness multiplier
     let typeMultiplier = 1.0;
     let typeEffectivenessText = "";
-    if (ability.elementalType && defender.type) {
-        typeMultiplier = calculateTypeEffectiveness(ability.elementalType, defender.type);
+    if (ability.elementalType && defender.misc?.elementalAlignments) {
+        const effectiveness = calculateBestTypeEffectiveness(ability.elementalType, defender);
+        typeMultiplier = effectiveness.multiplier;
         if (typeMultiplier === 0) {
             typeEffectivenessText = "It has no effect!";
         } else if (typeMultiplier === 0.7) {
@@ -158,10 +157,11 @@ export function calculateDamage(ability, attacker, defender) {
     // Step 9: Calculate ability type bonus (mastery bonus)
     let abilityTypeBonus = 1.0;
     let abilityBonusText = "";
-    if (ability.elementalType && attacker.type) {
-        abilityTypeBonus = calculateAbilityTypeBonus(attacker.type, ability.elementalType);
-        if (abilityTypeBonus > 1.0) {
-            abilityBonusText = `${attacker.type} type mastery enhances the ${ability.elementalType} ability!`;
+    if (ability.elementalType && attacker.misc?.elementalAlignments) {
+        const bonusResult = calculateBestAbilityTypeBonus(attacker, ability.elementalType);
+        abilityTypeBonus = bonusResult.bonus;
+        if (abilityTypeBonus > 1.0 && bonusResult.matchedType) {
+            abilityBonusText = `${bonusResult.matchedType} type mastery enhances the ${ability.elementalType} ability!`;
         }
     }
     
@@ -170,43 +170,30 @@ export function calculateDamage(ability, attacker, defender) {
     let environmentalEffectText = "";
     
     // Check if there's an active battle environment that affects the attacker
-    if (window.battleEnvironment && attacker.type) {
-        const penalties = getEnvironmentalPenalties(attacker, window.battleEnvironment.type, window.battleEnvironment.intensity);
-        if (penalties.damagePenalty > 0) {
-            environmentalMultiplier = 1.0 - penalties.damagePenalty;
-            environmentalEffectText = `${window.battleEnvironment.type} environment reduces ${attacker.type} attack power!`;
+    const activeEnv = getActiveEnvironment();
+    if (activeEnv && attacker.misc?.elementalAlignments) {
+        const primaryType = getPrimaryElementalAlignment(attacker);
+        // Use a mock ability to check environmental modifications
+        const mockAbility = { element: primaryType || 'neutral' };
+        const envModification = modifyAbilityByEnvironment(mockAbility, attacker, attacker, 100, 100);
+        
+        if (envModification.damage < 100) {
+            environmentalMultiplier = envModification.damage / 100;
+            environmentalEffectText = `${activeEnv.name} environment reduces ${primaryType} attack power!`;
         }
     }
     
     // Step 11: Apply the complete damage formula
-    // ((((baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier) * typeMultiplier * abilityTypeBonus * environmentalMultiplier) - defense)
-    const preDefenseDamage = (baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier * typeMultiplier * abilityTypeBonus * environmentalMultiplier;
+    // ((((baseDamage + weightBonusDamage + sizeDifferenceDamage) * elevationMultiplier) * typeMultiplier * abilityTypeBonus * environmentalMultiplier) - defense)
+    const preDefenseDamage = (baseDamage + weightBonusDamage + sizeDifferenceDamage) * elevationMultiplier * typeMultiplier * abilityTypeBonus * environmentalMultiplier;
     const finalDamage = Math.max(0, Math.floor(preDefenseDamage - defense));
     
-    // Debug log for damage calculation (temporarily disabled)
-    /*console.log(`🔥 DAMAGE CALCULATION BREAKDOWN:
-    Base Damage: ${baseDamage}
-    Weight Bonus: ${weightBonusDamage}
-    Size Difference: ${sizeDifferenceDamage}
-    Flying Multiplier: ${flyingMultiplier}x
-    Type Multiplier: ${typeMultiplier}x
-    Ability Type Bonus: ${abilityTypeBonus}x
-    Defense: ${defense}
-    
-    Formula: ((((${baseDamage} + ${weightBonusDamage} + ${sizeDifferenceDamage}) * ${flyingMultiplier}) * ${typeMultiplier} * ${abilityTypeBonus}) - ${defense})
-    Step 1: ${baseDamage} + ${weightBonusDamage} + ${sizeDifferenceDamage} = ${baseDamage + weightBonusDamage + sizeDifferenceDamage}
-    Step 2: ${baseDamage + weightBonusDamage + sizeDifferenceDamage} * ${flyingMultiplier} = ${(baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier}
-    Step 3: ${(baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier} * ${typeMultiplier} = ${(baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier * typeMultiplier}
-    Step 4: ${(baseDamage + weightBonusDamage + sizeDifferenceDamage) * flyingMultiplier * typeMultiplier} * ${abilityTypeBonus} = ${preDefenseDamage}
-    Step 5: ${preDefenseDamage} - ${defense} = ${finalDamage}
-    
-    FINAL DAMAGE (before crit): ${finalDamage}`)*/;
     
     return {
         baseDamage,
         weightBonusDamage,
         sizeDifferenceDamage,
-        flyingMultiplier,
+        elevationMultiplier,
         typeMultiplier,
         abilityTypeBonus,
         environmentalMultiplier,
@@ -232,8 +219,8 @@ export function calculateDamage(ability, attacker, defender) {
  * @returns {number} - Size bonus damage
  */
 function calculateSizeBonus(attacker, defender) {
-    const attackerHeight = attacker.height || 175; // Default height: 175cm (medium)
-    const defenderHeight = defender.height || 175; // Default height: 175cm (medium)
+    const attackerHeight = getHeight(attacker, 175); // Default height: 175cm (medium)
+    const defenderHeight = getHeight(defender, 175); // Default height: 175cm (medium)
     
     // Convert height to size category values
     // Height ranges: tiny(<120), small(120-150), medium(150-190), large(190-230), huge(230-270), massive(>270)
@@ -267,7 +254,18 @@ function calculateWeightBonus(ability, attacker) {
         return 0;
     }
     
-    const weight = attacker.weight || 65; // Default weight: 65kg (average human)
+    let weight = getWeight(attacker, 65); // Default weight: 65kg (average human)
+    
+    // Check if attacker is in a mount formation
+    if (isStatusActive(attacker, 'rider') && attacker.mountPartner) {
+        // Rider using abilities gets combined weight of rider + mount
+        const mountWeight = getWeight(attacker.mountPartner, 65);
+        weight += mountWeight;
+    } else if (isStatusActive(attacker, 'mount') && attacker.riderPartner) {
+        // Mount using abilities gets combined weight of mount + rider
+        const riderWeight = getWeight(attacker.riderPartner, 65);
+        weight += riderWeight;
+    }
 
     // Weight bonus: 1 point per 15 kg, with minimum of 1
     return Math.max(1, Math.floor(weight / 15));
@@ -291,11 +289,11 @@ export function calculateCriticalHit(ability, attacker, baseDamage, isPlayer = t
 
     if (isPlayer) {
         // Player crit calculation: 1% per 2 points of dexterity after 10
-        dexterityBonus = Math.floor((attacker.attributes?.dexterity || 0 - 10) / 2);
+        dexterityBonus = Math.floor((attacker.primary?.dexterity || 0 - 10) / 2);
         dexterityBonus = Math.max(0, dexterityBonus);
     } else {
         // Enemy crit calculation: direct dexterity bonus
-        dexterityBonus = attacker.attributes?.dexterity || 0;
+        dexterityBonus = attacker.primary?.dexterity || 0;
     }
 
     const totalCritChance = baseCritChance + dexterityBonus;
@@ -327,80 +325,46 @@ export function applyDamage(target, damage, ability, attacker, addLog) {
     let isOverkill = false;
     
     if (damage > 0) {
-        const originalLife = target.life;
-        target.life -= damage;
+        const originalLife = target.secondary.life;
+        target.secondary.life -= damage;
+        
+        // ✨ NEW: Handle falling interactions if target has isHigh status
+        const fallResult = handleFallingInteractions(target, damage, addLog);
+        if (fallResult.additionalDamage > 0) {
+            addLog(`💥 Fall damage adds ${fallResult.additionalDamage} more damage!`);
+        }
         
         // Check for overkill (damage would leave target below -20 HP)
-        if (target.life < -20) {
+        if (target.secondary.life < -20) {
             isOverkill = true;
         }
         
         // Clamp life to 0 for visual display (no negative life shown to players)
-        if (target.life < 0) {
-            target.life = 0;
+        if (target.secondary.life < 0) {
+            target.secondary.life = 0;
         }
         
-        updateLifeBar(target.life, target.maxLife);
+        // Clean up mount partnerships when character dies
+        if (target.secondary.life <= 0) {
+            removeMountPartnership(target, addLog);
+            
+            // Clean up trapped statuses when character dies
+            cleanupTrappedStatusesOnDeath(target, addLog);
+        }
 
-        // Life steal mechanic
+        updateLifeBar(target.secondary.life, target.secondary.maxLife);        // Life steal mechanic
         if (ability.lifeSteal && ability.lifeSteal > 0) {
             const healAmount = Math.floor(damage * ability.lifeSteal);
-            if (healAmount > 0) {
-                attacker.life = Math.min(attacker.maxLife, attacker.life + healAmount);
+            // Don't heal dead characters unless it's a revive ability
+            if (healAmount > 0 && (attacker.secondary.life > 0 || ability.revive)) {
+                attacker.secondary.life = Math.min(attacker.secondary.maxLife, attacker.secondary.life + healAmount);
                 addLog(`${attacker.name} steals ${healAmount} health!`);
-                updateLifeBar(attacker.life, attacker.maxLife);
+                updateLifeBar(attacker.secondary.life, attacker.secondary.maxLife);
             }
         }
     }
     
     return { isOverkill };
-}
-
-/**
- * Handle flying and range interactions
- * @param {Object} ability - The ability being used
- * @param {Object} attacker - The attacking character
- * @param {Object} target - The target character
- * @param {Function} addLog - Logging function
- * @returns {Object} - Object containing interaction results
- */
-export function handleFlyingInteractions(ability, attacker, target, addLog) {
-    let canHit = true;
-    let extraDamage = 0;
-    let damageMultiplier = 1.0;
-    let messages = [];
-
-    // Check if target is flying and ability is close range
-    if (isStatusActive(target, 'flying') && (ability.range === "close" || ability.type === "physical")) {
-        // Check if attacker is also flying (can hit flying targets with close attacks)
-        if (!isStatusActive(attacker, 'flying')) {
-            canHit = false;
-            messages.push(`${attacker.name} cannot reach the flying ${target.name} with a close attack!`);
-        }
-    }
-
-    // If attacker used a close ability while flying, they get diving attack bonus and land
-    if ((ability.range === "close" || ability.type === "physical") && isStatusActive(attacker, 'flying')) {
-        damageMultiplier = 1.6; // Diving attack bonus
-        applyStatus(attacker, 'flying', 0);
-        messages.push(`${attacker.name} dives down with ${ability.name} for extra damage!`);
-    }
-
-    // If target is flying and hit by ranged ability, they fall and take fall damage
-    if (isStatusActive(target, 'flying') && (ability.range === "ranged" || ability.type === "magic") && canHit) {
-        applyStatus(target, 'flying', 0);
-        const fallDamage = Math.max(5, Math.floor(target.maxLife * 0.1)); // 10% of max life fall damage
-        extraDamage = fallDamage;
-        messages.push(`${target.name} is struck from the sky and falls!`);
-        messages.push(`${target.name} takes ${fallDamage} fall damage!`);
-        // Apply fall damage immediately to target
-        target.life = Math.max(0, target.life - fallDamage);
-    }
-
-    // Log all messages
-    messages.forEach(msg => addLog(msg));
-
-    return { canHit, extraDamage, damageMultiplier };
 }
 
 /**
@@ -410,45 +374,87 @@ export function handleFlyingInteractions(ability, attacker, target, addLog) {
  * @param {Object} target - The target character
  * @param {Function} addLog - Logging function
  */
-export function handleAbilityEffects(ability, attacker, target, addLog) {
-    // Apply status effects
+export function handleAbilityEffects(ability, attacker, target, addLog, battleState = {}) {
+    // Special handling for mount ability
+    if (ability.id === 'mount') {
+        return handleMountAbility(ability, attacker, target, addLog, battleState);
+    }
+
+    // Check if ability has a custom apply function (new ability system)
+    if (typeof ability.apply === 'function') {
+        try {
+            return ability.apply(attacker, target, addLog);
+        } catch (error) {
+            console.error(`Error applying ability ${ability.name}:`, error);
+            addLog(`${ability.name} failed to apply properly!`);
+            return false;
+        }
+    }
+
+    // NEW STATUS SYSTEM: Handle statusToApply format
+    if (ability.statusToApply && ability.statusChance) {
+        if (Math.random() < ability.statusChance) {
+            const statusTarget = ability.targetType === 'self' ? attacker : target;
+            // Use nullish coalescing to properly handle 0 values
+            const duration = ability.statusDuration ?? 3;
+            addStatus(statusTarget, ability.statusToApply, duration, attacker, addLog);
+        }
+    }
+
+    // NEW STATUS SYSTEM: Handle secondary status effects
+    if (ability.secondaryStatusToApply && ability.secondaryStatusChance) {
+        if (Math.random() < ability.secondaryStatusChance) {
+            const statusTarget = ability.targetType === 'self' ? attacker : target;
+            // Use nullish coalescing to properly handle 0 values
+            const duration = ability.secondaryStatusDuration ?? 1;
+            addStatus(statusTarget, ability.secondaryStatusToApply, duration, attacker, addLog);
+        }
+    }
+
+    // Apply status effects (legacy system)
     if (ability.effect && Math.random() < (ability.effect.chance || 1)) {
         const statusTarget = ability.effect.target === 'self' ? attacker : target;
         
         // Special handling for pinned status
         if (ability.effect.type === 'pinned') {
-            applyPinnedStatus(attacker, statusTarget, addLog);
+            // Use nullish coalescing to properly handle 0 values
+            const duration = ability.effect.turns ?? 0;
+            addStatus(statusTarget, 'pinned', duration, attacker, addLog);
         } 
         // Special handling for stunned status
         else if (ability.effect.type === 'stunned') {
-            applyStunnedStatus(attacker, statusTarget, addLog);
+            // Use nullish coalescing to properly handle 0 values (though stunned should typically have turns > 0)
+            const duration = ability.effect.turns ?? 1;
+            applyStunnedStatus(statusTarget, duration, addLog);
         }
-        // Special handling for DoT effects (poisoned, burned, etc.)
-        else if (ability.effect.type === 'poisoned' || ability.effect.type === 'burned') {
+        // Special handling for DoT effects (poison, burn, etc.)
+        else if (ability.effect.type === 'poison' || ability.effect.type === 'burn' || ability.effect.type === 'poisoned' || ability.effect.type === 'burned') {
             // Check if this is a DoT status by looking in StatusRegistry
             const statusDef = StatusRegistry[ability.effect.type];
-            if (statusDef && statusDef.type === 'dot') {
-                // Use the DoT system
-                applyStatusDoT(attacker, statusTarget, ability.effect.type, addLog);
+            if (statusDef && statusDef.DoT && statusDef.DoT.isDoT) {
+                // Use the new DoT system
+                // Use nullish coalescing to properly handle 0 values
+                const duration = ability.effect.turns ?? 1;
+                addStatus(statusTarget, ability.effect.type, duration, attacker, addLog);
             } else {
-                // Fall back to legacy system
-                applyStatus(
+                // Fall back to standard status application
+                addStatus(
                     statusTarget,
                     ability.effect.type,
                     ability.effect.turns || 1,
-                    addLog,
-                    ability.effect.permanent || false
+                    attacker,
+                    addLog
                 );
             }
         } 
         else {
-            // Use legacy status system for other effects
-            applyStatus(
+            // Use new status system for other effects
+            addStatus(
                 statusTarget,
                 ability.effect.type,
                 ability.effect.turns || 1,
-                addLog,
-                ability.effect.permanent || false
+                attacker,
+                addLog
             );
         }
     }
@@ -457,7 +463,7 @@ export function handleAbilityEffects(ability, attacker, target, addLog) {
     if (ability.removesStatusSelf && Array.isArray(ability.removesStatusSelf)) {
         ability.removesStatusSelf.forEach(statusType => {
             if (isStatusActive(attacker, statusType)) {
-                applyStatus(attacker, statusType, 0);
+                removeStatus(attacker, statusType, addLog);
                 addLog(`${attacker.name} is no longer ${statusType}!`);
             }
         });
@@ -467,7 +473,7 @@ export function handleAbilityEffects(ability, attacker, target, addLog) {
     if (ability.removesStatusTarget && Array.isArray(ability.removesStatusTarget)) {
         ability.removesStatusTarget.forEach(statusType => {
             if (isStatusActive(target, statusType)) {
-                applyStatus(target, statusType, 0);
+                removeStatus(target, statusType, addLog);
                 addLog(`${target.name} is no longer ${statusType}!`);
             }
         });
@@ -475,46 +481,93 @@ export function handleAbilityEffects(ability, attacker, target, addLog) {
 
     // Backward compatibility: handle old removesPin property
     if (ability.removesPin && isStatusActive(target, 'pinned')) {
-        applyStatus(target, 'pinned', 0);
+        removeStatus(target, 'pinned', addLog);
         addLog(`${target.name} is no longer pinned!`);
     }
 }
 
 /**
- * Handle pinned status interactions
- * @param {Object} ability - The ability being used
- * @param {Object} attacker - The attacking character
- * @param {Object} target - The target character
+ * Handle mount ability - allows one character to mount another with different effects for allies/enemies
+ * @param {Object} ability - The mount ability being used
+ * @param {Object} attacker - The character attempting to mount (rider)
+ * @param {Object} target - The character being mounted (mount)
  * @param {Function} addLog - Logging function
- * @returns {Object} - Object containing pinned interaction results
+ * @param {Object} battleState - Battle state for ally/enemy determination
  */
-export function handlePinnedInteractions(ability, attacker, target, addLog) {
-    let shouldRemovePinFromAttacker = false;
-    let shouldRemovePinFromTarget = false;
-    let shouldStunTarget = false;
-
-    // Check if attacker is trapped (including pinned) and will hit successfully
-    if (isCharacterTrapped(attacker)) {
-        // Trapped character breaks free and stuns opponent when hitting
-        addLog(`${attacker.name} breaks free and stuns ${target.name}!`);
-        shouldRemovePinFromAttacker = true;
-        shouldStunTarget = true;
+export function handleMountAbility(ability, attacker, target, addLog, battleState = {}) {
+    // Check if already mounted - allow multiple riders on same mount
+    if (isStatusActive(attacker, 'rider')) {
+        addLog(`${attacker.name} is already riding another mount!`);
+        return { success: false, damage: 0 };
     }
 
-    // Check if target is trapped and opponent attacks without pin effect
-    if (isCharacterTrapped(target)) {
-        // If opponent's attack doesn't have pinned effect, release the pin
-        if (!ability.effect || ability.effect.type !== 'pinned') {
-            addLog(`${target.name} is released from the pin!`);
-            shouldRemovePinFromTarget = true;
+    // Determine if target is an ally
+    const isAlly = isTargetAlly(attacker, target, battleState);
+    
+    // Calculate mount success based on size and compatibility
+    const attackerSize = getWeight(attacker, 65);
+    const targetSize = getWeight(target, 65);
+    const sizeRatio = attackerSize / targetSize;
+    
+    // Size-based mount logic
+    let mountResult = { success: false, damage: 0, effect: 'fail' };
+    
+    if (sizeRatio <= 0.5) {
+        // Rider is much smaller - easy mount
+        mountResult = { success: true, damage: 0, effect: 'mount', reason: `${attacker.name} easily mounts ${target.name}!` };
+    } else if (sizeRatio <= 1.5) {
+        // Similar sizes - mount with some struggle
+        const damage = Math.floor(Math.random() * 10) + 5;
+        mountResult = { success: true, damage, effect: 'mount_with_struggle', reason: `${attacker.name} manages to mount ${target.name} after a struggle!` };
+    } else {
+        // Rider is much larger - potential crush
+        if (targetSize < attackerSize * 0.3) {
+            const damage = Math.floor(attackerSize * 0.8);
+            mountResult = { success: false, damage, effect: 'crush', reason: `${attacker.name} is too heavy and crushes ${target.name}!` };
+        } else {
+            mountResult = { success: false, damage: 0, effect: 'fail', reason: `${attacker.name} cannot mount ${target.name} - incompatible sizes!` };
         }
     }
-
-    return {
-        shouldRemovePinFromAttacker,
-        shouldRemovePinFromTarget,
-        shouldStunTarget
-    };
+    
+    // Handle the result
+    switch (mountResult.effect) {
+        case 'mount':
+            // Perfect mount - create partnership
+            if (isAlly) {
+                tameMount(attacker, target, addLog);
+            } else {
+                equipMount(attacker, target, addLog);
+            }
+            addLog(mountResult.reason);
+            return { success: true, damage: 0 };
+            
+        case 'mount_with_struggle':
+            // Mount succeeds but target takes damage and can still act
+            target.secondary.life = Math.max(0, target.secondary.life - mountResult.damage);
+            if (isAlly) {
+                tameMount(attacker, target, addLog);
+            } else {
+                equipMount(attacker, target, addLog);
+            }
+            addLog(mountResult.reason);
+            addLog(`${target.name} takes ${mountResult.damage} damage from the struggle!`);
+            updateLifeBar(target.secondary.life, target.secondary.maxLife);
+            return { success: true, damage: mountResult.damage };
+            
+        case 'crush':
+            // Rider is too heavy and crushes the target
+            target.secondary.life = Math.max(0, target.secondary.life - mountResult.damage);
+            addLog(mountResult.reason);
+            addLog(`${target.name} takes ${mountResult.damage} crushing damage!`);
+            updateLifeBar(target.secondary.life, target.secondary.maxLife);
+            return { success: false, damage: mountResult.damage };
+            
+        case 'fail':
+        default:
+            // Mount attempt failed
+            addLog(mountResult.reason);
+            return { success: false, damage: 0 };
+    }
 }
 
 /**
@@ -526,16 +579,64 @@ export function handlePinnedInteractions(ability, attacker, target, addLog) {
  */
 export function calculateEnvironmentalPenalty(characterType, environmentType, intensity = 1) {
     // Create a mock character object for the new system
-    const mockCharacter = { type: characterType };
-    const penalties = getEnvironmentalPenalties(mockCharacter, environmentType, intensity);
+    const mockCharacter = { 
+        type: characterType,
+        misc: { elementalAlignments: [characterType] }
+    };
+    
+    // Set temporary environment and check penalties
+    const currentEnv = getActiveEnvironment();
+    import('./environments.js').then(({ setActiveEnvironment }) => {
+        setActiveEnvironment(environmentType, intensity, () => {});
+    });
+    
+    // Use mock ability to check environmental modifications
+    const mockAbility = { element: characterType };
+    const envModification = modifyAbilityByEnvironment(mockAbility, mockCharacter, mockCharacter, 100, 100);
+    
+    const damageReduction = envModification.damage < 100 ? (100 - envModification.damage) / 100 : 0;
     
     // Convert to old format for backwards compatibility
     return {
-        damageReduction: penalties.damagePenalty,
-        description: penalties.damagePenalty > 0 ? 
-            `${environmentType} environment reduces ${characterType} attack power by ${Math.round(penalties.damagePenalty * 100)}%!` : "",
+        damageReduction: damageReduction,
+        description: damageReduction > 0 ? 
+            `${environmentType} environment reduces ${characterType} attack power by ${Math.round(damageReduction * 100)}%!` : "",
         environmentType,
         intensity,
         characterType
     };
+}
+
+/**
+ * Apply healing to a target character
+ * @param {Object} target - The target receiving healing
+ * @param {number} healAmount - Amount of healing
+ * @param {Object} ability - The ability used (optional, for revive check)
+ * @param {Object} caster - The character casting the heal (optional)
+ * @param {Function} addLog - Logging function
+ * @returns {number} - Actual amount healed
+ */
+export function applyHealing(target, healAmount, ability = null, caster = null, addLog = () => {}) {
+    // Don't heal dead characters unless it's a revive ability
+    if (target.secondary.life <= 0 && (!ability || !ability.revive)) {
+        if (addLog) addLog(`${target.name} is dead and cannot be healed!`);
+        return 0;
+    }
+
+    const originalLife = target.secondary.life;
+    target.secondary.life = Math.min(target.secondary.maxLife, target.secondary.life + healAmount);
+    const actualHealed = target.secondary.life - originalLife;
+
+    if (actualHealed > 0) {
+        if (addLog) {
+            if (originalLife <= 0) {
+                addLog(`${target.name} is revived with ${actualHealed} health!`);
+            } else {
+                addLog(`${target.name} recovers ${actualHealed} health!`);
+            }
+        }
+        updateLifeBar(target.secondary.life, target.secondary.maxLife);
+    }
+
+    return actualHealed;
 }

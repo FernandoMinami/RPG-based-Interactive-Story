@@ -8,7 +8,7 @@ export default {
     onUse: null,
     effectType: "permanent",
     stats: {
-        physicDefense: 12,
+        physicalDefense: 12,
         waterResistance: 100 // 100% water resistance
     },
     environmentalProtection: {

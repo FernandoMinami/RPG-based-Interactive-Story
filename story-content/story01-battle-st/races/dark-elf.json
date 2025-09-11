@@ -8,6 +8,7 @@
     "shadow_affinity": "Natural resistance to dark environments",
     "stealth_mastery": "Enhanced stealth and dark magic capabilities"
   },
+  "specialAbilities": ["poison"],
   "baseModifiers": {
     "strength": 0,
     "dexterity": 2, 

@@ -244,7 +244,7 @@
     "tavern-relaxed": {
       "title": "Relaxing at the Tavern",
       "text": "You enjoy a refreshing drink and feel reinvigorated.",
-      "mana": 15,
+      "mp": 15,
       "choices": [
         {
           "text": "Continue drinking",

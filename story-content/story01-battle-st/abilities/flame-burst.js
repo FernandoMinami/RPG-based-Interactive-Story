@@ -8,6 +8,7 @@ export default {
     accuracy: 95,
     mpCost: 10,
     cooldown: 1,
+    img: "flame-burst-attack.svg", // Image for this ability
     description: "A burst of magical fire that can start elemental combinations.",
     onHit: "Flames engulf the target!",
     onMiss: "The flames miss their mark!",

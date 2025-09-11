@@ -2,6 +2,9 @@
  * Save and Load system for the Interactive Story Game
  */
 
+import { getPrimaryRace, getWeight, getHeight } from './element-helpers.js';
+import { saveDayNightState, loadDayNightState } from './day-night.js';
+
 /**
  * Create a save data object with all necessary game state
  * @returns {Object} Complete save data
@@ -23,24 +26,22 @@ export function createSaveData() {
         player: {
             id: window.player.id,
             name: window.player.name,
-            race: window.player.race || "human",
+            race: getPrimaryRace(window.player) || "human",
             type: window.player.type || "neutral",
             level: window.player.level || 1,
             exp: window.player.exp || 0,
             experience: window.player.experience || 0,
             attributePoints: window.player.attributePoints || 0,
-            height: window.player.height,
-            weight: window.player.weight,
+            height: getHeight(window.player),
+            weight: getWeight(window.player),
             hp: window.player.hp,
             maxHp: window.player.maxHp,
-            life: window.player.life,
+            life: window.player.secondary.life,
             maxLife: window.player.maxLife,
-            mp: window.player.mp || 0,
+            mp: window.player.secondary.mp || 0,
             maxMp: window.player.maxMp || 0,
-            mana: window.player.mana || 0,
-            maxMana: window.player.maxMana || 0,
-            manaRegen: window.player.manaRegen || 0,
-            attributes: { ...window.player.attributes },
+            mpRegen: window.player.secondary.mpRegen || 0,
+            primary: { ...window.player.primary },
             secondary: { ...window.player.secondary },
             equipment: { ...window.player.equipment },
             statuses: [...(window.player.statuses || [])],
@@ -62,7 +63,8 @@ export function createSaveData() {
         },
         gameState: {
             battleJustHappened: window.battleJustHappened || false,
-            historyLog: [...(window.historyLog || [])]
+            historyLog: [...(window.historyLog || [])],
+            dayNight: saveDayNightState()
         }
     };
 
@@ -167,7 +169,7 @@ export async function loadGameFromSave(saveData) {
         // Import required modules
         const { inventory, addItem, setMoney, addLoot, restoreInventory } = await import('./inventory.js');
         const { updateCharacterUI, updateStoryUI } = await import('./ui.js');
-        const { updateSecondaryStats, syncManaProperties } = await import('./character.js');
+        const { updateSecondaryStats } = await import('./characters.js');
         const { historyLog, updateHistoryPanel, restoreHistoryLog } = await import('./history.js');
         const { loadItems } = await import('./items.js');
         const { loadLoot } = await import('./loot.js');
@@ -181,7 +183,7 @@ export async function loadGameFromSave(saveData) {
         
         // Find and load the character module based on saved player name
         const storyFolder = saveData.story.folder.replace('./', '');
-        const manifestUrl = `../story-content/${storyFolder}/characters/_characters.json?v=${Date.now()}`;
+        const manifestUrl = `../story-content/${storyFolder}/characters.json?v=${Date.now()}`;
         
         let characters;
         try {
@@ -243,7 +245,7 @@ export async function loadGameFromSave(saveData) {
         
         // Load statuses with proper manifest
         try {
-            const statusManifest = await fetch(`../story-content/${storyFolder}/statuses/_status.json?v=${Date.now()}`).then(res => {
+            const statusManifest = await fetch(`../story-content/${storyFolder}/statuses.json?v=${Date.now()}`).then(res => {
                 if (!res.ok) {
                     throw new Error(`Failed to fetch status manifest: ${res.status} ${res.statusText}`);
                 }
@@ -258,7 +260,7 @@ export async function loadGameFromSave(saveData) {
         
         // Load abilities with proper manifest  
         try {
-            const abilityManifest = await fetch(`../story-content/${storyFolder}/abilities/_abilities.json?v=${Date.now()}`).then(res => {
+            const abilityManifest = await fetch(`../story-content/${storyFolder}/abilities.json?v=${Date.now()}`).then(res => {
                 if (!res.ok) {
                     throw new Error(`Failed to fetch ability manifest: ${res.status} ${res.statusText}`);
                 }
@@ -302,7 +304,7 @@ export async function loadGameFromSave(saveData) {
             
             // Load all scenarios to get all possible nodes
             try {
-                const scenariosManifest = await fetch(`../story-content/${storyFolder}/scenarios/_scenarios.json?v=${Date.now()}`).then(res => {
+                const scenariosManifest = await fetch(`../story-content/${storyFolder}/scenarios.json?v=${Date.now()}`).then(res => {
                     if (!res.ok) {
                         throw new Error(`Failed to fetch scenarios manifest: ${res.status} ${res.statusText}`);
                     }
@@ -353,8 +355,7 @@ export async function loadGameFromSave(saveData) {
         storyModule.restoreStoryState(saveData, characterModule);
 
         // Sync character state after everything is loaded
-        syncManaProperties(window.player);
-        updateSecondaryStats(window.player);
+        updateSecondaryStats(window.player, true);
 
         // Update UI - Story layout character name only (old elements removed)
         const characterNameStory = document.getElementById("current-character-name-story");

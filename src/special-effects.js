@@ -3,29 +3,32 @@
  * 
  * This system provides dynamic effects that can be applied to any character
  * without hard-coding specific attributes or secondary stats. Each story
- * can define its own attributes and this system will adapt accordingly.
+ * can define its own special effects configuration.
  */
 
-/**
- * Base Attribute Boost Effect
- * Boosts one or more base attributes of a character dynamically
+// Import validation system for robust character structure checking
+import { validatePrimaryAttributes, validateSecondaryAttributes } from './character-validation.js';
+import { StatusRegistry, removeStatus, addStatus } from './status.js';
+
+/**Primary Attribute Boost Effect
+ * Boosts one or more primary attributes of a character dynamically
  * 
  * @param {Object} target - The character to apply effects to
  * @param {Array} attributeBoosts - Array of boost objects
  * @param {Function} addLog - Logging function for feedback
  * @returns {Object} Applied effects for tracking/removal
  */
-export function applyBaseAttributeBoost(target, attributeBoosts, addLog = () => {}) {
+export function applyPrimaryAttributeBoost(target, attributeBoosts, addLog = () => {}) {
     const appliedEffects = {
-        type: 'baseAttributeBoost',
+        type: 'primaryAttributeBoost',
         target: target,
         boosts: [],
         originalValues: {}
     };
 
-    // Ensure target has attributes object
-    if (!target.attributes) {
-        addLog(`${target.name || 'Target'} has no attributes to boost`);
+    // Validate target structure
+    if (!validatePrimaryAttributes(target, addLog)) {
+        addLog(`Cannot apply primary attribute boost: invalid target structure`);
         return appliedEffects;
     }
 
@@ -33,19 +36,19 @@ export function applyBaseAttributeBoost(target, attributeBoosts, addLog = () => 
     attributeBoosts.forEach(boost => {
         const { attribute, amount } = boost;
         
-        // Check if target has this base attribute
-        if (target.attributes.hasOwnProperty(attribute)) {
+        // Check if target has this primary attribute
+        if (target.primary.hasOwnProperty(attribute)) {
             // Store original value for later removal
             if (!appliedEffects.originalValues[attribute]) {
-                appliedEffects.originalValues[attribute] = target.attributes[attribute];
+                appliedEffects.originalValues[attribute] = target.primary[attribute];
             }
             
             // Apply the boost
-            target.attributes[attribute] += amount;
+            target.primary[attribute] += amount;
             appliedEffects.boosts.push({ attribute, amount });
             
             
-            addLog(`${target.name || 'Target'}'s ${attribute} increased by ${amount} (${appliedEffects.originalValues[attribute]} → ${target.attributes[attribute]})`);
+            addLog(`${target.name || 'Target'}'s ${attribute} increased by ${amount} (${appliedEffects.originalValues[attribute]} → ${target.primary[attribute]})`);
         } else {
             addLog(`${target.name || 'Target'} does not have ${attribute} attribute - boost ignored`);
         }
@@ -54,16 +57,15 @@ export function applyBaseAttributeBoost(target, attributeBoosts, addLog = () => 
     return appliedEffects;
 }
 
-/**
- * Remove Base Attribute Boost Effect
+/** Remove Primary Attribute Boost Effect
  * Removes previously applied attribute boosts
  * 
- * @param {Object} appliedEffects - The effects object returned from applyBaseAttributeBoost
+ * @param {Object} appliedEffects - The effects object returned from applyPrimaryAttributeBoost
  * @param {Function} addLog - Logging function for feedback
  */
-export function removeBaseAttributeBoost(appliedEffects, addLog = () => {}) {
-    if (!appliedEffects || appliedEffects.type !== 'baseAttributeBoost') {
-        addLog('Invalid or missing base attribute boost effects to remove');
+export function removePrimaryAttributeBoost(appliedEffects, addLog = () => {}) {
+    if (!appliedEffects || appliedEffects.type !== 'primaryAttributeBoost') {
+        addLog('Invalid or missing primary attribute boost effects to remove');
         return;
     }
 
@@ -71,15 +73,14 @@ export function removeBaseAttributeBoost(appliedEffects, addLog = () => {}) {
     
     // Restore original values
     Object.keys(originalValues).forEach(attribute => {
-        if (target.attributes && target.attributes.hasOwnProperty(attribute)) {
-            const oldValue = target.attributes[attribute];
-            target.attributes[attribute] = originalValues[attribute];
+        if (target.primary && target.primary.hasOwnProperty(attribute)) {
+            const oldValue = target.primary[attribute];
+            target.primary[attribute] = originalValues[attribute];
         }
     });
 }
 
-/**
- * Secondary Attribute Boost Effect
+/** Secondary Attribute Boost Effect
  * Boosts one or more secondary attributes (like maxLife, maxMana, speed, etc.)
  * 
  * @param {Object} target - The character to apply effects to
@@ -122,8 +123,7 @@ export function applySecondaryAttributeBoost(target, secondaryBoosts, addLog = (
     return appliedEffects;
 }
 
-/**
- * Remove Secondary Attribute Boost Effect
+/** Remove Secondary Attribute Boost Effect
  * 
  * @param {Object} appliedEffects - The effects object returned from applySecondaryAttributeBoost
  * @param {Function} addLog - Logging function for feedback
@@ -146,8 +146,7 @@ export function removeSecondaryAttributeBoost(appliedEffects, addLog = () => {})
     });
 }
 
-/**
- * Secondary Attribute Debuff
+/** Secondary Attribute Debuff
  * Debuffs one or more secondary attributes (like maxLife, maxMana, speed, etc.)
  * 
  * @param {Object} target - The character to apply effects to
@@ -189,8 +188,7 @@ export function applySecondaryAttributeDebuff(target, secondaryDebuffs, addLog =
     return appliedEffects;
 }
 
-/**
- * Remove Secondary Attribute Debuff Effect
+/** Remove Secondary Attribute Debuff Effect
  * Removes previously applied secondary attribute debuffs
  * 
  * @param {Object} appliedEffects - The effects object returned from applySecondaryAttributeDebuff
@@ -214,8 +212,7 @@ export function removeSecondaryAttributeDebuff(appliedEffects, addLog = () => {}
     });
 }
 
-/**
- * Percentage-Based Attribute Boost
+/** Percentage-Based Attribute Boost
  * Boosts attributes by a percentage rather than flat amount
  * 
  * @param {Object} target - The character to apply effects to
@@ -231,9 +228,9 @@ export function applyPercentageAttributeBoost(target, percentageBoosts, addLog =
         originalValues: {}
     };
 
-    // Ensure target has attributes object
-    if (!target.attributes) {
-        addLog(`${target.name || 'Target'} has no attributes to boost`);
+    // Ensure target has primary attributes object
+    if (!target.primary) {
+        addLog(`${target.name || 'Target'} has no primary attributes to boost`);
         return appliedEffects;
     }
 
@@ -241,19 +238,19 @@ export function applyPercentageAttributeBoost(target, percentageBoosts, addLog =
     percentageBoosts.forEach(boost => {
         const { attribute, percentage } = boost;
         
-        // Check if target has this base attribute
-        if (target.attributes.hasOwnProperty(attribute)) {
+        // Check if target has this primary attribute
+        if (target.primary.hasOwnProperty(attribute)) {
             // Store original value for later removal
             if (!appliedEffects.originalValues[attribute]) {
-                appliedEffects.originalValues[attribute] = target.attributes[attribute];
+                appliedEffects.originalValues[attribute] = target.primary[attribute];
             }
             
             // Calculate and apply the percentage boost
             const boostAmount = Math.floor(appliedEffects.originalValues[attribute] * (percentage / 100));
-            target.attributes[attribute] += boostAmount;
+            target.primary[attribute] += boostAmount;
             appliedEffects.boosts.push({ attribute, percentage, amount: boostAmount });
             
-            addLog(`${target.name || 'Target'}'s ${attribute} increased by ${percentage}% (+${boostAmount}) (${appliedEffects.originalValues[attribute]} → ${target.attributes[attribute]})`);
+            addLog(`${target.name || 'Target'}'s ${attribute} increased by ${percentage}% (+${boostAmount}) (${appliedEffects.originalValues[attribute]} → ${target.primary[attribute]})`);
         } else {
             addLog(`${target.name || 'Target'} does not have ${attribute} attribute - percentage boost ignored`);
         }
@@ -262,8 +259,7 @@ export function applyPercentageAttributeBoost(target, percentageBoosts, addLog =
     return appliedEffects;
 }
 
-/**
- * Generic Effect Application System
+/** Generic Effect Application System
  * Applies multiple types of effects from a single configuration object
  * 
  * @param {Object} target - The character to apply effects to
@@ -277,19 +273,19 @@ export function applySpecialEffects(target, effectConfig, addLog = () => {}) {
         effects: []
     };
 
-    // Apply base attribute boosts
-    if (effectConfig.baseAttributeBoosts && effectConfig.baseAttributeBoosts.length > 0) {
-        const baseBoostEffects = applyBaseAttributeBoost(target, effectConfig.baseAttributeBoosts, addLog);
-        if (baseBoostEffects.boosts.length > 0) {
-            allAppliedEffects.effects.push(baseBoostEffects);
+    // Apply primary attribute boosts
+    if (effectConfig.primaryAttributeBoosts && effectConfig.primaryAttributeBoosts.length > 0) {
+        const primaryBoostEffects = applyPrimaryAttributeBoost(target, effectConfig.primaryAttributeBoosts, addLog);
+        if (primaryBoostEffects.boosts.length > 0) {
+            allAppliedEffects.effects.push(primaryBoostEffects);
         }
     }
 
-    // Apply base attribute debuffs
-    if (effectConfig.baseAttributeDebuffs && effectConfig.baseAttributeDebuffs.length > 0) {
-        const baseDebuffEffects = applyBaseAttributeDebuff(target, effectConfig.baseAttributeDebuffs, addLog);
-        if (baseDebuffEffects.debuffs.length > 0) {
-            allAppliedEffects.effects.push(baseDebuffEffects);
+    // Apply primary attribute debuffs
+    if (effectConfig.primaryAttributeDebuffs && effectConfig.primaryAttributeDebuffs.length > 0) {
+        const primaryDebuffEffects = applyPrimaryAttributeDebuff(target, effectConfig.primaryAttributeDebuffs, addLog);
+        if (primaryDebuffEffects.debuffs.length > 0) {
+            allAppliedEffects.effects.push(primaryDebuffEffects);
         }
     }
 
@@ -320,8 +316,7 @@ export function applySpecialEffects(target, effectConfig, addLog = () => {}) {
     return allAppliedEffects;
 }
 
-/**
- * Remove All Special Effects
+/** Remove All Special Effects
  * Removes all effects applied by applySpecialEffects
  * 
  * @param {Object} allAppliedEffects - The effects object returned from applySpecialEffects
@@ -336,11 +331,11 @@ export function removeSpecialEffects(allAppliedEffects, addLog = () => {}) {
     // Remove each effect in reverse order
     allAppliedEffects.effects.reverse().forEach(effect => {
         switch (effect.type) {
-            case 'baseAttributeBoost':
-                removeBaseAttributeBoost(effect, addLog);
+            case 'primaryAttributeBoost':
+                removePrimaryAttributeBoost(effect, addLog);
                 break;
-            case 'baseAttributeDebuff':
-                removeBaseAttributeDebuff(effect, addLog);
+            case 'primaryAttributeDebuff':
+                removePrimaryAttributeDebuff(effect, addLog);
                 break;
             case 'secondaryAttributeBoost':
                 removeSecondaryAttributeBoost(effect, addLog);
@@ -349,7 +344,7 @@ export function removeSpecialEffects(allAppliedEffects, addLog = () => {}) {
                 removeSecondaryAttributeDebuff(effect, addLog);
                 break;
             case 'percentageAttributeBoost':
-                removeBaseAttributeBoost(effect, addLog); // Same removal logic as base attributes
+                removePrimaryAttributeBoost(effect, addLog); // Same removal logic as primary attributes
                 break;
             default:
                 addLog(`Unknown effect type: ${effect.type}`);
@@ -357,13 +352,12 @@ export function removeSpecialEffects(allAppliedEffects, addLog = () => {}) {
     });
 }
 
-/**
- * Example Usage and Configuration Objects
+/** Example Usage and Configuration Objects
  */
 
 // Example: Focus Attack ability configuration
 export const EXAMPLE_FOCUS_ATTACK = {
-    baseAttributeBoosts: [
+    primaryAttributeBoosts: [
         { attribute: 'dexterity', amount: 5 },
         { attribute: 'strength', amount: 3 }
     ]
@@ -371,7 +365,7 @@ export const EXAMPLE_FOCUS_ATTACK = {
 
 // Example: Magical Enhancement configuration
 export const EXAMPLE_MAGICAL_ENHANCEMENT = {
-    baseAttributeBoosts: [
+    primaryAttributeBoosts: [
         { attribute: 'intelligence', amount: 4 },
         { attribute: 'wisdom', amount: 2 }
     ],
@@ -392,26 +386,25 @@ export const EXAMPLE_BERSERKER_RAGE = {
     ]
 };
 
-/**
- * Base Attribute Debuff Effect
- * Reduces one or more base attributes of a character dynamically
+/** Primary Attribute Debuff Effect
+ * Reduces one or more primary attributes of a character dynamically
  * 
  * @param {Object} target - The character to apply effects to
  * @param {Array} attributeDebuffs - Array of debuff objects
  * @param {Function} addLog - Logging function for feedback
  * @returns {Object} Applied effects for tracking/removal
  */
-export function applyBaseAttributeDebuff(target, attributeDebuffs, addLog = () => {}) {
+export function applyPrimaryAttributeDebuff(target, attributeDebuffs, addLog = () => {}) {
     const appliedEffects = {
-        type: 'baseAttributeDebuff',
+        type: 'primaryAttributeDebuff',
         target: target,
         debuffs: [],
         originalValues: {}
     };
 
-    // Ensure target has attributes object
-    if (!target.attributes) {
-        addLog(`${target.name || 'Target'} has no attributes to debuff`);
+    // Validate target structure
+    if (!validatePrimaryAttributes(target, addLog)) {
+        addLog(`Cannot apply primary attribute debuff: invalid target structure`);
         return appliedEffects;
     }
 
@@ -419,15 +412,15 @@ export function applyBaseAttributeDebuff(target, attributeDebuffs, addLog = () =
     attributeDebuffs.forEach(debuff => {
         const { attribute, amount } = debuff;
         
-        // Check if target has this base attribute
-        if (target.attributes.hasOwnProperty(attribute)) {
+        // Check if target has this primary attribute
+        if (target.primary.hasOwnProperty(attribute)) {
             // Store original value for later removal
             if (!appliedEffects.originalValues[attribute]) {
-                appliedEffects.originalValues[attribute] = target.attributes[attribute];
+                appliedEffects.originalValues[attribute] = target.primary[attribute];
             }
             
             // Apply the debuff (reduce the attribute)
-            target.attributes[attribute] = Math.max(0, target.attributes[attribute] - amount);
+            target.primary[attribute] = Math.max(0, target.primary[attribute] - amount);
             appliedEffects.debuffs.push({ attribute, amount });
             
         } else {
@@ -437,16 +430,15 @@ export function applyBaseAttributeDebuff(target, attributeDebuffs, addLog = () =
     return appliedEffects;
 }
 
-/**
- * Remove Base Attribute Debuff Effect
+/** Remove Primary Attribute Debuff Effect
  * Removes previously applied attribute debuffs
  * 
- * @param {Object} appliedEffects - The effects object returned from applyBaseAttributeDebuff
+ * @param {Object} appliedEffects - The effects object returned from applyPrimaryAttributeDebuff
  * @param {Function} addLog - Logging function for feedback
  */
-export function removeBaseAttributeDebuff(appliedEffects, addLog = () => {}) {
-    if (!appliedEffects || appliedEffects.type !== 'baseAttributeDebuff') {
-        addLog('Invalid or missing base attribute debuff effects to remove');
+export function removePrimaryAttributeDebuff(appliedEffects, addLog = () => {}) {
+    if (!appliedEffects || appliedEffects.type !== 'primaryAttributeDebuff') {
+        addLog('Invalid or missing primary attribute debuff effects to remove');
         return;
     }
 
@@ -454,9 +446,9 @@ export function removeBaseAttributeDebuff(appliedEffects, addLog = () => {}) {
     
     // Restore original values
     Object.keys(originalValues).forEach(attribute => {
-        if (target.attributes && target.attributes.hasOwnProperty(attribute)) {
-            const oldValue = target.attributes[attribute];
-            target.attributes[attribute] = originalValues[attribute];
+        if (target.primary && target.primary.hasOwnProperty(attribute)) {
+            const oldValue = target.primary[attribute];
+            target.primary[attribute] = originalValues[attribute];
         }
     });
 }
@@ -465,8 +457,7 @@ export function removeBaseAttributeDebuff(appliedEffects, addLog = () => {}) {
 // DAMAGE IMMUNITY AND RESISTANCE SYSTEM
 // ============================================================================
 
-/**
- * Centralized Damage Immunity System
+/** Centralized Damage Immunity System
  * Handles all forms of damage immunity, resistance, and damage calculations
  */
 export const DamageImmunitySystem = {
@@ -747,16 +738,14 @@ export const DamageImmunitySystem = {
     }
 };
 
-/**
- * Quick immunity check for general damage
+/** Quick immunity check for general damage
  * Use this in battle.js and other systems for any damage dealing
  */
 export function checkDamageImmunity(character, damageType, damageSource = 'general', addLog = () => {}) {
     return DamageImmunitySystem.isImmuneToDamage(character, damageType, damageSource, addLog);
 }
 
-/**
- * Apply damage with full immunity and resistance checking
+/** Apply damage with full immunity and resistance checking
  * Returns the final damage dealt (0 if immune)
  */
 export function applyDamageWithImmunity(character, damage, damageType, damageSource = 'general', addLog = () => {}) {
@@ -774,8 +763,7 @@ export function applyDamageWithImmunity(character, damage, damageType, damageSou
     return finalDamage;
 }
 
-/**
- * Check if character has any damage resistance (not immunity)
+/** Check if character has any damage resistance (not immunity)
  * Returns the resistance multiplier (0.0 to 1.0, where 0.5 = 50% resistance)
  */
 export function getDamageResistance(character, damageType) {
@@ -788,8 +776,7 @@ export function getDamageResistance(character, damageType) {
     return Math.max(0, totalResistance);
 }
 
-/**
- * Environmental damage application with immunity checking
+/** Environmental damage application with immunity checking
  * Use this for environmental hazards, traps, etc.
  */
 export function applyEnvironmentalDamage(character, damage, damageType, environmentName, addLog = () => {}) {
@@ -801,13 +788,12 @@ export function applyEnvironmentalDamage(character, damage, damageType, environm
 // TRAPPED STATUS STRUGGLE MECHANICS
 // ============================================================================
 
-/**
- * Calculate struggle success based on strength vs strength+weight (enemy-based)
+/** Calculate struggle success based on strength vs strength+weight (enemy-based)
  * Used for pinned status where opponent stats matter
  */
 export function calculateEnemyBasedStruggle(character, opponent, status, addLog = () => {}) {
-    const characterStrength = character.attributes?.strength || 10;
-    const opponentStrength = opponent.attributes?.strength || 10;
+    const characterStrength = character.primary?.strength || 10;
+    const opponentStrength = opponent.primary?.strength || 10;
     const opponentWeight = opponent.weight || 65; // Default weight: 65kg
     
     // Opponent's resistance = strength + (weight bonus: 1 point per 20kg)
@@ -829,16 +815,15 @@ export function calculateEnemyBasedStruggle(character, opponent, status, addLog 
     return success;
 }
 
-/**
- * Calculate struggle success against status difficulty (status-based)
+/** Calculate struggle success against status difficulty (status-based)
  * Used for pinned status - contested roll between player and enemy
  */
 export function calculateStatusBasedStruggle(character, status, addLog = () => {}, opponent = null) {
-    const characterStrength = character.attributes?.strength || 10;
+    const characterStrength = character.primary?.strength || 10;
     
     // If we have an opponent and this is a pinned status, use contested roll
     if (opponent && (status.statusTag === 'pinned' || status.name === 'Pinned')) {
-        const opponentStrength = opponent.attributes?.strength || 10;
+        const opponentStrength = opponent.primary?.strength || 10;
         const opponentWeight = opponent.weight || 65; // Default weight: 65kg
         
         // Player roll: d20 + strength
@@ -889,8 +874,7 @@ export function calculateStatusBasedStruggle(character, status, addLog = () => {
     }
 }
 
-/**
- * Enhanced struggle calculation that considers usesEnemyStats property
+/** Enhanced struggle calculation that considers usesEnemyStats property
  * This is the unified function that determines which type of struggle to use
  */
 export function calculateStruggleWithStats(character, opponent, statusDef, addLog = () => {}) {
@@ -902,8 +886,7 @@ export function calculateStruggleWithStats(character, opponent, statusDef, addLo
     }
 }
 
-/**
- * Handle forceful break free when trapped character successfully hits an attack
+/** Handle forceful break free when trapped character successfully hits an attack
  * This automatically removes trapped status and may apply effects to opponent
  */
 export function forcefulBreakFreeEffect(attacker, target, addLog = () => {}, applyStatusFunction = null) {
@@ -918,8 +901,7 @@ export function forcefulBreakFreeEffect(attacker, target, addLog = () => {}, app
     return true; // Indicates trapped status should be removed
 }
 
-/**
- * Check if trapped status should end when opponent attacks without maintaining trap
+/** Check if trapped status should end when opponent attacks without maintaining trap
  * Used for pinned status - attacks without pin effect release the pin
  */
 export function checkTrapRelease(ability, target, addLog = () => {}) {
@@ -937,8 +919,7 @@ export function checkTrapRelease(ability, target, addLog = () => {}) {
 // FLYING STATUS MECHANICS
 // ============================================================================
 
-/**
- * Check if a character is currently flying
+/** Check if a character is currently flying
  */
 export function isCharacterFlying(character) {
     if (!character.statusEffects) return false;
@@ -948,8 +929,7 @@ export function isCharacterFlying(character) {
     );
 }
 
-/**
- * Handle diving attack when flying character uses close/physical attack
+/** Handle diving attack when flying character uses close/physical attack
  * Applies damage multiplier and removes flying status
  */
 export function handleDivingAttack(attacker, target, ability, baseDamage, addLog = () => {}) {
@@ -975,8 +955,7 @@ export function handleDivingAttack(attacker, target, ability, baseDamage, addLog
     return { isDivingAttack: false, finalDamage: baseDamage };
 }
 
-/**
- * Handle fall damage when flying character is hit by ranged attack
+/** Handle fall damage when flying character is hit by ranged attack
  * Calculates fall damage and determines if flying should end
  */
 export function handleFlyingRangedHit(target, ability, addLog = () => {}) {
@@ -986,14 +965,14 @@ export function handleFlyingRangedHit(target, ability, addLog = () => {}) {
 
     // Check if it's a ranged/magic attack
     if (ability.range === 'ranged' || ability.type === 'magic') {
-        const fallDamage = Math.max(5, Math.floor(target.maxLife * 0.08)); // 8% of max life
+        const fallDamage = Math.max(5, Math.floor(target.secondary.maxLife * 0.08)); // 8% of max life
         
         addLog(`${target.name} is struck from the sky by ${ability.name}!`);
         addLog(`${target.name} falls and takes ${fallDamage} fall damage!`);
         
         // Apply fall damage
-        target.life = Math.max(0, target.life - fallDamage);
-        
+        target.secondary.life = Math.max(0, target.secondary.life - fallDamage);
+
         return {
             shouldFall: true,
             fallDamage: fallDamage,
@@ -1004,8 +983,7 @@ export function handleFlyingRangedHit(target, ability, addLog = () => {}) {
     return { shouldFall: false, fallDamage: 0 };
 }
 
-/**
- * Check if flying character should be immune to close attacks
+/** Check if flying character should be immune to close attacks
  * Returns true if the attack should be blocked due to flying immunity
  */
 export function checkFlyingImmunity(target, ability, addLog = () => {}) {
@@ -1022,8 +1000,7 @@ export function checkFlyingImmunity(target, ability, addLog = () => {}) {
     return false; // Not immune
 }
 
-/**
- * Remove flying status from character
+/** Remove flying status from character
  * Handles proper cleanup of flying effects
  */
 export function removeFlyingStatus(character, addLog = () => {}) {
@@ -1040,4 +1017,364 @@ export function removeFlyingStatus(character, addLog = () => {}) {
     }
     
     return false;
+}
+
+// =============================================================================
+// NEW MODULAR FUNCTIONS FOR isHigh STATUS SYSTEM
+// =============================================================================
+
+/** Check if character has any status with isHigh property
+ * @param {Object} character - Character to check
+ * @returns {boolean} - True if character has any status with isHigh: true
+ */
+export function hasIsHighStatus(character) {
+    // console.log("🔧 DEBUG: hasIsHighStatus called for", character.name);
+    if (!character.statusEffects || !Array.isArray(character.statusEffects)) {
+        // console.log("🔧 No status effects or not array");
+        return false;
+    }
+    
+    // console.log("🔧 Status effects:", character.statusEffects);
+    
+    for (const statusEffect of character.statusEffects) {
+        // Use statusTag (which contains the ID) instead of statusId
+        const statusId = statusEffect.statusTag || statusEffect.statusId;
+        // console.log("🔧 Checking status:", statusId || statusEffect.name);
+        const statusDef = StatusRegistry[statusId];
+        // console.log("🔧 Status definition:", statusDef);
+        if (statusDef && statusDef.isHigh === true) {
+            // console.log("🔧 Found isHigh status!", statusId);
+            return true;
+        }
+    }
+    
+    // console.log("🔧 No isHigh status found");
+    return false;
+}
+
+/** Check dynamic range immunity based on elevation status
+ * @param {Object} target - Target character
+ * @param {Object} ability - Ability being used
+ * @param {Object} caster - Character using the ability
+ * @returns {boolean} - True if immune to this range
+ */
+export function checkDynamicRangeImmunity(target, ability, caster) {
+// Remove debug logging after testing
+// console.log("🔧 DEBUG: checkDynamicRangeImmunity called");
+// console.log("Target:", target.name, "Ability:", ability.name, "Range:", ability.range, "Caster:", caster?.name);
+    
+    if (!ability.range || ability.range !== 'close') {
+        // console.log("🔧 Not a close range ability, no immunity");
+        return false;
+    }
+    
+    // Check if target has isHigh status
+    const targetIsHigh = hasIsHighStatus(target);
+    const casterIsHigh = hasIsHighStatus(caster);
+    
+    // console.log("🔧 Target isHigh:", targetIsHigh, "Caster isHigh:", casterIsHigh);
+    
+    // If target is high and caster is not high, target is immune to close range
+    if (targetIsHigh && !casterIsHigh) {
+        console.log("🔧 IMMUNITY TRIGGERED: Target is high, caster is not");
+        return true;
+    }
+    
+    // If both are high or both are ground level, no immunity
+    // console.log("🔧 No immunity: both same level");
+    return false;
+}
+
+/** Apply swoop down attack modifier for elevated attackers
+ * @param {Object} attacker - Character performing the attack
+ * @param {Object} ability - Ability being used
+ * @param {number} baseDamage - Base damage before modifiers
+ * @param {Function} addLog - Logging function
+ * @returns {Object} - {damage: number, effects: Array, shouldRemoveStatus: boolean}
+ */
+export function applySwoopDownModifier(attacker, ability, baseDamage, addLog = () => {}) {
+    // console.log("🔧 DEBUG: applySwoopDownModifier called");
+    // console.log("🔧 Attacker:", attacker.name, "Ability:", ability.name, "Range:", ability.range);
+    
+    // Check if attacker has isHigh status
+    const attackerIsHigh = hasIsHighStatus(attacker);
+    // console.log("🔧 Attacker isHigh:", attackerIsHigh);
+    
+    if (!attackerIsHigh || ability.range !== 'close') {
+        // console.log("🔧 No swoop: not high or not close range");
+        return { damage: baseDamage, effects: [], shouldRemoveStatus: false };
+    }
+    
+    // Apply swoop down damage multiplier for close range attacks from elevated position
+    const swoopMultiplier = 1.5; // 50% damage bonus for swooping down
+    const modifiedDamage = Math.floor(baseDamage * swoopMultiplier);
+    
+    console.log("🔧 SWOOP ATTACK DETECTED! Damage:", baseDamage, "→", modifiedDamage);
+    addLog(`${attacker.name} swoops down for extra damage! (+${modifiedDamage - baseDamage} damage)`);
+    
+    return { 
+        damage: modifiedDamage, 
+        effects: ['swoop_down'], 
+        shouldRemoveStatus: true // Remove elevated status after swooping down
+    };
+}
+
+/** Calculate fall damage when elevated character takes damage
+ * @param {Object} character - Character taking fall damage
+ * @param {number} triggeringDamage - Original damage that caused the fall
+ * @param {Function} addLog - Logging function
+ * @returns {Object} - {damage: number, effects: Array, shouldRemoveStatuses: boolean}
+ */
+export function calculateFallDamage(character, triggeringDamage = 0, addLog = () => {}) {
+    // Check if character has isHigh status
+    const characterIsHigh = hasIsHighStatus(character);
+    
+    if (!characterIsHigh) {
+        return { damage: 0, effects: [], shouldRemoveStatuses: false };
+    }
+    
+    // Calculate fall damage based on character weight
+    const characterWeight = character.weight || 65; // Default weight
+    const baseFallDamage = Math.floor(characterWeight / 10); // 1 damage per 10kg
+    
+    // Add bonus damage based on triggering damage (represents harder fall from stronger hit)
+    const fallDamageBonus = Math.floor(triggeringDamage / 5);
+    const totalFallDamage = baseFallDamage + fallDamageBonus;
+    
+    addLog(`${character.name} falls from height! Takes ${totalFallDamage} fall damage (Weight: ${characterWeight}kg)`);
+    
+    return { 
+        damage: totalFallDamage, 
+        effects: ['fall_impact', 'stunned'], 
+        shouldRemoveStatuses: true // Remove all isHigh statuses
+    };
+}
+
+/** Remove all statuses that have isHigh property set to true
+ * @param {Object} character - Character to remove statuses from
+ * @param {Function} addLog - Logging function
+ * @returns {Array} - Array of removed status IDs
+ */
+export function removeIsHighStatuses(character, addLog = () => {}) {
+    console.log("🔧 DEBUG: removeIsHighStatuses called for", character.name);
+    if (!character.statusEffects || !Array.isArray(character.statusEffects)) {
+        console.log("🔧 No status effects to remove");
+        return [];
+    }
+    
+    console.log("🔧 Current status effects:", character.statusEffects);
+    const removedStatuses = [];
+    
+    // Create a copy of the array to avoid modification during iteration
+    const statusEffectsCopy = [...character.statusEffects];
+    
+    for (const statusEffect of statusEffectsCopy) {
+        // Use statusTag (which contains the ID) instead of statusId
+        const statusId = statusEffect.statusTag || statusEffect.statusId;
+        console.log("🔧 Checking status for removal:", statusId);
+        const statusDef = StatusRegistry[statusId];
+        console.log("🔧 Status definition:", statusDef);
+        if (statusDef && statusDef.isHigh === true) {
+            console.log("🔧 Removing isHigh status:", statusId);
+            removeStatus(character, statusId, addLog);
+            removedStatuses.push(statusId);
+        }
+    }
+    
+    if (removedStatuses.length > 0) {
+        addLog(`${character.name} loses elevated position (${removedStatuses.join(', ')})`);
+    }
+    
+    console.log("🔧 Removed statuses:", removedStatuses);
+    return removedStatuses;
+}
+
+/** Handle falling interactions when character takes damage
+ * @param {Object} character - Character that took damage
+ * @param {number} damage - Amount of damage taken
+ * @param {Function} addLog - Logging function
+ * @returns {Object} - {additionalDamage: number, statusesApplied: Array, statusesRemoved: Array}
+ */
+export function handleFallingInteractions(character, damage, addLog = () => {}) {
+    const fallResult = calculateFallDamage(character, damage, addLog);
+    
+    if (fallResult.damage === 0) {
+        return { additionalDamage: 0, statusesApplied: [], statusesRemoved: [] };
+    }
+    
+    // Apply fall damage
+    character.life = Math.max(0, character.life - fallResult.damage);
+    
+    // Remove isHigh statuses
+    const removedStatuses = removeIsHighStatuses(character, addLog);
+    
+    // Apply stunned status for 1 turn
+    addStatus(character, 'stunned', 1, null, addLog);
+    
+    return {
+        additionalDamage: fallResult.damage,
+        statusesApplied: ['stunned'],
+        statusesRemoved: removedStatuses
+    };
+}
+
+/** Handle modular battle interactions (replaces hardcoded flying/pinned functions)
+ * @param {Object} ability - Ability being used
+ * @param {Object} attacker - Character performing the attack
+ * @param {Object} target - Target character
+ * @param {Function} addLog - Logging function
+ * @returns {Object} - {canHit: boolean, damageMultiplier: number, shouldRemoveStatus: boolean, messages: Array}
+ */
+export function handleModularBattleInteractions(ability, attacker, target, addLog = () => {}) {
+    const results = {
+        canHit: true,
+        damageMultiplier: 1.0,
+        shouldRemoveStatus: false,
+        messages: []
+    };
+    
+    // Check dynamic range immunity (replaces old flying immunity check)
+    if (checkDynamicRangeImmunity(target, ability, attacker)) {
+        results.canHit = false;
+        results.messages.push(`${attacker.name} cannot reach the elevated ${target.name} with a ${ability.range} attack!`);
+        return results;
+    }
+    
+    // Check for swoop down attack (replaces old diving attack logic)
+    const swoopResult = applySwoopDownModifier(attacker, ability, 100); // Use base 100 to get multiplier
+    if (swoopResult.shouldRemoveStatus) {
+        results.damageMultiplier = swoopResult.damage / 100; // Extract multiplier
+        results.shouldRemoveStatus = true;
+        results.messages.push(`${attacker.name} swoops down with ${ability.name} for extra damage!`);
+    }
+    
+    return results;
+}
+
+/** Handle forceful break-free when trapped character successfully attacks
+ * @param {Object} attacker - Character that attacked (potentially trapped)
+ * @param {Object} target - Target that was attacked
+ * @param {Function} addLog - Logging function
+ */
+export function handleForcefulBreakFree(attacker, target, addLog = () => {}) {
+    console.log("🔧 DEBUG: handleForcefulBreakFree called for", attacker.name);
+    
+    // Check if attacker is trapped
+    const trapInfo = isCharacterTrapped(attacker);
+    if (!trapInfo) {
+        console.log("🔧 No trap to break free from");
+        return;
+    }
+    
+    const { status } = trapInfo;
+    const trapConfig = status.trapped;
+    
+    // Check if this trap allows breaking free by force
+    if (!trapConfig.canBreakByForce) {
+        console.log("🔧 Trap doesn't allow breaking free by force");
+        return;
+    }
+    
+    console.log("🔧 Breaking free by force!");
+    
+    // Remove the trapped status
+    removeStatus(attacker, trapInfo.statusId, addLog);
+    addLog(`${attacker.name} breaks free with a powerful attack!`);
+    
+    // Apply stunned effect to the target (the one who was trapping)
+    addStatus(target, 'stunned', 1, attacker, addLog);
+    addLog(`${target.name} is stunned by the forceful break!`);
+}
+
+/** Check if character is trapped (uses status system)
+ * @param {Object} character - Character to check
+ * @returns {Object|null} - Trap info or null if not trapped
+ */
+export function isCharacterTrapped(character) {
+    if (!character.statusEffects || !Array.isArray(character.statusEffects)) return null;
+    
+    for (const statusEffect of character.statusEffects) {
+        const statusId = statusEffect.statusTag || statusEffect.statusId;
+        const statusDef = StatusRegistry[statusId];
+        if (statusDef && statusDef.trapped && statusDef.trapped.isTrapped) {
+            return {
+                statusId,
+                status: statusDef,
+                instance: statusEffect
+            };
+        }
+    }
+    
+    return null;
+}
+
+/** Clean up trapped statuses when a character dies
+ * @param {Object} deadCharacter - Character that died
+ * @param {Function} addLog - Logging function
+ */
+export function cleanupTrappedStatusesOnDeath(deadCharacter, addLog = () => {}) {
+    console.log("🔧 DEBUG: cleanupTrappedStatusesOnDeath called for", deadCharacter.name);
+    
+    // If the dead character was trapping others, free them
+    if (deadCharacter.statusEffects) {
+        // Check all other characters for trapped statuses caused by this character
+        const allCharacters = [...(window.playerCharacters || []), ...(window.enemies || [])];
+        
+        for (const character of allCharacters) {
+            if (character === deadCharacter) continue;
+            
+            if (character.statusEffects) {
+                const trappedStatuses = character.statusEffects.filter(effect => {
+                    const statusId = effect.statusTag || effect.statusId;
+                    const statusDef = StatusRegistry[statusId];
+                    return statusDef && statusDef.trapped && statusDef.trapped.isTrapped;
+                });
+                
+                for (const trappedEffect of trappedStatuses) {
+                    const statusId = trappedEffect.statusTag || trappedEffect.statusId;
+                    removeStatus(character, statusId, addLog);
+                    addLog(`${character.name} is freed as ${deadCharacter.name} can no longer maintain the pin!`);
+                }
+            }
+        }
+    }
+    
+    // Remove any trapped statuses from the dead character itself
+    if (deadCharacter.statusEffects) {
+        const trappedStatuses = deadCharacter.statusEffects.filter(effect => {
+            const statusId = effect.statusTag || effect.statusId;
+            const statusDef = StatusRegistry[statusId];
+            return statusDef && statusDef.trapped && statusDef.trapped.isTrapped;
+        });
+        
+        for (const trappedEffect of trappedStatuses) {
+            const statusId = trappedEffect.statusTag || trappedEffect.statusId;
+            removeStatus(deadCharacter, statusId, addLog);
+        }
+    }
+}
+
+/** Clean up all trapped statuses when battle ends
+ * @param {Function} addLog - Logging function
+ */
+export function cleanupAllTrappedStatuses(addLog = () => {}) {
+    console.log("🔧 DEBUG: cleanupAllTrappedStatuses called");
+    
+    const allCharacters = [...(window.playerCharacters || []), ...(window.enemies || [])];
+    
+    for (const character of allCharacters) {
+        if (character.statusEffects) {
+            const trappedStatuses = character.statusEffects.filter(effect => {
+                const statusId = effect.statusTag || effect.statusId;
+                const statusDef = StatusRegistry[statusId];
+                return statusDef && statusDef.trapped && statusDef.trapped.isTrapped;
+            });
+            
+            for (const trappedEffect of trappedStatuses) {
+                const statusId = trappedEffect.statusTag || trappedEffect.statusId;
+                removeStatus(character, statusId, addLog);
+                console.log(`🔧 Cleaned up trapped status ${statusId} from ${character.name}`);
+            }
+        }
+    }
 }

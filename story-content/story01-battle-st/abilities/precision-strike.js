@@ -1,4 +1,5 @@
 export default {
+    id: "precisionStrike",
     name: "Precision Strike",
     type: "physical",
     range: "close",

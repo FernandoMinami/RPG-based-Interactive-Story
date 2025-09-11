@@ -8,34 +8,52 @@ import { TestRunner } from './test-framework.js';
 
 class StoryTypeEffectivenessTests {
     constructor(storyFolder) {
+        if (!storyFolder) {
+            // Silently create an invalid instance instead of showing warning during page load
+            this.runner = new TestRunner();
+            this.storyFolder = null;
+            this.storyTypes = {};
+            this.typeList = [];
+            this.isValid = false;
+            return;
+        }
+        
         this.runner = new TestRunner();
         this.storyFolder = storyFolder;
         this.storyTypes = {};
         this.typeList = [];
+        this.isValid = true;
     }
 
     async initialize() {
+        if (!this.isValid) {
+            // Silently skip initialization for invalid instances
+            return;
+        }
         await this.loadStoryTypes();
         this.generateDynamicTests();
     }
 
     async loadStoryTypes() {
         try {
+            if (!this.storyFolder) {
+                throw new Error('Cannot load story types: storyFolder is undefined/null');
+            }
+            
             // Load types manifest
-            const manifestUrl = `../../story-content/${this.storyFolder}/types/_types.json?v=${Date.now()}`;
+            const manifestUrl = `../../story-content/${this.storyFolder}/elements.json?v=${Date.now()}`;
+
             const typeManifest = await fetch(manifestUrl).then(res => res.json());
             
-            console.log(`📚 Loading ${typeManifest.length} types from ${this.storyFolder}...`);
+
             
             // Load each type file
             for (const typeInfo of typeManifest) {
-                const typeUrl = `../../story-content/${this.storyFolder}/types/${typeInfo.file}?v=${Date.now()}`;
+                const typeUrl = `../../story-content/${this.storyFolder}/elements/${typeInfo.file}?v=${Date.now()}`;
                 const typeData = await fetch(typeUrl).then(res => res.json());
                 this.storyTypes[typeData.id] = typeData;
                 this.typeList.push(typeData.id);
             }
-            
-            console.log(`✅ Loaded types: ${this.typeList.join(', ')}`);
             
             // Mock the types system for testing
             window.testTypeData = this.storyTypes;
@@ -47,7 +65,7 @@ class StoryTypeEffectivenessTests {
     }
 
     generateDynamicTests() {
-        console.log(`🔄 Generating dynamic tests for ${this.typeList.length} types...`);
+
         
         // Generate all vs all type matchup tests
         this.typeList.forEach(attackerType => {
@@ -81,7 +99,7 @@ class StoryTypeEffectivenessTests {
             }
         });
         
-        console.log(`✅ Generated ${this.runner.tests.length} dynamic tests`);
+
     }
 
     testTypeMatchup(attackerType, defenderType) {
@@ -178,6 +196,16 @@ class StoryTypeEffectivenessTests {
     }
 
     async runTests() {
+        if (!this.isValid) {
+            // Silently return empty results for invalid instances
+            return {
+                totalTests: 0,
+                passed: 0,
+                failed: 0,
+                results: []
+            };
+        }
+        
         return await this.runner.runAll();
     }
 }

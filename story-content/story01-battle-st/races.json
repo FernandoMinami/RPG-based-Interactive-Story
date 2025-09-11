@@ -1,0 +1,67 @@
+[
+  {
+    "id": "human",
+    "name": "Human",
+    "file": "human.json"
+  },
+  {
+    "id": "elf", 
+    "name": "Elf",
+    "file": "elf.json"
+  },
+  {
+    "id": "dwarf",
+    "name": "Dwarf", 
+    "file": "dwarf.json"
+  },
+  {
+    "id": "halfling",
+    "name": "Halfling",
+    "file": "halfling.json"
+  },
+  {
+    "id": "orc",
+    "name": "Orc",
+    "file": "orc.json"
+  },
+  {
+    "id": "half-elf",
+    "name": "Half-Elf",
+    "file": "half-elf.json"
+  },
+  {
+    "id": "variant-human",
+    "name": "Variant Human", 
+    "file": "variant-human.json"
+  },
+  {
+    "id": "dark-elf",
+    "name": "Dark Elf",
+    "file": "dark-elf.json"
+  },
+  {
+    "id": "wood-elf",
+    "name": "Wood Elf",
+    "file": "wood-elf.json"
+  },
+  {
+    "id": "high-elf",
+    "name": "High Elf",
+    "file": "high-elf.json"
+  },
+  {
+    "id": "hybrid",
+    "name": "Hybrid",
+    "file": "hybrid.json"
+  },
+  {
+    "id": "dragon",
+    "name": "Dragon",
+    "file": "dragon.json"
+  },
+  {
+    "id": "beast",
+    "name": "Beast",
+    "file": "beast.json"
+  }
+]

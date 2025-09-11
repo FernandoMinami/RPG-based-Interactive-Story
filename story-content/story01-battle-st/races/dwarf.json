@@ -8,6 +8,7 @@
     "forgemaster": "Natural affinity with fire and earth elements",
     "resilience": "Enhanced physical defense and constitution"
   },
+  "specialAbilities": ["defenseBoost"],
   "baseModifiers": {
     "strength": 2,
     "dexterity": -1,

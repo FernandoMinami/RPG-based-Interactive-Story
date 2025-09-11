@@ -3,7 +3,7 @@
 import { getInventory, removeItem } from './inventory.js';
 import { items } from './items.js';
 import { getAbilities, canUseAbility } from './abilities.js';
-import { isStatusActive, applyStatus, statusSummary, isBuffActive, isCharacterTrapped } from './status.js';
+import { isStatusActive, addStatus, statusSummary, isCharacterTrapped, isBuffActive } from './status.js';
 
 /**
  * Create and manage ability buttons for the player
@@ -60,9 +60,52 @@ export function createAbilityButtons(player, enemy, battleState, onAbilityUse) {
 
         // Check combo requirements for display
         if (ability.combo && ability.combo.followsFrom && ability.combo.followsFrom.length > 0) {
-            if (!battleState.lastPlayerAbility || !ability.combo.followsFrom.includes(battleState.lastPlayerAbility)) {
-                const requiredAbilities = ability.combo.followsFrom.join(' or ');
-                requirementMessage += ` (combo: needs ${requiredAbilities})`;
+            const comboType = ability.combo.type || 'self';
+            const requiredAbilities = ability.combo.followsFrom;
+            let comboMet = false;
+            let comboSource = '';
+
+            switch (comboType) {
+                case 'self':
+                    comboMet = battleState.lastPlayerAbility && requiredAbilities.includes(battleState.lastPlayerAbility);
+                    comboSource = 'you';
+                    break;
+
+                case 'ally':
+                    // Check if any enemy ally used the required ability
+                    for (const enemyId in battleState.lastEnemyAbilities) {
+                        const lastAbility = battleState.lastEnemyAbilities[enemyId];
+                        if (lastAbility && requiredAbilities.includes(lastAbility)) {
+                            comboMet = true;
+                            break;
+                        }
+                    }
+                    comboSource = 'ally';
+                    break;
+
+                case 'any':
+                    // Check player
+                    if (battleState.lastPlayerAbility && requiredAbilities.includes(battleState.lastPlayerAbility)) {
+                        comboMet = true;
+                        comboSource = 'you';
+                    }
+                    // Check allies
+                    if (!comboMet) {
+                        for (const enemyId in battleState.lastEnemyAbilities) {
+                            const lastAbility = battleState.lastEnemyAbilities[enemyId];
+                            if (lastAbility && requiredAbilities.includes(lastAbility)) {
+                                comboMet = true;
+                                comboSource = 'ally';
+                                break;
+                            }
+                        }
+                    }
+                    break;
+            }
+
+            if (!comboMet) {
+                const requiredAbilitiesText = requiredAbilities.join(' or ');
+                requirementMessage += ` (combo: needs ${comboSource} to use ${requiredAbilitiesText})`;
             } else {
                 buttonText += ` [COMBO!]`;
             }
@@ -82,7 +125,7 @@ export function createAbilityButtons(player, enemy, battleState, onAbilityUse) {
 
         // Update button text to show all information
         btn.textContent = buttonText + requirementMessage;
-        btn.disabled = player.mp < (ability.mpCost || 0) || buffActive || !canUse;
+        btn.disabled = player.secondary.mp < (ability.mpCost || 0) || buffActive || !canUse;
 
         btn.onclick = () => onAbilityUse(abilityId, ability);
         abilityDiv.appendChild(btn);
@@ -191,19 +234,19 @@ export function updateBattleStats(player, enemy) {
 
              <div style="flex: 1;display: flex; flex-direction: column;align-items: center;">
                <div><b>${player.name}</b></div>
-               <div>HP: ${player.life}/${player.maxLife}</div>
-               <div>MP: ${player.mp}/${player.maxMp}</div>
+               <div>HP: ${player.secondary.life}/${player.secondary.maxLife}</div>
+               <div>MP: ${player.secondary.mp}/${player.secondary.maxMp}</div>
                <div>Status: ${statusSummary(player)}</div>
              </div>
            </div>`
-        : `<div><b>${player.name}</b> <span>HP: ${player.life}/${player.maxLife}</span> <span>MP: ${player.mp}/${player.maxMp}</span> <span>Status: ${statusSummary(player)}</span></div>`;
+        : `<div><b>${player.name}</b> <span>HP: ${player.secondary.life}/${player.secondary.maxLife}</span> <span>MP: ${player.secondary.mp}/${player.secondary.maxMp}</span> <span>Status: ${statusSummary(player)}</span></div>`;
 
     // Create enemy display with optional image
     const enemyImageHtml = enemy.imagePath
         ? `<div style="display: flex; align-items: center;width: 100%; justify-content: space-between;">
              <div style="flex: 1;display: flex; flex-direction: column;align-items: center;">
                <div><b>${enemy.name}</b></div>
-               <div>HP: ${enemy.life}/${enemy.maxLife}</div>
+               <div>HP: ${enemy.secondary.life}/${enemy.secondary.maxLife}</div>
                <div>Status: ${statusSummary(enemy)}</div>
              </div>
 
@@ -211,7 +254,7 @@ export function updateBattleStats(player, enemy) {
                 style="width: 180px; object-fit: cover; border-radius: 8px; margin-right: 15px;" 
                 onerror="this.style.display='none';">
            </div>`
-        : `<div><b>${enemy.name}</b> <span>HP: ${enemy.life}/${enemy.maxLife}</span> <span>Status: ${statusSummary(enemy)}</span></div>`;
+        : `<div><b>${enemy.name}</b> <span>HP: ${enemy.secondary.life}/${enemy.secondary.maxLife}</span> <span>Status: ${statusSummary(enemy)}</span></div>`;
 
     playerStats.innerHTML = playerImageHtml;
     enemyStats.innerHTML = enemyImageHtml;

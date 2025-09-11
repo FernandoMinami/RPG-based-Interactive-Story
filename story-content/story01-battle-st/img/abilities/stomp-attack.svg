@@ -1,0 +1,29 @@
+<svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="400" height="300" fill="#2a2a2a"/>
+  <rect x="20" y="20" width="360" height="260" fill="#3a3a3a" stroke="#4a4a4a" stroke-width="2"/>
+  
+  <!-- Ground surface -->
+  <rect x="0" y="200" width="400" height="100" fill="#4a3429"/>
+  
+  <!-- Large foot/boot coming down -->
+  <ellipse cx="200" cy="180" rx="80" ry="30" fill="#2c1810" stroke="#1a0e08" stroke-width="3"/>
+  <rect x="120" y="150" width="160" height="50" rx="10" fill="#654321" stroke="#4a3018" stroke-width="2"/>
+  
+  <!-- Impact lines -->
+  <g stroke="#ffff00" stroke-width="3" opacity="0.8">
+    <line x1="50" y1="220" x2="80" y2="240"/>
+    <line x1="100" y1="215" x2="130" y2="235"/>
+    <line x1="270" y1="215" x2="300" y2="235"/>
+    <line x1="320" y1="220" x2="350" y2="240"/>
+  </g>
+  
+  <!-- Dust clouds -->
+  <circle cx="80" cy="240" r="15" fill="#8b7355" opacity="0.6"/>
+  <circle cx="150" cy="245" r="20" fill="#8b7355" opacity="0.5"/>
+  <circle cx="250" cy="245" r="20" fill="#8b7355" opacity="0.5"/>
+  <circle cx="320" cy="240" r="15" fill="#8b7355" opacity="0.6"/>
+  
+  <!-- Title -->
+  <text x="200" y="40" font-family="Arial, sans-serif" font-size="20" fill="#e0e0e0" text-anchor="middle" font-weight="bold">STOMP ATTACK</text>
+  <text x="200" y="60" font-family="Arial, sans-serif" font-size="14" fill="#c0c0c0" text-anchor="middle">Crushing Foot Strike</text>
+</svg>
